@@ -1,1 +1,0 @@
-""" Collators for data loading. """
