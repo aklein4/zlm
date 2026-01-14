@@ -11,6 +11,13 @@ A work in progress.
 
 3. Run command: `cd ~/zlm && . setup_vm.sh <HF_TOKEN> <WANDB_TOKEN>`
 
-## Running in the background
+## Running commands
+
+Basic command:
+
+`gcloud compute tpus tpu-vm ssh <NODE_ID> --worker=all --command='<COMMAND>'`
+
+
+Background command:
 
 `nohup python ~/zlm/src/train.py > train.log 2>&1 &`
