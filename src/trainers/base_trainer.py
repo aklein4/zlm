@@ -25,17 +25,14 @@ import torch_xla.core.xla_model as xm
 import torch_xla.distributed.parallel_loader as pl
 import torch_xla.distributed.spmd as xs
 import torch_xla.runtime as xr
-from torch_xla.core import functions as xf
 
 from omegaconf import DictConfig, OmegaConf
 
-from torch import nn
 from torch.utils.data import DataLoader, Dataset, IterableDataset
 from torch_xla.distributed.spmd.xla_sharding import apply_xla_patch_to_nn_linear
 from transformers import (
     get_scheduler,
 )
-from transformers.optimization import Adafactor
 
 from torchprime.torch_xla_models.model_rewriting.assume_pure import (
     mark_pure_modules,
@@ -53,17 +50,12 @@ from torchprime.utils.parallelism_utils import lb_cp_enabled, reorder_sequence
 import wandb
 import huggingface_hub as hf
 
-from optimizers.adamw import AdamW
 from models.xla import BaseXLAModel
 from utils.import_utils import import_class
 from utils import constants
 
 
 logger = logging.getLogger(__name__)
-
-
-_ADAFACTOR = "adafactor"
-_ADAMW = "adamw"
 
 
 class BaseTrainer:
@@ -158,40 +150,11 @@ class BaseTrainer:
     @staticmethod
     def _create_optimizer(config, model_parameters) -> torch.optim.Optimizer:
         """Helper for optimizer initialization."""
-        if config.trainer.optimizer.type not in (_ADAFACTOR, _ADAMW):
-            raise ValueError(
-                f"Supported optimizers are {[_ADAFACTOR, _ADAMW]}, "
-                f"but got {config.trainer.optimizer.type}"
-            )
 
-        if config.trainer.optimizer.type == _ADAMW:
-            optimizer = AdamW(
-                params=model_parameters,
-                lr=config.trainer.optimizer.learning_rate,
-                weight_decay=config.trainer.optimizer.weight_decay,
-                betas=(
-                    config.trainer.optimizer.beta1,
-                    config.trainer.optimizer.beta2,
-                ),
-                update_clip=config.trainer.optimizer.update_clip,
-            )
-
-        elif config.trainer.optimizer.type == _ADAFACTOR:
-            # Adafactor optimizer does not support weight decay.
-            if "weight_decay" in config.trainer.optimizer:
-                raise ValueError("Adafactor does not support weight decay.")
-
-            optimizer = Adafactor(
-                params=model_parameters,
-                lr=config.trainer.optimizer.learning_rate,
-                relative_step=False,
-                scale_parameter=False,
-            )
-
-        else:
-            raise AssertionError(f"Invalid optimizer type: {config.trainer.optimizer.type}")
-
-        return optimizer
+        return import_class(config.trainer.optimizer.type, constants.OPTIMIZER_MODULE)(
+            params=model_parameters,
+            **config.trainer.optimizer.kwargs,
+        )
 
 
     def _get_train_dataloader(self) -> pl.MpDeviceLoader:
@@ -228,8 +191,8 @@ class BaseTrainer:
             batch_size = self.global_batch_size
 
         # handle the collator
-        collator_cls = import_class(self.config.data.collator_class, constants.COLLATOR_MODULE)
-        collator = collator_cls(**self.config.data.collator_kwargs)
+        collator_cls = import_class(self.config.data.collator.type, constants.COLLATOR_MODULE)
+        collator = collator_cls(**self.config.data.collator.kwargs)
 
         dataloader = DataLoader(
             self.train_dataset,
@@ -277,7 +240,7 @@ class BaseTrainer:
 
             logger.info(f"Saving config to {save_path}")
             with open(os.path.join(save_path, "config.json"), "w") as f:
-                json.dump(OmegaConf.to_container(self.config, resolve=True), f, indent=4)
+                json.dump(OmegaConf.to_container(self.config.model, resolve=True), f, indent=4)
             logger.info(f"Saved config to {save_path}/config.json")
 
             logger.info(f"Saving model state to {save_path}")
@@ -390,12 +353,10 @@ class BaseTrainer:
                 to_wandb["examples_seen"] = (step + 1) * self.global_batch_size
                 if "atom_count" in aux.keys():
                     to_wandb["atoms_seen"] = self.atoms_seen
+                to_wandb["nan"] = int(math.isnan(loss))
 
                 if not self.config.debug and constants.PROCESS_IS_MAIN():
                     wandb.log(to_wandb)
-
-                # if math.isnan(loss):
-                #     raise ValueError(f"Loss is NaN at step {step}")
                 
             xm.add_step_closure(
                 step_closure,
@@ -423,18 +384,9 @@ class BaseTrainer:
     @torch_xla.compile(full_graph=True)
     def train_step(self, batch: dict) -> tuple[torch.Tensor, dict, torch.Tensor]:
         
-        loss, aux = self.forward(batch)
-
-        # mean_reduce = lambda x: xf.all_reduce(
-        #     xm.REDUCE_SUM, x, scale=1.0 / xr.process_count()
-        # )
-        # loss = mean_reduce(loss)
-        # for k, v in aux.items():
-        #     if isinstance(v, torch.Tensor):
-        #         aux[k] = mean_reduce(v)
+        loss, aux = self.forward(**batch)
 
         loss.backward()
-        # xm.reduce_gradients(self.optimizer)
         
         grad_norm = self.clip_gradients()
         self.optimizer.step()
@@ -444,7 +396,7 @@ class BaseTrainer:
         return loss, aux, grad_norm
 
 
-    def forward(self, batch: dict) -> tuple[torch.Tensor, dict]:
+    def forward(self, **batch) -> tuple[torch.Tensor, dict]:
         raise NotImplementedError(
             "The forward method should be implemented in the derived class."
         )

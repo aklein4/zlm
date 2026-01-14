@@ -87,17 +87,17 @@ def main(config: omegaconf.DictConfig):
     logger.info(f"Model initialized: {config.model.model_class}")
 
     # Create the dataset
-    data = get_dataset(**config.data.dataset)
+    data = get_dataset(config.data.dataset.name, **config.data.dataset.kwargs)
     logger.info(f"Dataset loaded: {config.data.dataset.name}")
 
     # initialize the trainer
-    trainer_cls = import_class(config.trainer.trainer_class, constants.TRAINER_MODULE)
+    trainer_cls = import_class(config.trainer.trainer_type, constants.TRAINER_MODULE)
     trainer = trainer_cls(
         model=model,
         config=config,
         train_dataset=data,
     )
-    logger.info(f"Trainer initialized: {config.trainer.trainer_class}")
+    logger.info(f"Trainer initialized: {config.trainer.trainer_type}")
 
     # TODO(https://github.com/pytorch/xla/issues/8954): Remove `jax_env_context`.
     with torch_xla._internal.jax_workarounds.jax_env_context():

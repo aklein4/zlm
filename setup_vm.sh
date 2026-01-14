@@ -31,7 +31,7 @@ pip install setuptools==67.7.2
 pip install transformers==4.52.1 datasets==4.0.0 hydra-core==1.3.0 optax==0.2.4 wandb
 
 # login to huggingface
-# huggingface-cli login --token $1 --add-to-git-credential
+hf auth login --token $1
 
 # login to wandb
-python -m wandb login $1
+python -m wandb login $2

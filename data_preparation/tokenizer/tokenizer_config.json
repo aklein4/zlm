@@ -173,5 +173,5 @@
   "pad_token": "<|pad|>",
   "tokenizer_class": "GPT2Tokenizer",
   "unk_token": "<|endoftext|>",
-  "vocab_size": 49152
+  "vocab_size": 49153
 }

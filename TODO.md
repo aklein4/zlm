@@ -1,6 +1,6 @@
 
 ### Data
- - [ ] create a single mixed and shuffled SFT dataset
+ - [x] create a single mixed and shuffled SFT dataset
  - [ ] create a single mixed and shuffled RAW dataset
   - how to handle input/output splitting and lengths?
 

@@ -30,7 +30,7 @@ def load_checkpoint(
 
     # load the model
     config_path = os.path.join(save_path, "config.json")
-    config = omegaconf.OmegaConf.load(config_path).model
+    config = omegaconf.OmegaConf.load(config_path)
     config.attention_kernel = attention_kernel
 
     model_cls = import_class(config.model_class, constants.MODEL_MODULE)

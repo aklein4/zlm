@@ -42,6 +42,7 @@ CONFIG_PATH = os.path.join(BASE_PATH, "configs")
 MODEL_MODULE = "models"
 TRAINER_MODULE = "trainers"
 COLLATOR_MODULE = "collators"
+OPTIMIZER_MODULE = "optimizers"
 
 # huggingface login id
 HF_ID = "aklein4"

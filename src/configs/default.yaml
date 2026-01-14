@@ -5,9 +5,9 @@
 # override the earlier ones.
 defaults:
   - _self_ # refers to this config file
-  - model: llama-3-test # refers to model/llama-3-test.yaml
-  - data: tokenized # refers to dataset/tokenized.yaml
-  - trainer: llama-3-2b # refers to trainer/llama-3-2b.yaml
+  - model: smollm2-test 
+  - data: mixed-smollm2
+  - trainer: lm-test
 
 
 # compute configuration
@@ -17,7 +17,7 @@ torch_dtype: float32 # must be float32 for now
 
 # logging and saving configuration
 debug: false
-project: prime-testing
+project: tpu-testing
 name: test
 notes: null
 

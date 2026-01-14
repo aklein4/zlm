@@ -1,8 +1,4 @@
 import torch
-import torch.nn as nn
-import torch.nn.functional as F
-
-import numpy as np
 
 
 class SeqToSeqCollator:
@@ -12,13 +8,11 @@ class SeqToSeqCollator:
         input_length: int,
         output_length: int,
         pad_token_id: int,
-        vocab_size: int,
     ):
         self.input_length = input_length
         self.output_length = output_length
 
         self.pad_token_id = pad_token_id
-        self.vocab_size = vocab_size
 
     
     def __call__(
@@ -31,19 +25,17 @@ class SeqToSeqCollator:
                 "input_ids",
                 self.input_length,
                 self.pad_token_id,
-                self.vocab_size
             ),
             "output_ids": handle_ids(
                 batch,
                 "output_ids",
                 self.output_length,
                 self.pad_token_id,
-                self.vocab_size
             )
         }
 
 
-def handle_ids(batch, key, sequence_length, pad_token_id, vocab_size):
+def handle_ids(batch, key, sequence_length, pad_token_id):
 
     input_ids = []
     for x in batch:
@@ -74,7 +66,5 @@ def handle_ids(batch, key, sequence_length, pad_token_id, vocab_size):
         ],
         dim=1
     )
-
-    input_ids = torch.clip(input_ids, 0, vocab_size - 1)
 
     return input_ids
