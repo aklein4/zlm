@@ -17,7 +17,6 @@ Basic command:
 
 `gcloud compute tpus tpu-vm ssh <NODE_ID> --worker=all --command='<COMMAND>'`
 
-
 Background command:
 
 `nohup python ~/zlm/src/train.py > train.log 2>&1 &`
