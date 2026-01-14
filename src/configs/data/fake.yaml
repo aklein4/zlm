@@ -1,0 +1,10 @@
+
+dataset:
+    name: fake
+
+collator_class: fake.FakeCollator
+collator_kwargs:
+
+    sequence_length: 1024
+    vocab_size: 32001
+    

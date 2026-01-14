@@ -1,0 +1,261 @@
+
+
+ ========== Example 0 ==========
+
+ --- Input --- 
+
+[[[<|im_start|>user
+Is it true that $0.999999999\ldots=1$? I'm told by smart people that
+$$0.999999999\ldots=1$$
+and I believe them, but is there a proof that explains why this is?<|im_end|>
+<|im_start|>assistant
+]]]
+
+ --- Output --- 
+
+[[[\begin{align}
+x &= 0.999... \\
+10x &= 9.999... \\
+&= 9 + 0.999... \\
+&= 9 + x \\
+10x - x &= (9 + x) - x \\
+(10 - 1)x &= 9 + (x - x) \\
+9x &= 9 \\
+x &= 1
+\end{align}<|im_end|><|endoftext|>]]]
+
+ ========== Example 1 ==========
+
+ --- Input --- 
+
+[[[<|im_start|>user
+How do you calculate the semi-minor axis of an ellipsoid? Given the semi-major axis and a flattening factor, is it possible to calculate the semi-minor axis?<|im_end|>
+<|im_start|>assistant
+]]]
+
+ --- Output --- 
+
+[[[Where,
+$a$ = transverse radius = semi-major axis (for ellipse/oblate spheroid);
+$b$ = conjugate radius = semi-minor axis ("     "     ");
+$oe$ = angular eccentricity = $\arccos(\frac{b}{a})$;
+$f$ = flattening = $\frac{a-b}{a} = 1 - \frac{b}{a} = 1 - \cos(oe) = 2\sin(\frac{oe}{2})^{2}$;
+then $b = a\cos(oe) = a(1-f)$.<|im_end|><|endoftext|>]]]
+
+ ========== Example 2 ==========
+
+ --- Input --- 
+
+[[[<|im_start|>user
+Do complex numbers really exist? Complex numbers involve the square root of negative one, and most non-mathematicians find it hard to accept that such a number is meaningful. In contrast, they feel that real numbers have an obvious and intuitive meaning. What's the best way to explain to a non-mathematician that complex numbers are necessary and meaningful, in the same way that real numbers are?
+This is not a Platonic question about the reality of mathematics, or whether abstractions are as real as physical entities, but an attempt to bridge a comprehension gap that many people experience when encountering complex numbers for the first time. The wording, although provocative, is deliberately designed to match the way that many people actually ask this question.<|im_end|>
+<|im_start|>assistant
+]]]
+
+ --- Output --- 
+
+[[[In the en they exists as a consistent definition, you cannot be agnostic about it.<|im_end|><|endoftext|>]]]
+
+ ========== Example 3 ==========
+
+ --- Input --- 
+
+[[[<|im_start|>user
+Why is the volume of a sphere $\frac{4}{3}\pi r^3$? I learned that the volume of a sphere is $\frac{4}{3}\pi r^3$, but why? The $\pi$ kind of makes sense because its round like a circle, and the $r^3$ because it's 3-D, but $\frac{4}{3}$ is so random! How could somebody guess something like this for the formula?<|im_end|>
+<|im_start|>assistant
+]]]
+
+ --- Output --- 
+
+[[[I am no where near as proficient in math as any of the people who answered this before me, but nonetheless I would like to add a simplified version;
+A cylinder's volume is: 
+$$\pi r^2h$$
+A cone's volume is $\frac{1}{3}$ that of a cylinder of equal height and radius:
+$$\frac{1}{3}\pi r^2h$$
+A sphere's volume is two cones, each of equal height and radius to that of the sphere's: 
+$$\frac{1}{3}\pi r^2h + \frac{1}{3}\pi r^2h$$
+The height of the sphere is equal to it's diameter $(r + r)$ so the earlier equation can be rewritten as;
+$$\frac{1}{3}\pi r^2(r + r) + \frac{1}{3}\pi r^2(r + r)$$
+If we simplify it;
+$$\frac{1}{3}\pi r^2(2r) + \frac{1}{3}\pi r^2(2r)$$
+Following the math convention of numbers before letters it changes to:
+$$\frac{1}{3}2\pi r^2r + \frac{1}{3}2\pi r^2r$$
+Combining like terms;
+$$r^2\cdot r= r^3$$
+and
+$$\frac{1}{3}\cdot 2 = \frac{2}{3}$$
+The equation now becomes
+$$\frac{2}{3}\pi r^3 + \frac{2}{3}\pi r^3$$
+Again add the like terms, being the $\frac{2}{3}$ together;
+$$\frac{2}{3} + \frac{2}{3} = \frac{4}{3}$$
+Finally we get to how $\frac{4}{3}$ is part of the equation;
+$$\frac{4}{3}\pi r^3$$<|im_end|><|endoftext|>]]]
+
+ ========== Example 4 ==========
+
+ --- Input --- 
+
+[[[<|im_start|>user
+Is there possibly a largest prime number? Prime numbers are numbers with no factors other than one and itself.
+Factors of a number are always lower or equal to than a given number; so, the larger the number is, the larger the pool of "possible factors" that number might have.
+So the larger the number, it seems like the less likely the number is to be a prime.
+Surely there must be a number where, simply, every number above it has some other factors.  A "critical point" where every number larger than it simply will always have some factors other than one and itself.
+Has there been any research as to finding this critical point, or has it been proven not to exist?  That for any $n$ there is always guaranteed to be a number higher than $n$ that has no factors other than one and itself?<|im_end|>
+<|im_start|>assistant
+]]]
+
+ --- Output --- 
+
+[[[Another proof is:
+Consider the numbers $$9^{2^n} + 1, \\ \\  n = 1,2,\dots$$
+Now if $$9^{2^n} + 1 = 0 \mod p$$ then we have that, for $ m > n$ that
+$$9^{2^m} + 1 = (9^{2^n})^{2^{m-n}} + 1 = (-1)^{2^{m-n}} + 1 = 1+1 = 2 \mod p$$
+Thus if one term of the sequence is divisible by a prime, none of the next terms are divisible by that prime, i.e. if you write out the factors of the terms of the sequence, each term of this sequence gives rise to a prime not seen before!
+As a curiosity, it can be shown that each number in the sequence has at least one prime factor > 40. See this question on this very site: Does $9^{2^n} + 1$ always have a prime factor larger than $40$?<|im_end|><|endoftext|>]]]
+
+ ========== Example 5 ==========
+
+ --- Input --- 
+
+[[[<|im_start|>user
+Proof that the sum of two Gaussian variables is another Gaussian The sum of two Gaussian variables is another Gaussian.
+It seems natural, but I could not find a proof using Google.
+What's a short way to prove this?
+Thanks!
+Edit: Provided the two variables are independent.<|im_end|>
+<|im_start|>assistant
+]]]
+
+ --- Output --- 
+
+[[[I posted the following in response to a question that got closed as a duplicate of this one:
+It looks from your comment as if the meaning of your question is different from what I thought at first.  My first answer assumed you knew that the sum of independent normals is itself normal.
+You have
+$$
+\exp\left(-\frac12 \left(\frac{x}{\alpha}\right)^2 \right) \exp\left(-\frac12 \left(\frac{z-x}{\beta}\right)^2 \right)
+= \exp\left(-\frac12 \left( \frac{\beta^2x^2 + \alpha^2(z-x)^2}{\alpha^2\beta^2} \right) \right).
+$$
+Then the numerator is
+$$
+\begin{align}
+& (\alpha^2+\beta^2)x^2 - 2\alpha^2 xz + \alpha^2 z^2 \\  \\
+= {} & (\alpha^2+\beta^2)\left(x^2 - 2\frac{\alpha^2}{\alpha^2+\beta^2} xz\right) + \alpha^2 z^2 \\  \\
+= {} & (\alpha^2+\beta^2)\left(x^2 - 2\frac{\alpha^2}{\alpha^2+\beta^2} xz + \frac{\alpha^4}{(\alpha^2+\beta^2)^2}z^2\right) + \alpha^2 z^2 - \frac{\alpha^4}{\alpha^2+\beta^2}z^2 \\  \\
+= {} & (\alpha^2+\beta^2)\left(x - \frac{\alpha^2}{\alpha^2+\beta^2}z\right)^2 + \alpha^2 z^2 - \frac{\alpha^4}{\alpha^2+\beta^2}z^2,
+\end{align}
+$$
+and then remember that you still have the $-1/2$ and the $\alpha^2\beta^2$ in the denominator, all inside the "exp" function.
+(What was done above is completing the square.)
+The factor of $\exp\left(\text{a function of }z\right)$ does not depend on $x$ and so is a "constant" that can be pulled out of the integral.
+The remaining integral does not depend on "$z$" for a reason we will see below, and thus becomes part of the normalizing constant.
+If $f$ is any probability density function, then
+$$
+\int_{-\infty}^\infty f(x - \text{something}) \; dx
+$$
+does not depend on "something", because one may write $u=x-\text{something}$ and then $du=dx$, and the bounds of integration are still $-\infty$ and $+\infty$, so the integral is equal to $1$.
+Now look at
+$$
+\alpha^2z^2 - \frac{\alpha^4}{\alpha^2+\beta^2} z^2 = \frac{z^2}{\frac{1}{\beta^2} + \frac{1}{\alpha^2}}.
+$$
+This was to be divided by $\alpha^2\beta^2$, yielding
+$$
+\frac{z^2}{\alpha^2+\beta^2}=\left(\frac{z}{\sqrt{\alpha^2+\beta^2}}\right)^2.
+$$
+So the density is
+$$
+(\text{constant})\cdot \exp\left( -\frac12 \left(\frac{z}{\sqrt{\alpha^2+\beta^2}}\right)^2 \right) .
+$$
+Where the standard deviation belongs we now have $\sqrt{\alpha^2+\beta^2}$.<|im_end|><|endoftext|>]]]
+
+ ========== Example 6 ==========
+
+ --- Input --- 
+
+[[[<|im_start|>user
+Why does the series $\sum_{n=1}^\infty\frac1n$ not converge? Can someone give a simple explanation as to why the harmonic series 
+
+$$\sum_{n=1}^\infty\frac1n=\frac 1 1 + \frac 12 + \frac 13 + \cdots $$
+
+doesn't converge, on the other hand it grows very slowly? 
+I'd prefer an easily comprehensible explanation rather than a rigorous proof regularly found in undergraduate textbooks.<|im_end|>
+<|im_start|>assistant
+]]]
+
+ --- Output --- 
+
+[[[Let's group the terms as follows:$$A=\frac11+\frac12+\frac13+\frac14+\cdots\\ $$
+$$
+A=\underbrace{(\frac{1}{1}+\frac{1}{2}+\frac{1}{3}+\cdots+\frac{1}{9})}_{\color{red} {9- terms}}
++\underbrace{(\frac{1}{10}+\frac{1}{11}+\frac{1}{12}+\cdots+\frac{1}{99})}_{\color{red} {90- terms}}\\+\underbrace{(\frac{1}{101}+\frac{1}{102}+\frac{1}{103}+\cdots+\frac{1}{999})}_{\color{red} {900- terms}}+\cdots \\ \to $$
+$$\\A>9 \times(\frac{1}{10})+(99-10+1)\times \frac{1}{100}+(999-100+1)\times \frac{1}{1000}+... \\A>\frac{9}{10}+\frac{90}{100}+\frac{90}{100}+\frac{900}{1000}+...\\ \to A>\underbrace{\frac{9}{10}+\frac{9}{10}+\frac{9}{10}+\frac{9}{10}+\frac{9}{10}+\frac{9}{10}+...}_{\color{red} {\text{ m group} ,\text{  and} \space m\to \infty}} \to \infty
+$$
+Showing that $A$ diverges by grouping numbers.<|im_end|><|endoftext|>]]]
+
+ ========== Example 7 ==========
+
+ --- Input --- 
+
+[[[<|im_start|>user
+What is the single most influential book every mathematician should read? If you could go back in time and tell yourself to read a specific book at the beginning of your career as a mathematician, which book would it be?<|im_end|>
+<|im_start|>assistant
+]]]
+
+ --- Output --- 
+
+[[[There are so many, and I've already seen three that I would mention.  Two more of interest to lay readers:
+The Man Who Knew Infinity by Robert Kanigel.  Excellently written, ultimately a tragedy, but a real source of inspiration.
+Goedel's Proof by Nagel & Newman.  Really, a beautiful and short exposition of the nature of proof, non-euclidean geometry, and the thinking that led Goedel to his magnificent proof.<|im_end|><|endoftext|>]]]
+
+ ========== Example 8 ==========
+
+ --- Input --- 
+
+[[[<|im_start|>user
+Calculating the probability of two dice getting at least a $1$ or a $5$ So you have $2$ dice and you want to get at least a $1$ or a $5$ (on the dice not added).  How do you go about calculating the answer for this question.
+This question comes from the game farkle.<|im_end|>
+<|im_start|>assistant
+]]]
+
+ --- Output --- 
+
+[[[The other way to visualise this would be to draw a probability tree like so:
+alt text http://img.skitch.com/20100721-xwruwx7qnntx1pjmkjq8gxpifs.gif
+(apologies for my poor standard of drawing :) )<|im_end|><|endoftext|>]]]
+
+ ========== Example 9 ==========
+
+ --- Input --- 
+
+[[[<|im_start|>user
+Why $\sqrt{-1 \cdot {-1}} \neq \sqrt{-1}^2$? I know there must be something unmathematical in the following but I don't know where it is:
+\begin{align}
+\sqrt{-1} &= i \\\\\
+\frac1{\sqrt{-1}} &= \frac1i \\\\ 
+\frac{\sqrt1}{\sqrt{-1}} &= \frac1i \\\\ 
+\sqrt{\frac1{-1}} &= \frac1i \\\\ 
+\sqrt{\frac{-1}1} &= \frac1i \\\\ 
+\sqrt{-1} &= \frac1i \\\\ 
+i &= \frac1i \\\\ 
+i^2 &= 1 \\\\ 
+-1 &= 1 \quad !!?
+\end{align}<|im_end|>
+<|im_start|>assistant
+]]]
+
+ --- Output --- 
+
+[[[Isaac's answer is correct, but it can be hard to see if you don't have a strong knowledge of your laws. These problems are generally easy to solve if you examine it line by line and simplify both sides.
+$$\begin{align*}
+\sqrt{-1} &= i &
+\mathrm{LHS}&=i, \mathrm{RHS}=i
+\\
+1/\sqrt{-1} &= 1/i &
+\mathrm{LHS}&=1/i=-i, \mathrm{RHS}=-i
+\\
+\sqrt{1}/\sqrt{-1} &= 1/i &
+\mathrm{LHS}&=1/i=-i, \mathrm{RHS}=-i
+\\
+\textstyle\sqrt{1/-1} &= 1/i &
+\mathrm{LHS}&=\sqrt{-1}=i, \mathrm{RHS}=-i
+\end{align*}$$
+We can then see that the error must be assuming $\textstyle\sqrt{1}/\sqrt{-1}=\sqrt{1/-1}$.<|im_end|><|endoftext|>]]]

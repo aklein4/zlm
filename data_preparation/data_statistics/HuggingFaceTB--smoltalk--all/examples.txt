@@ -1,0 +1,261 @@
+
+
+ ========== Example 0 ==========
+
+ --- Input --- 
+
+[[[<|im_start|>user
+The function \( g(x) \) satisfies the functional equation
+\[ g(x + y) = g(x) + g(y) \]
+for all real numbers \( x \) and \( y \), and it is given that \( g(3) = 4 \). Find \( g(10) \).<|im_end|>
+<|im_start|>assistant
+]]]
+
+ --- Output --- 
+
+[[[Given the functional equation and the specific value \( g(3) = 4 \), we can find \( g(1) \) by using the equation multiple times:
+\[
+g(3) = g(2) + g(1)
+\]
+\[
+g(2) = g(1) + g(1) = 2g(1)
+\]
+Thus,
+\[
+4 = 2g(1) + g(1) = 3g(1)
+\]
+\[
+g(1) = \frac{4}{3}
+\]
+Now we can find \( g(10) \) using \( g(1) \):
+\[
+g(10) = 10g(1) = 10 \times \frac{4}{3} = \frac{40}{3}
+\]
+Hence, the value of \( g(10) \) is \(\boxed{\frac{40}{3}}\).<|im_end|><|endoftext|>]]]
+
+ ========== Example 1 ==========
+
+ --- Input --- 
+
+[[[<|im_start|>user
+Ben twice chooses a random integer between 1 and 60, inclusive. What is the probability that at least one of the numbers Ben chooses is a multiple of 4?<|im_end|>
+<|im_start|>assistant
+]]]
+
+ --- Output --- 
+
+[[[First, we find the number of multiples of 4 between 1 and 60. The smallest multiple of 4 is $4 \times 1 = 4$ and the largest multiple of 4 within 60 is $4 \times 15 = 60$. Hence, there are 15 multiples of 4.
+
+The total number of integers between 1 to 60 is 60. Therefore, the number of integers that are not multiples of 4 is $60 - 15 = 45$.
+
+The probability that a single number chosen is not a multiple of 4 is $\frac{45}{60} = \frac{3}{4}$. If Ben chooses two numbers independently, the probability that neither number is a multiple of 4 is $\left(\frac{3}{4}\right)^2 = \frac{9}{16}$.
+
+Thus, the probability that at least one of the numbers is a multiple of 4 is $1 - \frac{9}{16} = \frac{7}{16}$.
+
+Therefore, the final answer is:
+\[
+\boxed{\frac{7}{16}}
+\]<|im_end|><|endoftext|>]]]
+
+ ========== Example 2 ==========
+
+ --- Input --- 
+
+[[[<|im_start|>user
+Find all values of $x$ that satisfy the equation $|2x-5| = 3x + 1$.<|im_end|>
+<|im_start|>assistant
+]]]
+
+ --- Output --- 
+
+[[[We can solve the equation $|2x-5| = 3x + 1$ by considering two cases for the absolute value.
+
+**Case 1**: When $2x - 5 \geq 0$, which simplifies to $x \geq \frac{5}{2}$.
+\[
+2x - 5 = 3x + 1
+\Rightarrow -x = 6
+\Rightarrow x = -6
+\]
+However, $x = -6$ does not satisfy $x \geq \frac{5}{2}$. Thus, no solutions exist in this case.
+
+**Case 2**: When $2x - 5 < 0$, which implies $x < \frac{5}{2}$.
+\[
+-(2x-5) = 3x + 1
+\Rightarrow -2x + 5 = 3x + 1
+\Rightarrow 5x = 4
+\Rightarrow x = \frac{4}{5}
+\]
+We then check if $x = \frac{4}{5}$ meets $x < \frac{5}{2}$ which is true.
+
+Substituting $x = \frac{4}{5}$ back into the original equation to verify,
+\[
+|2(\frac{4}{5}) - 5| = 3(\frac{4}{5}) + 1
+\Rightarrow |-\frac{1}{5}| = \frac{12}{5} + 1
+\Rightarrow \frac{1}{5} = \frac{17}{5}
+\]
+This claim is incorrect; therefore, no solution arises from this case as well. Both checks failed.
+
+Conclusion:
+There are no values of $x$ that satisfy the given equation. Therefore, the answer is $\boxed{\text{no solution}}$.<|im_end|><|endoftext|>]]]
+
+ ========== Example 3 ==========
+
+ --- Input --- 
+
+[[[<|im_start|>user
+How can you help me? I'm writing an essay and need assistance in revising my work for better structure and clarity.<|im_end|>
+<|im_start|>assistant
+]]]
+
+ --- Output --- 
+
+[[[I can help you refine your essay by reviewing your text and providing suggestions to improve its structure, clarity, and overall flow. I can also assist in identifying areas where the writing may be unclear or difficult to understand and offer alternatives to make your points more concise and impactful.
+
+Please go ahead and share the essay you're working on, and let me know what specific areas you're concerned about or would like me to focus on. Is it the introduction, transitions between paragraphs, supporting evidence, or the conclusion? Or would you like a general review of the entire piece?<|im_end|><|endoftext|>]]]
+
+ ========== Example 4 ==========
+
+ --- Input --- 
+
+[[[<|im_start|>system
+Extract and present the main key point of the input text in one very short sentence, including essential details like dates or locations if necessary.<|im_end|>
+<|im_start|>user
+Hi Michael,
+
+I hope you're doing well! I wanted to follow up on our conversation from the Math Educators Forum about collaborating on decimal operation worksheets. I'm excited to work together and combine our strengths to create something great for our students.
+
+I was thinking we could meet in person to discuss our plans and goals for the project. I live in Oakville and you're in Pinecrest, right? There's a great coffee shop called "The Bean Counter" that's about halfway between us. Would you be available to meet there next Saturday, March 14th, at 10 AM? Let me know if that works for you or if you have any other suggestions.
+
+Looking forward to working together!
+
+Best,
+Sarah<|im_end|>
+<|im_start|>assistant
+]]]
+
+ --- Output --- 
+
+[[[Sarah is proposing a meeting at "The Bean Counter" in Oakville on March 14th at 10 AM to collaborate on decimal operation worksheets.<|im_end|><|endoftext|>]]]
+
+ ========== Example 5 ==========
+
+ --- Input --- 
+
+[[[<|im_start|>system
+You're an AI assistant for text re-writing. Rewrite the input text to make it more concise while preserving its core meaning.<|im_end|>
+<|im_start|>user
+I'm thrilled to share a recent project that has been a labor of love and a significant milestone in my career: the restoration of a 16th-century astrolabe at the Historical Science Museum in London. This intricate instrument, a marvel of medieval craftsmanship, was in a state of disrepair when I first encountered it. The corrosion and missing parts presented a formidable challenge, but after months of meticulous work, I'm proud to say that it now stands restored to its former glory.
+
+One of the most rewarding moments came when I discovered a hidden engraving on the back of the astrolabe, which provided invaluable insights into its history and provenance. This experience reinforced my belief in the importance of preserving such artifacts, not just for their historical value but for the stories they tell and the connections they forge between past and present.
+
+I had the honor of giving a lecture at the museum on the role of astrolabes in navigation and astronomy, and the enthusiastic response from the audience was truly inspiring. If you have any similar experiences or projects to share, or if you'd like to collaborate on future endeavors, I'd love to hear from you! 🌟
+
+#HistoricalAstronomy #AstrolabeRestoration #Preservation #MuseumLife<|im_end|>
+<|im_start|>assistant
+]]]
+
+ --- Output --- 
+
+[[[I'm excited to share my recent project: restoring a 16th-century astrolabe at the Historical Science Museum in London. This intricate medieval instrument was badly corroded and missing parts, but after months of work, it's now restored. A hidden engraving on the back provided crucial historical insights. I also gave a lecture on astrolabes, which was well-received. If you have similar experiences or want to collaborate, let me know! 🌟
+
+#HistoricalAstronomy #AstrolabeRestoration #Preservation #MuseumLife<|im_end|><|endoftext|>]]]
+
+ ========== Example 6 ==========
+
+ --- Input --- 
+
+[[[<|im_start|>system
+You're an AI assistant for text re-writing. Rewrite the input text to make it more friendly and approachable while maintaining its main points.<|im_end|>
+<|im_start|>user
+Dr. Thompson,
+
+I’ve reviewed the latest draft of the Listeria campaign, and I must say I’m disappointed. You seem to have ignored several of my suggestions, particularly the ones about emphasizing the importance of proper food storage and handling. I understand you might have your own ideas, but this is a critical issue, and we need to ensure the public is fully informed.
+
+If this keeps up, I’ll have to escalate this to our department head.
+
+Emily Jenkins, Ph.D.
+Public Health Professional, Food Safety Specialist<|im_end|>
+<|im_start|>assistant
+]]]
+
+ --- Output --- 
+
+[[[Hi Dr. Thompson,
+
+I hope you're doing well. I’ve had a chance to review the latest draft of the Listeria campaign, and I wanted to share some thoughts. While there’s a lot of good information, I noticed that some of my previous suggestions, especially those about the importance of proper food storage and handling, weren’t included. I know you have your own creative vision, and I really appreciate that, but these points are crucial for public safety.
+
+I’m confident we can work together to make this campaign as effective as possible. If we can, let’s discuss how to integrate these key messages. I’m here to support you in any way I can, and I believe with a bit of collaboration, we can create something truly impactful.
+
+Looking forward to your thoughts.
+
+Best regards,
+Emily Jenkins, Ph.D.
+Public Health Professional, Food Safety Specialist<|im_end|><|endoftext|>]]]
+
+ ========== Example 7 ==========
+
+ --- Input --- 
+
+[[[<|im_start|>user
+What are some ideas for a good short story about a city not on a planet, but rather a generation ship, or on the moon of a gas giant, or somewhere else unusual?<|im_end|>
+<|im_start|>assistant
+]]]
+
+ --- Output --- 
+
+[[[Imagine a city on a generation ship, a self-sustaining vessel hurtling through the vast expanse of space. The city, called Aurora, is home to the descendants of those who fled a dying Earth. Over time, the ship's original purpose has been lost to myth, and the inhabitants live with the constant hum of engines and the glow of artificial sunlight. Tensions rise as resources dwindle and factions form, each with their own vision for the future. Your story could follow a young engineer who stumbles upon an ancient log from the ship's creators, revealing a shocking truth about their destination and the true nature of their journey.
+
+Or, picture a city on one of Jupiter's moons, like Europa or Ganymede. The city, New Atlantis, is a hub for interplanetary commerce and innovation, attracting scientists and entrepreneurs from across the solar system. However, beneath the city's gleaming surface, a hidden world of smugglers, black marketeers, and revolutionaries operates in the shadows. Your story could center around a brilliant but rebellious astrobiologist who discovers a long-dormant alien microorganism in the moon's subsurface ocean, threatening to upend the delicate balance of power in the city.
+
+Another possibility is a city on a massive, nomadic space station built into the hollowed-out core of an asteroid. This city, Kyrios, is a lawless frontier town, home to prospectors, scavengers, and explorers. The station is ruled by a mysterious Council of Elders, who maintain control through a complex web of intrigue and deception. Your story could follow a young orphan who possesses a rare gift – the ability to navigate the treacherous asteroid fields – and becomes embroiled in a struggle for power and survival as rival factions vie for control of the station.
+
+Alternatively, consider a city on a Mars terraforming platform, where scientists and engineers work tirelessly to make the red planet habitable for humanity. Your story could focus on a psychologist tasked with evaluating the mental health of the platform's crew, only to discover a disturbing trend of strange visions and nightmares that seem to be connected to the very fabric of the Martian environment.
+
+Lastly, imagine a city on a Dyson sphere, a megastructure encompassing a star to harness its energy. This city, Elysium, is a utopia where technology and nature coexist in harmony. However, as the protagonist, a gifted mathematician, delves deeper into the workings of the sphere, they begin to realize that the city's perfection is an illusion, and that the true cost of their paradise may be higher than they ever imagined.
+
+Each of these settings offers a unique blend of science fiction and social commentary, allowing you to explore complex themes and ideas in a thought-provoking and engaging narrative.<|im_end|><|endoftext|>]]]
+
+ ========== Example 8 ==========
+
+ --- Input --- 
+
+[[[<|im_start|>user
+I am starting a non-profit organization and would like help in planning the process. What steps should I take?<|im_end|>
+<|im_start|>assistant
+]]]
+
+ --- Output --- 
+
+[[[Congratulations on starting your non-profit organization. The process can be complex, but with a clear plan, you can navigate it efficiently. Here's a step-by-step guide to help you get started:
+
+First, define your mission and purpose. Determine the cause or issue your organization aims to address, and craft a concise mission statement that captures your goals and values. This will serve as the foundation for your organization and guide your decision-making process.
+
+Next, conduct a needs assessment to understand the landscape of your cause and identify gaps in services or resources. Research existing organizations, their programs, and the population they serve. This will help you understand how your organization can fill a unique need and make a meaningful impact.
+
+With your mission and needs assessment in place, develop a business plan that outlines your organizational structure, goals, and financial projections. Define your leadership team, board of directors, and staffing needs. Create a budget and financial plan, including funding strategies and potential revenue streams.
+
+Now, it's time to register your non-profit organization. Choose a name, obtain an Employer Identification Number (EIN) from the IRS, and file for 501(c)(3) tax-exempt status. You'll also need to register with your state's charity registration office and obtain any necessary licenses and permits.
+
+While waiting for your tax-exempt status to be approved, establish a strong online presence by creating a website and social media accounts. Develop a brand identity, including a logo and messaging, to help build your organization's reputation and attract supporters.
+
+Once you have your tax-exempt status, you can begin applying for grants, soliciting donations, and building partnerships with other organizations. Develop a fundraising plan that includes a mix of individual donations, corporate sponsorships, and grant funding.
+
+Finally, establish a system for tracking finances, measuring impact, and evaluating progress. This will help you make informed decisions, ensure transparency, and demonstrate accountability to your donors and stakeholders. By following these steps, you'll be well on your way to establishing a successful non-profit organization that makes a meaningful difference in your community.<|im_end|><|endoftext|>]]]
+
+ ========== Example 9 ==========
+
+ --- Input --- 
+
+[[[<|im_start|>user
+Adam had a farm with animals. He had 12 cows and twice as many sheep. He decided to buy 3 pigs for every sheep he had. How many animals were on the farm after the transaction?<|im_end|>
+<|im_start|>assistant
+]]]
+
+ --- Output --- 
+
+[[[Adam had 12 cows.
+He had twice as many sheep as cows, so he had 12 * 2 = 24 sheep.
+He decided to buy 3 pigs for every sheep he had, so he bought 24 * 3 = 72 pigs.
+In total, after the transaction, Adam had 12 cows + 24 sheep + 72 pigs = 108 animals on the farm.
+#### 108
+The answer is: 108<|im_end|><|endoftext|>]]]

@@ -122,11 +122,22 @@ ICI mesh axis length to 64:
 ```sh
 python3 torchprime/torch_xla_models/train.py \
     model=mixtral-8x7b \
-    global_batch_size=256 \
+    task=train \
+    dataset=wikitext \
+    task.global_batch_size=256 \
     ici_mesh.fsdp=64
 ```
 
 You may refer to the hydra docs for other ways to specify configs.
+
+To fine-tune a pretrained model using the gsm8k (Grade School Math question-answer) dataset, run
+
+```sh
+python3 torchprime/torch_xla_models/train.py --config-name llama-3-8b-sft-w-gsm8k
+```
+
+This uses the `llama-3-8b-sft-w-gsm8k.yaml` config which selects the SFT trainer and
+dataset automatically.
 
 ### Multi-VM distributed training
 
@@ -141,11 +152,12 @@ Example:
 ```sh
 tp use \
     --cluster <XPK CLUSTER NAME> \
-    --project my-gcp-project \
+    --project <my-gcp-project> \
+    --docker-project <my-docker-project-if-it-is-different-from-gcp-project> \
     --zone us-east5-b \
     --num-slices 1 \
     --tpu-type v6e-256 \
-    --artifact-dir gs://bucket/dir
+    --artifact-dir <my-gs-bucket-dir>
 ```
 
 `torchprime` natively supports [multi-slice or multi-pod][multi-slice] training.
@@ -161,7 +173,7 @@ would like to run remotely, including arguments, e.g.
 # Train Llama 3.0 8B on 256 chips
 tp run torchprime/torch_xla_models/train.py \
     model=llama-3-8b \
-    global_batch_size=256 \
+    task.global_batch_size=256 \
     ici_mesh.fsdp=256
 ```
 
@@ -189,6 +201,11 @@ Besides forwarding your command line arguments, `tp run` will add:
   accessible by the workload
 - `output_dir=[...]` path to a directory where the workload may store output
   artifacts such as metrics and checkpoints
+
+#### Troubleshooting distributed training setup
+
+See the guide to [troubleshoot distributed training][troubleshoot-distributed]
+for troubleshooting tools and an FAQ. 
 
 ## Supported Models
 
@@ -232,6 +249,11 @@ Contributions are welcome! Please feel free to submit a pull request.
 
 Refer to the [contributor guide](./docs/contributor/README.md) to get started.
 
+## Questions and suggestions
+
+Feel free to ask questions in the [Discussions][discussions] panel, or to look
+at previous questions and discussions.
+
 ## License
 
 This project is licensed under the New BSD License - see the [LICENSE](LICENSE)
@@ -242,6 +264,7 @@ documentation](https://github.com/pytorch/xla).
 
 [torch_xla]: https://github.com/pytorch/xla
 [fsdp]: https://jax-ml.github.io/scaling-book/training/#fully-sharded-data-parallelism-fsdp
+[discussions]: https://github.com/AI-Hypercomputer/torchprime/discussions/categories/q-a
 [xpk]: https://github.com/AI-Hypercomputer/xpk
 [torch_xla_debug_env]:
     https://github.com/pytorch/xla/blob/master/docs/source/learn/troubleshoot.md#environment-variables
@@ -254,3 +277,4 @@ documentation](https://github.com/pytorch/xla).
 [tpu-slice]: https://cloud.google.com/tpu/docs/system-architecture-tpu-vm#slices
 [accelerator-type]: https://cloud.google.com/tpu/docs/multislice-introduction#concepts
 [multi-slice]: https://cloud.google.com/tpu/docs/multislice-introduction
+[troubleshoot-distributed]: https://github.com/AI-Hypercomputer/torchprime/docs/troubleshoot-distributed.md

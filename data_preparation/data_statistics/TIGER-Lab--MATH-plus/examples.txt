@@ -1,0 +1,241 @@
+
+
+ ========== Example 0 ==========
+
+ --- Input --- 
+
+[[[<|im_start|>system
+Place the final answer to the following question inside of a \boxed{} command. This must come at the end of your response, and no other text should come after it.<|im_end|>
+<|im_start|>user
+Convert the point $(\rho,\theta,\phi) = \left( 2, \frac{2 \pi}{3}, \frac{\pi}{4} \right)$ in spherical coordinates to rectangular coordinates.<|im_end|>
+<|im_start|>assistant
+]]]
+
+ --- Output --- 
+
+[[[We have that $\rho = 2,$ $\theta = \frac{2 \pi}{3},$ and $\phi = \frac{\pi}{4},$ so
+\begin{align*}
+x &= \rho \sin \phi \cos \theta = 2 \sin \frac{\pi}{4} \cos \frac{2 \pi}{3} = -1, \\
+y &= \rho \sin \phi \sin \theta = 2 \sin \frac{\pi}{4} \sin \frac{2 \pi}{3} = \sqrt{3}, \\
+z &= \rho \cos \phi = 2 \cos \frac{\pi}{4} = \sqrt{2}.
+\end{align*}Therefore, the rectangular coordinates are $\boxed{(-1, \sqrt{3}, \sqrt{2})}.$ The answer is (-1, \sqrt{3}, \sqrt{2}).
+Final answer: \boxed{(-1, \sqrt{3}, \sqrt{2})}<|im_end|><|endoftext|>]]]
+
+ ========== Example 1 ==========
+
+ --- Input --- 
+
+[[[<|im_start|>system
+Place the final answer to the following question inside of a \boxed{} command. This must come at the end of your response, and no other text should come after it.<|im_end|>
+<|im_start|>user
+Two sectors of a circle of radius $10$ overlap as shown, with $P$ and $R$ as the centers of the respective circles. Determine the area of the shaded region.
+
+[asy]
+draw((0,0)--(8.6603,-5)--(17.3205,0)--(8.6603,5)--cycle,black+linewidth(1));
+filldraw((8.6603,5)..(10,0)..(8.6603,-5)--cycle,gray,black+linewidth(1));
+filldraw((8.6603,5)..(6.9282,0)..(8.6603,-5)--cycle,gray,black+linewidth(1));
+label("$P$",(0,0),W);
+label("$Q$",(8.6603,5),N);
+label("$R$",(17.3205,0),E);
+label("$S$",(8.6603,-5),S);
+label("$60^\circ$",(0,0),2E);
+label("$60^\circ$",(17.3205,0),2W);
+[/asy]<|im_end|>
+<|im_start|>assistant
+]]]
+
+ --- Output --- 
+
+[[[By symmetry, the areas of the two parts of the shaded region are equal. Consider the right part of the shaded region and the left triangle.
+
+[asy]
+draw((0,0)--(8.6603,-5)--(8.6603,5)--cycle,black+linewidth(1));
+filldraw((8.6603,5)..(10,0)..(8.6603,-5)--cycle,gray,black+linewidth(1));
+draw((0,0)--(8.6603,0),black+linewidth(1));
+draw((8.6603,0)--(7.6603,0)--(7.6603,1)--(8.6603,1),black+linewidth(1));
+label("$P$",(0,0),W);
+label("$Q$",(8.6603,5),N);
+label("$S$",(8.6603,-5),S);
+label("$Z$",(8.6603,0),SW);
+[/asy]
+
+The shaded area is equal to the area of sector $PQS$ minus the area of triangle $PQS.$
+
+Since $\angle PQS = 60^\circ$ and $PQ = 10,$ the area of sector $PQS$ is
+\[\frac{1}{6} \cdot 10^2 \cdot \pi = \frac{50}{3} \pi.\]Also, triangle $PQS$ is equilateral with side length 10, so its area is
+\[\frac{\sqrt{3}}{4} \cdot 10^2 = 25 \sqrt{3}.\]Thus, the area of the right part of the shaded region is $\frac{50}{3}\pi - 25\sqrt{3},$ so the area of the entire shaded region is $$2\left(\frac{50}{3}\pi-25\sqrt{3}\right)=\boxed{\frac{100}{3}\pi-50\sqrt{3}}.$$ The answer is \frac{100}{3}\pi-50\sqrt{3}.
+Final answer: \boxed{\frac{100}{3}\pi-50\sqrt{3}}<|im_end|><|endoftext|>]]]
+
+ ========== Example 2 ==========
+
+ --- Input --- 
+
+[[[<|im_start|>system
+Place the final answer to the following question inside of a \boxed{} command. This must appear at the start of your response before any other text.<|im_end|>
+<|im_start|>user
+The areas of two similar regular hexagons are in the ratio $49:81$. What is the ratio of their perimeters? Express your answer in the form $a:b$.<|im_end|>
+<|im_start|>assistant
+]]]
+
+ --- Output --- 
+
+[[[\boxed{7:9}
+In general, if the ratio of the perimeters of two similar figures is $a/b$, then the ratio of their areas is $(a/b)^2$. So in this case, $(a/b)^2 = 49/81$, or $a/b = 7/9$. So the answer is $\boxed{7:9}$. The answer is 7:9.<|im_end|><|endoftext|>]]]
+
+ ========== Example 3 ==========
+
+ --- Input --- 
+
+[[[<|im_start|>system
+Place the final answer to the following question inside of a \boxed{} command. This must appear at the start of your response before any other text.<|im_end|>
+<|im_start|>user
+A hexagon is inscribed in a circle. Five of the sides have length $100$ and the sixth, denoted by $\overline{AB}$, has length $20$. Find the sum of the lengths of the three diagonals that can be drawn from $A$.<|im_end|>
+<|im_start|>assistant
+]]]
+
+ --- Output --- 
+
+[[[\boxed{440}
+[asy]defaultpen(fontsize(9)); pair A=expi(-pi/2-acos(475/486)), B=expi(-pi/2+acos(475/486)), C=expi(-pi/2+acos(475/486)+acos(7/18)), D=expi(-pi/2+acos(475/486)+2*acos(7/18)), E=expi(-pi/2+acos(475/486)+3*acos(7/18)), F=expi(-pi/2-acos(475/486)-acos(7/18)); draw(unitcircle);draw(A--B--C--D--E--F--A);draw(A--C..A--D..A--E); dot(A^^B^^C^^D^^E^^F); label("\(A\)",A,(-1,-1));label("\(B\)",B,(1,-1));label("\(C\)",C,(1,0)); label("\(D\)",D,(1,1));label("\(E\)",E,(-1,1));label("\(F\)",F,(-1,0)); label("20",A/2+B/2,(0.7,1));label("100",B/2+C/2,(0.45,-0.2)); label("100",C/2+D/2,(-1,-1));label("100",D/2+E/2,(0,-1)); label("100",E/2+F/2,(1,-1));label("100",F/2+A/2,(1,1)); label("\(x\)",A/2+C/2,(-1,1));label("\(y\)",A/2+D/2,(1,-1.5)); label("\(z\)",A/2+E/2,(1,0)); [/asy]
+Let $x=AC=BF$, $y=AD=BE$, and $z=AE=BD$.
+Ptolemy's Theorem on $ABCD$ gives $100y+20\cdot 100=xz$, and Ptolemy on $ACDF$ gives $x\cdot z+100^2=y^2$. Subtracting these equations give $y^2-100y-120\cdot 100=0$, and from this $y=180$. Ptolemy on $ADEF$ gives $100y+100^2=z^2$, and from this $z=140$. Finally, plugging back into the first equation gives $x=120$, so $x+y+z=120+180+140=\boxed{440}$. The answer is 440.<|im_end|><|endoftext|>]]]
+
+ ========== Example 4 ==========
+
+ --- Input --- 
+
+[[[<|im_start|>user
+Below is a portion of the graph of a quadratic function, $y=q(x)=ax^2+bx+c$:
+
+[asy]
+import graph; size(8cm); real lsf=0.5; pen dps=linewidth(0.7)+fontsize(10); defaultpen(dps); pen ds=black; real xmin=-0.99,xmax=10.5,ymin=-5.5,ymax=5.5;
+
+pen cqcqcq=rgb(0.75,0.75,0.75);
+/*grid*/ pen gs=linewidth(0.7)+cqcqcq+linetype("2 2"); real gx=1,gy=1;
+for(real i=ceil(xmin/gx)*gx;i<=floor(xmax/gx)*gx;i+=gx) draw((i,ymin)--(i,ymax),gs); for(real i=ceil(ymin/gy)*gy;i<=floor(ymax/gy)*gy;i+=gy) draw((xmin,i)--(xmax,i),gs);
+
+Label laxis; laxis.p=fontsize(10);
+
+xaxis("",xmin,xmax,Ticks(laxis,Step=1.0,Size=2,NoZero),Arrows(6),above=true); yaxis("",ymin,ymax,Ticks(laxis,Step=1.0,Size=2,NoZero),Arrows(6),above=true);
+real f1(real x){return 4-(x-8)*(x-7)/8;}
+draw(graph(f1,-0.99,10.5),linewidth(1));
+clip((xmin,ymin)--(xmin,ymax)--(xmax,ymax)--(xmax,ymin)--cycle);
+label("$y=q(x)$",(10.75,2.5),E);
+[/asy] The graph passes through the point $(0,-3)$. What is the value of $q(16)$?<|im_end|>
+<|im_start|>assistant
+]]]
+
+ --- Output --- 
+
+[[[Observing that $q(7)=q(8),$ $q(6)=q(9),$ and so on, we see that this graph's axis of symmetry is $x=7.5$, and so $q(16)=q(-1)$.
+
+Since the graph passes through the point $(0,-3)$, we have $q(0)=-3$. By symmetry, $q(-1)=-3$, so $q(16)=\boxed{-3}$. The answer is -3.<|im_end|><|endoftext|>]]]
+
+ ========== Example 5 ==========
+
+ --- Input --- 
+
+[[[<|im_start|>user
+Three dice with faces numbered 1 through 6 are stacked as shown. Six of the eighteen faces are visible, leaving twelve faces hidden (back, bottom, between). What is the total number of dots NOT visible in this view? [asy]
+/* AMC8 2000 #8 Problem */
+draw((0,0)--(1,0)--(1.5,0.66)--(1.5,3.66)--(.5,3.66)--(0,3)--cycle);
+draw((1.5,3.66)--(1,3)--(1,0));
+draw((0,3)--(1,3));
+draw((0,1)--(1,1)--(1.5,1.66));
+draw((0,2)--(1,2)--(1.5,2.66));
+
+fill(circle((.75, 3.35), .08));
+fill(circle((.25, 2.75), .08));
+fill(circle((.75, 2.25), .08));
+fill(circle((.25, 1.75), .08));
+fill(circle((.75, 1.75), .08));
+fill(circle((.25, 1.25), .08));
+
+/* Right side */
+fill(circle((1.15, 2.5), .08));
+fill(circle((1.25, 2.8), .08));
+fill(circle((1.35, 3.1), .08));
+
+fill(circle((1.12, 1.45), .08));
+fill(circle((1.26, 1.65), .08));
+fill(circle((1.40, 1.85), .08));
+
+fill(circle((1.26, .8), .08));
+[/asy]<|im_end|>
+<|im_start|>assistant
+]]]
+
+ --- Output --- 
+
+[[[The numbers on one die total $1+2+3+4+5+6=21$, so the numbers on the three dice total 63. Numbers 1, 2, 3, 4, 5, 6 are visible, and these total 21. This leaves $63-21=\boxed{42}$ not seen. The answer is 42.<|im_end|><|endoftext|>]]]
+
+ ========== Example 6 ==========
+
+ --- Input --- 
+
+[[[<|im_start|>user
+How many factors of 8000 are perfect cubes?<|im_end|>
+<|im_start|>assistant
+]]]
+
+ --- Output --- 
+
+[[[Similarly, to count the number of perfect cube factors, we must count the factors of $2^6\cdot5^3$ that have $a=0$ or $3$ and $b=0$ or $3$. This gives $2\cdot2=\boxed{4}$ perfect cube factors. The answer is 4.<|im_end|><|endoftext|>]]]
+
+ ========== Example 7 ==========
+
+ --- Input --- 
+
+[[[<|im_start|>user
+For real numbers $x > 4,$ find the minimum value of
+\[\frac{x + 10}{\sqrt{x - 4}}.\]<|im_end|>
+<|im_start|>assistant
+]]]
+
+ --- Output --- 
+
+[[[Let $y = \sqrt{x - 4}.$  Then $y^2 = x - 4,$ so $x = y^2 + 4.$  Then
+\[\frac{x + 10}{\sqrt{x - 4}} = \frac{y^2 + 14}{y} = y + \frac{14}{y}.\]By AM-GM,
+\[y + \frac{14}{y} \ge 2\sqrt{14}.\]Equality occurs when $y = \sqrt{14},$ or $x = 18,$ so the minimum value is $\boxed{2\sqrt{14}}.$ The answer is 2\sqrt{14}.<|im_end|><|endoftext|>]]]
+
+ ========== Example 8 ==========
+
+ --- Input --- 
+
+[[[<|im_start|>user
+If $y = \displaystyle\frac{1}{3x+1}$, what is the value of $x$ when $y = 2$?<|im_end|>
+<|im_start|>assistant
+]]]
+
+ --- Output --- 
+
+[[[Since $y=2$, we have $2 =\displaystyle\frac{1}{3x+1}$.  Multiplying both sides by $3x+1$, we have $$3x+1=\frac{1}{2}$$ $$\Rightarrow \qquad 3x=-\frac{1}{2}$$ $$\Rightarrow \qquad x=\boxed{-\frac{1}{6}}$$ The answer is -\frac{1}{6}.<|im_end|><|endoftext|>]]]
+
+ ========== Example 9 ==========
+
+ --- Input --- 
+
+[[[<|im_start|>system
+Place the final answer to the following question inside of a \boxed{} command. This must come at the end of your response, and no other text should come after it.<|im_end|>
+<|im_start|>user
+Suppose $\cos Q = 0.4$ in the diagram below.  What is the length of the hypotenuse of the triangle?
+
+[asy]
+pair P,Q,R;
+P = (0,0);
+Q = (6,0);
+R = (0,6*tan(acos(0.4)));
+draw(P--Q--R--P);
+draw(rightanglemark(Q,P,R,18));
+label("$P$",P,SW);
+label("$Q$",Q,SE);
+label("$R$",R,N);
+label("$12$",Q/2,S);
+[/asy]<|im_end|>
+<|im_start|>assistant
+]]]
+
+ --- Output --- 
+
+[[[Since $\cos Q = 0.4$ and $\cos Q = \frac{QP}{QR}=\frac{12}{QR}$, we have $\frac{12}{QR} = 0.4$, so $QR = \frac{12}{0.4} = \boxed{30}$. The answer is 30.
+Final answer: \boxed{30}<|im_end|><|endoftext|>]]]

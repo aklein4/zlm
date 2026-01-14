@@ -1,0 +1,59 @@
+name: CPU tests
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+  schedule:  # Schedule the job run at 12AM PST daily.
+  - cron: "0 8 * * *"
+
+jobs:
+  setup:
+    runs-on: ubuntu-22.04
+    outputs:
+      container_date: ${{ steps.identify-date.outputs.container-date }}
+    steps:
+    - uses: actions/checkout@v4
+    - name: Set up Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: '3.11'
+    - name: Identify container date
+      id: identify-date
+      run: |
+        CONTAINER_DATE=$(python -c "import tomllib; print(tomllib.loads(open('pyproject.toml').read())['tool']['torchprime']['torch_xla_version'])")
+        echo "$CONTAINER_DATE"
+        echo "container-date=$CONTAINER_DATE" >> $GITHUB_OUTPUT
+
+  pytest:
+    needs: setup
+    runs-on: ubuntu-22.04
+    strategy:
+      matrix:
+        python-version: ["3.10", "3.11"]
+    container:
+      image: us-central1-docker.pkg.dev/tpu-pytorch-releases/docker/xla:nightly_${{ matrix.python-version }}_tpuvm_${{ needs.setup.outputs.container_date }}
+    steps:
+    - uses: actions/checkout@v4
+    - name: Install dev dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install -e '.[dev]'
+    - name: Run PyTest
+      env:
+        # TODO(https://github.com/AI-Hypercomputer/torchprime/issues/14): Remove and burn the token.
+        HF_TOKEN: ${{ secrets.HF_TOKEN }}
+      run: |
+        export PJRT_DEVICE=CPU
+        export JAX_PLATFORMS=cpu
+        export CI=true
+        pytest -v
+    - name: Run model forward
+      env:
+        # TODO(https://github.com/AI-Hypercomputer/torchprime/issues/14): Remove and burn the token.
+        HF_TOKEN: ${{ secrets.HF_TOKEN }}
+      run: |
+        export PJRT_DEVICE=CPU
+        export JAX_PLATFORMS=cpu
+        python e2e_testing/run_model_forward.py pinterest/transformer_user_action --run_type=torch_xla

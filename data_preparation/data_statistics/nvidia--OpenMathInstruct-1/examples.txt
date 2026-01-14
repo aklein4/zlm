@@ -1,0 +1,297 @@
+
+
+ ========== Example 0 ==========
+
+ --- Input --- 
+
+[[[<|im_start|>system
+Place the final answer to the following question inside of a \boxed{} command. This must appear at the start of your response before any other text.<|im_end|>
+<|im_start|>user
+Martha has 18 crayons. She lost half of them, so she bought a new set of 20 crayons. How many crayons in total does Martha have after the purchase?<|im_end|>
+<|im_start|>assistant
+]]]
+
+ --- Output --- 
+
+[[[\boxed{29}
+Let's solve this problem using Python code.
+<llm-code>
+amount_of_lost_crayons = 18 / 2
+amount_of_new_crayons = 20
+total_amount = amount_of_lost_crayons + amount_of_new_crayons
+total_amount
+</llm-code>
+<llm-code-output>
+29.0
+</llm-code-output>
+Thus Martha has \boxed{29} crayons in total.<|im_end|><|endoftext|>]]]
+
+ ========== Example 1 ==========
+
+ --- Input --- 
+
+[[[<|im_start|>user
+Noa scored 30 points to win a bowl, and Phillip scores twice that number. What is the total number of points Tom and Phillip scored to win the bowl?<|im_end|>
+<|im_start|>assistant
+]]]
+
+ --- Output --- 
+
+[[[Let's solve this problem using Python code.
+<llm-code>
+score_first_player = 30
+score_second_player = 2 * score_first_player
+score_first_player + score_second_player
+</llm-code>
+<llm-code-output>
+90
+</llm-code-output>
+Thus Tom and Phillip scored \boxed{90} points.<|im_end|><|endoftext|>]]]
+
+ ========== Example 2 ==========
+
+ --- Input --- 
+
+[[[<|im_start|>system
+Place the final answer to the following question inside of a \boxed{} command. This must appear at the start of your response before any other text.<|im_end|>
+<|im_start|>user
+In a rectangular coordinate system, what is the number of units in the distance from the origin to the point $(-15, 8)$?<|im_end|>
+<|im_start|>assistant
+]]]
+
+ --- Output --- 
+
+[[[\boxed{17}
+To find the distance between the origin $(0, 0)$ and the point $(-15, 8)$ in a rectangular coordinate system, we can use the distance formula:
+$$d = \sqrt{(x_2 - x_1)^2 + (y_2 - y_1)^2}$$
+where $(x_1, y_1)$ is the coordinate of the first point and $(x_2, y_2)$ is the coordinate of the second point.
+Substituting the values for the origin and the given point, we get:
+<llm-code>
+from sympy import sqrt
+
+x1, y1, x2, y2 = 0, 0, -15, 8
+
+distance = sqrt((x2 - x1)**2 + (y2 - y1)**2)
+distance
+</llm-code>
+<llm-code-output>
+17
+</llm-code-output>
+So the distance between the origin and the point $(-15, 8)$ is $\boxed{17}$ units.<|im_end|><|endoftext|>]]]
+
+ ========== Example 3 ==========
+
+ --- Input --- 
+
+[[[<|im_start|>system
+Place the final answer to the following question inside of a \boxed{} command. This must come at the end of your response, and no other text should come after it.<|im_end|>
+<|im_start|>user
+The four-digit numeral $3AA1$ is divisible by 9. What digit does $A$ represent?<|im_end|>
+<|im_start|>assistant
+]]]
+
+ --- Output --- 
+
+[[[To solve this, we will find the possible values for $A$ that make $3AA1$ divisible by 9 using Python.
+<llm-code>
+def is_divisible_by_9(numeral):
+    return numeral % 9 == 0
+
+for a in range(10):
+    numeral = str(3 * 100 + a * 10 + a * 10 + 1)
+    if is_divisible_by_9(int(numeral)):
+        print(f"When A is {a}, the numeral 3AA1 is divisible by 9.")
+</llm-code>
+<llm-code-output>
+When A is 7, the numeral 3AA1 is divisible by 9.
+</llm-code-output>
+So $A$ represents $\boxed{7}$
+Final answer: \boxed{7}<|im_end|><|endoftext|>]]]
+
+ ========== Example 4 ==========
+
+ --- Input --- 
+
+[[[<|im_start|>user
+Of the 90 people on William's bus, 3/5 were Dutch. Of the 1/2 of the Dutch who were also American, 1/3 got window seats. What's the number of Dutch Americans who sat at the windows?<|im_end|>
+<|im_start|>assistant
+]]]
+
+ --- Output --- 
+
+[[[Let's solve this problem using Python code.
+<llm-code>
+number_of_passengers = 90
+number_of_dutch_passengers = 3 / 5 * number_of_passengers
+number_of_dutch_american_passengers = 1 / 2 * number_of_dutch_passengers
+window_sitting_passengers = 1 / 3 * number_of_dutch_american_passengers
+window_sitting_passengers
+</llm-code>
+<llm-code-output>
+9.0
+</llm-code-output>
+Thus the number of Dutch Americans that sat at the windows is \boxed{9}.<|im_end|><|endoftext|>]]]
+
+ ========== Example 5 ==========
+
+ --- Input --- 
+
+[[[<|im_start|>system
+Place the final answer to the following question inside of a \boxed{} command. This must appear at the start of your response before any other text.<|im_end|>
+<|im_start|>user
+Jaynie wants to make leis for the graduation party.  It will take 2 and half dozen plumeria flowers to make 1 lei.  If she wants to make 4 leis, how many plumeria flowers must she pick from the trees in her yard?<|im_end|>
+<|im_start|>assistant
+]]]
+
+ --- Output --- 
+
+[[[\boxed{120}
+Let's solve this problem using Python code.
+<llm-code>
+# the multiplication step
+number_of_flowers_for_one_lei = 2.5 * 12
+
+# repeat it for 4 times
+number_of_flowers_for_four_leis = number_of_flowers_for_one_lei * 4
+number_of_flowers_for_four_leis
+</llm-code>
+<llm-code-output>
+120.0
+</llm-code-output>
+Thus Jaynie has to pick \boxed{120} flowers.<|im_end|><|endoftext|>]]]
+
+ ========== Example 6 ==========
+
+ --- Input --- 
+
+[[[<|im_start|>system
+Place the final answer to the following question inside of a \boxed{} command. This must come at the end of your response, and no other text should come after it.<|im_end|>
+<|im_start|>user
+The price of an iPhone fell 10% in a particular month and another 20% in the second month.  If the initial price was $1000, calculate the price after the second month.<|im_end|>
+<|im_start|>assistant
+]]]
+
+ --- Output --- 
+
+[[[Let's solve this problem using Python code.
+<llm-code>
+starting_price = 1000
+price_in_first_month = starting_price - starting_price * 10 / 100
+price_in_second_month = price_in_first_month - price_in_first_month * 20 / 100
+price_in_second_month
+</llm-code>
+<llm-code-output>
+720.0
+</llm-code-output>
+Thus the new price after the second month is \boxed{720} dollars.
+Final answer: \boxed{720}<|im_end|><|endoftext|>]]]
+
+ ========== Example 7 ==========
+
+ --- Input --- 
+
+[[[<|im_start|>user
+Lennon is a sales rep and is paid $0.36 in mileage reimbursement when he travels to meet with clients.  On Monday he drove 18 miles.  Tuesday he drove 26 miles.  Wednesday and Thursday he drove 20 miles each day and on Friday he drove 16 miles.  How much money will he be reimbursed?<|im_end|>
+<|im_start|>assistant
+]]]
+
+ --- Output --- 
+
+[[[Let's solve this problem using Python code.
+<llm-code>
+monday_distance = 18
+tuesday_distance = 26
+wednesday_distance = 20
+thursday_distance = 20
+friday_distance = 16
+
+# sum up daily distances
+total_distance = monday_distance + tuesday_distance + wednesday_distance + thursday_distance + friday_distance
+
+# multiply distance traveled with reimbursement rate
+reimbursement_amount = total_distance * 0.36
+
+# sum up to get the total
+reimbursement_amount
+</llm-code>
+<llm-code-output>
+36.0
+</llm-code-output>
+Thus the total amount that Lennon is reimbursed is \boxed{36} dollars.<|im_end|><|endoftext|>]]]
+
+ ========== Example 8 ==========
+
+ --- Input --- 
+
+[[[<|im_start|>system
+Place the final answer to the following question inside of a \boxed{} command. This must come at the end of your response, and no other text should come after it.<|im_end|>
+<|im_start|>user
+Susan wants to throw a party for her mom. She is planning on having 30 guests. For dinner she is making a recipe that makes 2 servings each. Each batch of the recipe calls for 4 potatoes and 1 teaspoon of salt. A potato costs $.10 and a container of salt costs $2 at the supermarket. If each container of salt has 5 teaspoons, how much money will Susan spend on food?<|im_end|>
+<|im_start|>assistant
+]]]
+
+ --- Output --- 
+
+[[[Let's solve this problem using Python code.
+<llm-code>
+servings_per_batch = 2
+servings_for_all_guests = 30
+batches_needed = servings_for_all_guests / servings_per_batch
+# batches needed = 15
+
+# potatoes in 1 batch
+potatoes_per_batch = 4
+potatoes_needed = potatoes_per_batch * batches_needed
+# potatoes needed = 60
+
+# salt in 1 batch
+salt_per_batch = 1
+teaspoons_needed = salt_per_batch * batches_needed
+# teaspoons needed = 15
+
+# salt containers per teaspoon
+containers_per_teaspoon = 5
+containers_needed = teaspoons_needed / containers_per_teaspoon
+# containers needed = 3
+
+# potatoes cost
+potatoes_cost = potatoes_needed * 0.1
+# salt cost
+salt_cost = containers_needed * 2
+# total cost
+total_cost = potatoes_cost + salt_cost
+total_cost
+</llm-code>
+<llm-code-output>
+12.0
+</llm-code-output>
+Thus the total cost comes to \boxed{12} dollars.
+Final answer: \boxed{12}<|im_end|><|endoftext|>]]]
+
+ ========== Example 9 ==========
+
+ --- Input --- 
+
+[[[<|im_start|>system
+Place the final answer to the following question inside of a \boxed{} command. This must appear at the start of your response before any other text.<|im_end|>
+<|im_start|>user
+A bottle of wine costs $20.00 today.  When new tariffs are imposed in 2 months, the price of wine will increase by 25%.  How much more expensive will 5 bottles of wine be in 2 months?<|im_end|>
+<|im_start|>assistant
+]]]
+
+ --- Output --- 
+
+[[[\boxed{25}
+Let's solve this problem using Python code.
+<llm-code>
+price_per_bottle = 20
+number_of_bottles = 5
+new_tariff_percentage = 25
+new_price_per_bottle = price_per_bottle + price_per_bottle * new_tariff_percentage / 100
+new_price_for_five_bottles = number_of_bottles * new_price_per_bottle
+new_price_for_five_bottles - 5 * price_per_bottle
+</llm-code>
+<llm-code-output>
+25.0
+</llm-code-output>
+Thus when new tariffs are imposed, 5 bottles of wine will be \boxed{25} dollars more expensive.<|im_end|><|endoftext|>]]]

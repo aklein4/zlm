@@ -1,0 +1,9 @@
+{
+    "num_examples": 2326119,
+    "total_tokens": 834483845,
+    "input_tokens": 179466527,
+    "output_tokens": 655017318,
+    "mean_total_length": 358.75,
+    "mean_input_length": 77.15,
+    "mean_output_length": 281.59
+}

@@ -1,0 +1,14 @@
+# Weights
+model.embed_tokens.weight: [fsdp, null]
+model.layers.*.self_attn.qkv_proj.weight: [fsdp, null]
+model.layers.*.self_attn.o_proj.weight: [fsdp, null]
+model.layers.*.mlp.gate_up_proj.weight: [fsdp, null]
+model.layers.*.mlp.down_proj.weight: [null, fsdp]
+model.layers.*.input_layernorm.weight: [fsdp]
+model.layers.*.post_attention_layernorm.weight: [fsdp]
+model.norm.weight: [fsdp]
+lm_head.weight: [fsdp, null]
+
+# Activations
+model.layers.*: [[data, fsdp], null, null]
+lm_head: [[data, fsdp], null, null]

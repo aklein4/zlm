@@ -1,0 +1,27 @@
+
+[1/23] Goedel-LM--Goedel-Pset-v1: SUCCESS (1_713_126 examples, 659_929_585 tokens)
+[2/23] HuggingFaceTB--smoltalk--all: SUCCESS (1_017_863 examples, 419_066_235 tokens)
+[3/23] HuggingFaceTB--smoltalk2--SFT: SUCCESS (2_028_452 examples, 1_023_437_717 tokens)
+[4/23] OpenDataArena--ODA-Math-460k: SUCCESS (428_610 examples, 271_216_906 tokens)
+[5/23] TIGER-Lab--MATH-plus: SUCCESS (892_633 examples, 275_717_949 tokens)
+[6/23] TIGER-Lab--WebInstructSub: SUCCESS (2_326_119 examples, 834_483_845 tokens)
+[7/23] allenai--sciq: SUCCESS (11_679 examples, 1_889_718 tokens)
+[8/23] facebook--natural_reasoning: SUCCESS (936_899 examples, 732_347_448 tokens)
+[9/23] math-ai--StackMathQA--stackmathqa800k: SUCCESS (786_709 examples, 321_531_034 tokens)
+[10/23] meta-math--MetaMathQA: SUCCESS (394_465 examples, 112_378_983 tokens)
+[11/23] nampdn-ai--tiny-codes: SUCCESS (1_220_738 examples, 435_638_307 tokens)
+[12/23] nvidia--AceMath-Instruct-Training-Data: SUCCESS (4_814_219 examples, 2_783_152_092 tokens)
+[13/23] nvidia--AceReason-1.1-SFT: SUCCESS (3_445_973 examples, 2_470_355_398 tokens)
+[14/23] nvidia--Nemotron-Instruction-Following-Chat-v1--chat_if: SUCCESS (271_271 examples, 144_065_126 tokens)
+[15/23] nvidia--Nemotron-Math-Proofs-v1--lean: SUCCESS (1_349_197 examples, 429_642_770 tokens)
+[16/23] nvidia--Nemotron-Post-Training-Dataset-v2: SUCCESS (1_074_057 examples, 794_271_967 tokens)
+[17/23] nvidia--Nemotron-PrismMath: SUCCESS (980_601 examples, 585_923_651 tokens)
+[18/23] nvidia--OpenCodeReasoning--split_0: SUCCESS (519_874 examples, 427_637_237 tokens)
+[19/23] nvidia--OpenMathInstruct-1: SUCCESS (1_578_369 examples, 415_726_692 tokens)
+[20/23] nvidia--OpenMathInstruct-2--train_2M: SUCCESS (1_944_877 examples, 1_018_284_446 tokens)
+[21/23] nvidia--OpenScience: SUCCESS (6_122_443 examples, 3_207_461_668 tokens)
+[22/23] nvidia--OpenScienceReasoning-2: SUCCESS (1_558_505 examples, 984_278_563 tokens)
+[23/23] teknium--OpenHermes-2.5: SUCCESS (979_594 examples, 360_965_143 tokens)
+
+Total examples: 36_396_273
+Total tokens: 18_709_402_480

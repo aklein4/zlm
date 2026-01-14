@@ -1,0 +1,579 @@
+
+
+ ========== Example 0 ==========
+
+ --- Input --- 
+
+[[[<|im_start|>user
+Develop a Python program snippet to Determine High Sneezing and coughing etiquette: Preventing Spread of Germs for Engineer for Experts. Incorporate if/else or switch/case statements to handle various cases related to the Bias. Dry-run, ensure your control flow logic is clear and well-commented.<|im_end|>
+<|im_start|>assistant
+]]]
+
+ --- Output --- 
+
+[[[```python 
+def determine_high_sneeze_cough_etiquette(isolation_period):
+    # check whether isolation period has been exceeded 
+    if (isolation_period >0) & (today() - last_symptomatic_day() < isolation_period):
+        return "Stay home"
+    
+    elif exposure_risk() >= risk_threshold():
+        return "Wear mask"
+        
+    else: 
+        return "Go about usual activities"
+    
+        
+# define function to calculate days since symptoms appeared    
+def today():
+    return datetime.now().date()
+    
+    
+# define function to retrieve date when patient became symptomatic   
+def first_significant_symptom_onset_date():    
+    return pd.to_datetime('2021-10-3').date()
+    
+
+# define function to calculate number of days between two dates  
+def days_between(d1, d2):
+    return abs((d1 - d2).days)
+
+    
+# define function to retrieve duration of isolation period     
+def isolation_period():
+    return timedelta(days=7)
+    
+    
+# define function to assess level of exposure risk      
+def exposure_risk():
+    # dummy variable indicating likelihood of close contact during infectious phase
+    close_contact = True
+
+    # calculate average household size within a radius of one kilometer from the index case
+    avg_hhsize = np.random.normal(4., .5, 1)[0]
+
+    # estimate probability of transmission via respiratory droplets at close range given close contact
+    exp_prob = 1 - math.exp(-.06 * days_between(first_significant_symptom_onset_date(), today()) + .89)
+
+    # apply social distancing measures if applicable
+    if not close_contact:
+        exp_prob *= .6
+
+    # multiply by average household size to get overall exposure risk
+    return exp_prob * avg_hhsize
+    
+    
+# define function to set threshold value for determining risk          
+def risk_threshold():
+    return .05
+    
+    
+# dry run to test functions        
+if __name__ == '__main__':
+    print("High Sneeze Cough Etiquette:", 
+          determine_high_sneeze_cough_etiquette(isolation_period()), "\n")
+```<|im_end|><|endoftext|>]]]
+
+ ========== Example 1 ==========
+
+ --- Input --- 
+
+[[[<|im_start|>user
+Build a Rust module snippet that Displays Extreme Security: Access Control for Decision Making for Beginners. Incorporate if/else or switch/case statements to handle different cases based on the Safety. Ensure your control flow is well-documented with comments explaining your approach.<|im_end|>
+<|im_start|>assistant
+]]]
+
+ --- Output --- 
+
+[[[```rust 
+// Define a function called display_extreme_security() that takes two arguments: `action` and `safety`.
+fn display_extreme_security(action: &str, safety: i32) {
+    // Use an if statement to determine whether the action requires high (1), medium (0), or low (-1) levels of security.
+    match safety {
+        1 => println!("{} must only be performed under extreme security conditions.", action),
+        0 => println!(
+            "{} may require some additional precautions but can still be done safely under most circumstances.",
+            action
+        ),
+        -1 => println!("{} should generally not be attempted unless absolutely necessary.", action),
+        _ => panic!("Invalid value for 'safety'."),
+    }
+}
+
+// Call the display_extreme_security() function with appropriate input values.
+display_extreme_security("hacking", 1);    // Output: "Hacking must only be performed under extreme security conditions."
+display_extreme_security("data analysis", 0); // Output: "Data analysis may require some additional precautions but can still be done safely under most circumstances."
+display_extreme_security("skydiving", -1);   // Output: "Skydiving should generally not be attempted unless absolutely necessary."
+```<|im_end|><|endoftext|>]]]
+
+ ========== Example 2 ==========
+
+ --- Input --- 
+
+[[[<|im_start|>user
+Develop a C# program snippet to Update Low Online Shopping: Product Availability for Analysis for Experts. Incorporate if/else or switch/case statements to handle various cases related to the Privacy. Dry-run, ensure your control flow logic is clear and well-commented.<|im_end|>
+<|im_start|>assistant
+]]]
+
+ --- Output --- 
+
+[[[```c#
+// Define variables
+string customerName = "John Doe";
+bool isMinor = false;
+DateTime birthDate = new DateTime(1980, 2, 5);
+
+// Check whether customer is underage based on their date of birth
+if (birthDate > DateTime.Today.AddYears(-18))
+{
+    Console.WriteLine("Customer is not considered a minor");
+}
+else
+{
+    Console.WriteLine("Customer is considered a minor");
+    isMinor = true;
+}
+
+// Prompt user to enter their ZIP code
+Console.Write("Enter ZIP code: ");
+string zipCode = Console.ReadLine();
+
+// Determine which privacy scenario applies based on ZIP code
+if (zipCode == "XXXXX") // Scenario 1: Customer lives within the same state as the retailer
+{
+    Console.WriteLine($"Updating {customerName}'s information with latest purchase history...");
+}
+else if (isMinor && zipCode != "YYYYY") //Scenario 2: Minor customer resides outside of the state where they made purchases
+{
+    Console.WriteLine($"Obtaining parental consent from {customerName}'s legal guardian before updating their information.");
+}
+else // All other scenarios
+{
+    Console.WriteLine($"{customerName}'s information will remain private.");
+}
+```<|im_end|><|endoftext|>]]]
+
+ ========== Example 3 ==========
+
+ --- Input --- 
+
+[[[<|im_start|>user
+Develop a Python program snippet to Check Extreme Ear hygiene: Cleaning Outer Ear for Analysis for Experts. Incorporate if/else or switch/case statements to handle various cases related to the Responsibility. Dry-run, ensure your control flow logic is clear and well-commented.<|im_end|>
+<|im_start|>assistant
+]]]
+
+ --- Output --- 
+
+[[[```python 
+# Define functions
+def clean_ear():
+    # Ask questions 
+    condition = input("Does the patient experience pain when moving their jaw? (y/n): ")
+    
+    if condition == "y":
+        print("The patient may need more extensive cleaning of their outer ear.")
+        
+    elif condition == "n":
+        print("Regular cleaning of the outer ear may suffice")
+
+    else: 
+        print("Invalid Input! Please try again.")
+
+
+def main():
+    while True:    
+        choice = input("""Choose an option:
+        1 - Perform regular cleaning 
+        2 - Perform extreme cleaning
+        3 - Quit
+        Your selection: """)
+    
+        if choice == '1':
+            clean_ear()
+        
+        elif choice == '2':
+            print("Extreme cleaning procedure initiated!")
+
+        elif choice == '3': 
+            print("Thank you for using our app!")
+            break 
+
+        else: 
+            print("Invalid Selection! Try Again.")
+
+
+
+if __name__ == '__main__':
+    main()
+```<|im_end|><|endoftext|>]]]
+
+ ========== Example 4 ==========
+
+ --- Input --- 
+
+[[[<|im_start|>user
+Create a TypeScript script snippet that Determines Extreme Food hygiene: Avoiding Foodborne Illnesses for Analysis for Experts. Use if/else or switch/case statements to conditionally perform different actions based on the Transparency. Dry-run, then include comments that outline the control flow and how you handle different scenarios.<|im_end|>
+<|im_start|>assistant
+]]]
+
+ --- Output --- 
+
+[[[```typescript 
+function determineExtremeFoodHygiene(data : any) {
+  // dry run 
+  console.log("Dry Run:")
+
+  let extreme = false;
+  
+  const ratings = [
+    "A", 
+    "B", 
+    "C", 
+    "U" // unrated
+  ];
+
+  const transparency = data["transparency"];
+
+  if (transparency === undefined || transparency === null){
+      throw new Error(`Invalid input data - 'transparency' field not found`);
+  } else if (!Array.isArray(transparency)) {
+    throw new TypeError(`Invalid type for 'transparency' field. Expected array but got ${typeof transparency}`);
+  }
+
+  for (const rating of ratings) {
+
+    const count = transparency.filter((t) => t['rating'] === rating).length;
+    
+    if (count > 1 && !extreme) {
+        extreme = true;
+        console.log(`Found multiple entries with rating '${rating}'`)
+    } else if (count === 1) {
+        console.log(`Only one entry with rating '${rating}' found`)
+    }
+    
+  }
+
+  return extreme ? "Yes" : "No";
+}
+
+
+// Example usage: 
+try{
+  const result = determineExtremeFoodHygiene([
+    {"transparency": [{"rating":"A"}, {"rating":"B"}]},
+    {"transparency": [{"rating":"B"}]}
+  ]);
+  console.log(result);
+} catch(err) {
+  console.error(err);
+}
+
+/* Output:
+Dry Run:
+Found multiple entries with rating 'A'
+Only one entry with rating 'B' found
+No
+*/
+```<|im_end|><|endoftext|>]]]
+
+ ========== Example 5 ==========
+
+ --- Input --- 
+
+[[[<|im_start|>user
+Develop a C# program snippet to Transform Low Nail care: Preventing Nail Problems for Engineer for Experts. Incorporate if/else or switch/case statements to handle various cases related to the Trust. Dry-run, ensure your control flow logic is clear and well-commented.<|im_end|>
+<|im_start|>assistant
+]]]
+
+ --- Output --- 
+
+[[[```csharp
+    // This function takes two numbers as input 
+    // and returns their sum
+    int Add(int x, int y) {
+        return x + y;
+    }
+    
+    // Main function
+    static void Main() {
+    
+        Console.WriteLine("Enter first number:");
+        string num1 = Console.ReadLine();
+        
+        Console.WriteLine("Enter second number:");
+        string num2 = Console.ReadLine();
+        
+        try {
+            int n1 = Int32.Parse(num1);
+            int n2 = Int32.Parse(num2);
+        
+            Console.WriteLine("Sum of " + num1 + " and " + num2 + " is:"
+                + Add(n1, n2));
+    
+        } catch (FormatException e) {
+            Console.WriteLine("Invalid input");
+        }
+        
+    }
+```<|im_end|><|endoftext|>]]]
+
+ ========== Example 6 ==========
+
+ --- Input --- 
+
+[[[<|im_start|>user
+Write a Ruby code snippet to Calculate Low Finance: Loan Calculations for Engineer for Experts. Consider the Safety and implement appropriate if/else or switch/case statements to handle different conditions. Dry-run, then provide comments explaining your decision-making process and how the control flow is structured.<|im_end|>
+<|im_start|>assistant
+]]]
+
+ --- Output --- 
+
+[[[```ruby 
+# Define constants for interest rates
+APR = 0.05 # Annual Percentage Rate (float)
+
+def calculate_low_finance(principal:, term_in_years:, monthly_interest_rate:)
+  raise ArgumentError, "Monthly Interest Rate must be greater than zero" unless monthly_interest_rate > 0
+
+  # Convert months into years for easier math later on
+  term_in_months = term_in_years * 12
+  
+  # Calculate simple interest formula 
+  simple_interest = principal * monthly_interest_rate * term_in_months / 12.0
+
+  # Calculate compound interest formula using continuously compounded rate
+  cc_monthly_interest_rate = (1 + APR / 12.0).pow(-12) - 1
+  compound_interest = principal * cc_monthly_interest_rate ** term_in_months
+
+  {
+    principal: principal, 
+    term_in_years: term_in_years, 
+    monthly_interest_rate: monthly_interest_rate, 
+    apr: APR, 
+    simple_interest: simple_interest, 
+    compound_interest: compound_interest, 
+    total_interest: compound_interest - simple_interest
+  }
+end
+
+
+inputs = {
+  principal: 10000.0, # Principal amount (float)
+  term_in_years: 3.0, # Term in years (float)
+  monthly_interest_rate: 0.04 # Monthly Interest Rate (float)
+}
+
+results = {} # Initialize empty results hash
+
+# Loop over all possible inputs and run calculations
+inputs.each do |key, value|
+  results[key] = calculate_low_finance(**{ key => value }) 
+end
+
+# Print out calculated results along with explanatory notes
+puts "\nLoan Calculations for #{inputs[:term_in_years].round(1)} Years at #{inputs[:monthly_interest_rate]}% Interest\n"
+puts "Principal: $#{inputs[:principal]}"
+puts "Term: #{inputs[:term_in_years]} Years"
+puts "Monthly Interest Rate: #{inputs[:monthly_interest_rate]}%"
+puts "Annual Percentage Rate: #{inputs[:apr]*100}% (based on monthy rate)"
+puts ""
+puts "| Equation               | Result                    | Comment                                                                                         |"
+puts "|------------------------|---------------------------|-------------------------------------------------------------------------------------------------|"'
+puts "| Simple Interest        | $#{results[:simple_interest].round(2)}      | Paid every month                                                                                |"
+puts "| Compound Interest      | $#{results[:compound_interest].round(2)}    | Accrued daily from start date until end date                                                    |"
+puts "| Total Interest         | $#{results[:total_interest].round(2)}       | Sum of simple and compound interest                                                            |"
+puts ""
+```<|im_end|><|endoftext|>]]]
+
+ ========== Example 7 ==========
+
+ --- Input --- 
+
+[[[<|im_start|>user
+Build a Rust module snippet that Transforms High Fitness: Exercise Tracking for Analysis for Beginners. Incorporate if/else or switch/case statements to handle different cases based on the Reliability. Ensure your control flow is well-documented with comments explaining your approach.<|im_end|>
+<|im_start|>assistant
+]]]
+
+ --- Output --- 
+
+[[[```rust 
+// Define a struct to hold information about each exercise
+struct Exercise {
+    name: String,
+    sets: i32,
+    reps: i32,
+    weight: f64,
+    date: NaiveDate,
+    reliability: f64, // A value between 0 and 1 indicating how reliable the measurement was
+}
+
+// Function to calculate the total number of reps performed for an exercise
+fn calc_reps(exercise: &Exercise) -> i32 {
+    return exercise.sets * exercise.reps;
+}
+
+// Function to calculate the total weight lifted for an exercise
+fn calc_weight(exercise: &Exercise) -> f64 {
+    return exercise.sets as f64 * exercise.repetitions as f64 * exercise.weight;
+}
+
+// Function to determine whether an exercise was completed successfully (reliability > threshold)
+fn successful_completion(exercise: &Exercise, threshold: f64) -> bool {
+    return exercise.reliability >= threshold;
+}
+
+// Main function
+fn main() {
+    let mut exercises = Vec::new();
+
+    // Add some sample exercises
+    exercises.push(Exercise {
+        name: "Squats".to_string(),
+        sets: 5,
+        reps: 8,
+        weight: 90.0,
+        date: NaiveDate::from_ymd(2023, 2, 17),
+        reliability: 0.8,
+    });
+    exercises.push(Exercise {
+        name: "Bench Press".to_string(),
+        sets: 3,
+        reps: 10,
+        weight: 100.0,
+        date: NaiveDate::from_ymd(2023, 2, 10),
+        reliability: 0.6,
+    });
+    exercises.push(Exercise {
+        name: "Deadlifts".to_string(),
+        sets: 2,
+        reps: 6,
+        weight: 120.0,
+        date: NaiveDate::from_ymd(2023, 2, 24),
+        reliability: 0.9,
+    });
+
+    // Calculate the total number of reps and weight lifted for all exercises
+    let total_reps = exercises.iter().map(|e| calc_reps(e)).sum::<i32>();
+    println!("Total Reps: {}", total_reps);
+
+    let total_weight = exercises.iter().map(|e| calc_weight(e)).sum::<f64>();
+    println!("Total Weight Lifted: {:.2}", total_weight);
+
+    // Determine which exercises were successful based on a reliability threshold of 0.7
+    let successful_exercises = exercises
+        .into_iter()
+        .filter(|e| successful_completion(e, 0.7))
+        .collect::<Vec<_>>();
+
+   println!("\nSuccessful Exercises:");
+    for e in successful_exercises {
+        println!(
+            "\t{} - {} Sets x {} Reps @ {} lbs ({:.2}%)",
+            e.name, e.sets, e.reps, e.weight, e.reliability * 100.0
+        );
+    }
+}
+```<|im_end|><|endoftext|>]]]
+
+ ========== Example 8 ==========
+
+ --- Input --- 
+
+[[[<|im_start|>user
+Build a Julia module snippet that Transforms Low Eye hygiene: Washing Hands Before Touching Eyes for Analysis for Experts. Incorporate if/else or switch/case statements to handle different cases based on the Responsibility. Ensure your control flow is well-documented with comments explaining your approach.<|im_end|>
+<|im_start|>assistant
+]]]
+
+ --- Output --- 
+
+[[[```julia
+module TransformLowEyeHygiene
+"""
+    wash_hands(person)
+Washes hands before touching eyes for `person`. Returns true if successful, false otherwise.
+"""
+function wash_hands(person::String)
+    # Determine whether person needs to wash their hands 
+    if person == "doctor"
+        return true  # Doctors always need to wash their hands before examining patients
+    elseif person == "nurse"
+        return rand() < 0.95  # Nurses sometimes need to wash their hands depending on situation
+    else 
+        return false  # All other persons do not need to wash their hands
+    end
+end
+
+
+"""
+    wear_gloves(person)
+Determines whether gloves should be used when dealing with `person`. Returns true if gloves should be worn, false otherwise.
+"""
+function wear_gloves(person::String)
+    # Gloves may be needed for some people but not others
+    if person == "doctor" || person == "lab technician"
+        return true
+    else
+        return false
+    end
+end
+
+
+
+# Example usage:
+if wash_hand("doctor") && !wear_gloves("doctor")
+    println("The doctor washes his hands then examines the patient without gloves.")
+elseif wash_hand("nurse") && !wear_gloves("nurse")
+    println("The nurse washes her hand then takes care of the patient without gloves.")
+else
+    println("No handwashing required!")
+end
+
+end # End of module
+```<|im_end|><|endoftext|>]]]
+
+ ========== Example 9 ==========
+
+ --- Input --- 
+
+[[[<|im_start|>user
+Create a Go script snippet that Checks Low Education: Grade Calculation for Engineer for Beginners. Use if/else or switch/case statements to conditionally perform different actions based on the Ethics. Dry-run, then include comments that outline the control flow and how you handle different scenarios.<|im_end|>
+<|im_start|>assistant
+]]]
+
+ --- Output --- 
+
+[[[```go
+package main
+import(
+    "fmt"
+)
+func main() {
+
+    // Mock input values 
+    marks := 38
+    totmarks := 90
+    
+    // Calculate Percentage
+    perc := float64(marks)/float64(totmarks)*100
+    
+    fmt.Println("Marks Scored:", marks)
+    fmt.Println("Total Marks:", totmarks)
+    fmt.Printf("Percentage = %.2f%%\n",perc)
+    
+    // Check if mark falls within range [0, 24] -> Fail
+    if(marks < int((float64(totmarks)/2))) {
+        fmt.Println("Result : Failed")
+    } 
+    
+    //Check if mark falls within range[50%, 74%] -> Pass with distinction
+    elif ((marks >=int((float64(totmarks)/2)) && marks <= int(50+float64(totmarks)*(0.74)))){
+        fmt.Println("Result : Passed with Distinction ")
+    }
+    
+    // All other cases -> pass
+    else {
+        fmt.Println("Result : Passed")
+    }
+    
+}
+```<|im_end|><|endoftext|>]]]

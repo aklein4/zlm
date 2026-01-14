@@ -1,0 +1,345 @@
+
+ ===== Example 0 ===== 
+
+ - Input - 
+
+[[[<s> Question:
+Question:
+Which of the following best describes the concept of "bad faith" as it is used in existentialist philosophy, particularly by Jean-Paul Sartre?
+Choices:
+A. Bad faith is the belief that one's actions are predetermined by external forces.
+B. Bad faith is the refusal to accept one's own freedom and responsibility.
+C. Bad faith is the pursuit of happiness as the ultimate goal in life.
+D. Bad faith is the acceptance of societal norms without question.
+E. Bad faith is the constant awareness of the absurdity of life.
+F. Bad faith is the rejection of all moral principles.
+G. Bad faith is the alignment of one's actions with the dictates of a higher power.
+H. Bad faith is the continuous struggle against the influence of "the Other."
+I. Bad faith is the realization that all human actions are ultimately meaningless.
+J. Bad faith is the pursuit of knowledge and truth.
+Answer:
+]]]
+
+ - Output - 
+
+[[[B 
+Explanation:
+The answer is (B). 
+
+Sartre's concept of "bad faith" centers on self-deception where individuals deny their inherent freedom and evade responsibility for their choices. This often manifests as adopting rigid identities (e.g., social roles) or attributing actions to external forces, effectively excusing oneself from the burden of autonomy. While options like A (predetermination) or D (unquestioned societal norms) might describe specific instances of bad faith, they are narrower examples of the broader refusal to confront freedom and responsibility. Sartre’s emphasis is on the existential obligation to acknowledge one’s agency, making **B** the most accurate and comprehensive choice. 
+
+The answer is ($\boxed{B}$).</s>]]]
+
+ ===== Example 1 ===== 
+
+ - Input - 
+
+[[[<s> Question:
+Question:
+In the context of global health, which of the following events or developments has had the most significant and enduring impact on international health policies and public health strategies?
+Choices:
+A. The SARS outbreak in 2003
+B. The Ebola epidemic in West Africa from 2014 to 2016
+C. The HIV/AIDS pandemic beginning in the 1980s
+D. The H1N1 (Swine Flu) pandemic in 2009
+E. The Polio eradication initiative launched in 1988
+F. The global anti-tobacco campaign initiated by the WHO in the 1990s
+G. The MERS outbreak in 2012
+H. The Zika virus outbreak in 2015-2016
+I. The COVID-19 pandemic starting in 2019
+J. The eradication of smallpox in 1980
+Answer:
+]]]
+
+ - Output - 
+
+[[[The answer hinges on identifying the event or development that has fundamentally reshaped international health policies and public health strategies with the most significant and enduring impact. 
+
+**HIV/AIDS (C)** has had a profound influence since the 1980s, driving the creation of global institutions like UNAIDS and the Global Fund. It transformed approaches to treatment access, human rights in health, and mobilized unprecedented funding (e.g., PEPFAR). Its multi-sectoral impact on policy, research, and advocacy remains enduring. 
+
+**Smallpox eradication (J)**, declared in 1980, marked the first and only successful eradication of a human disease through coordinated global vaccination efforts. This achievement established the WHO’s credibility, inspired subsequent initiatives like the Expanded Programme on Immunization (EPI), and demonstrated the feasibility of international collaboration. Its legacy in shaping vaccine infrastructure, surveillance systems, and eradication strategies is foundational and irreversible. 
+
+Other options, while impactful, are less definitive:  
+- **COVID-19 (I)** has driven rapid, large-scale changes (e.g., vaccine development, COVAX), but its enduring effects are still unfolding.  
+- **Anti-tobacco campaigns (F)** led to the FCTC, a landmark treaty, but its scope is narrower.  
+- **SARS (A)**, **Ebola (B)**, and **H1N1 (D)** prompted specific reforms (e.g., revised IHR) but lack the systemic, long-term influence of smallpox or HIV/AIDS.  
+
+While both HIV/AIDS and smallpox eradication are strong candidates, **smallpox eradication** stands out as a singular success that permanently altered the global health landscape, proving the effectiveness of international cooperation and immunization strategies. Its impact is both historic and foundational, influencing all subsequent public health initiatives. 
+
+The answer is **($\boxed{J}$)**.</s>]]]
+
+ ===== Example 2 ===== 
+
+ - Input - 
+
+[[[<s> Question:
+Question:
+In a lawsuit where a software company is sued for a security breach that led to data theft, which of the following defenses is **most likely** to be successful if the plaintiff can prove that the security vulnerability existed when the software was released and that the vulnerability directly led to the data theft?
+Choices:
+A. The plaintiff used the software in a manner that was not intended by the company.
+B. The security breach was caused by a sophisticated attack that could not have been reasonably anticipated.
+C. The company had no knowledge of the vulnerability at the time of release.
+D. The plaintiff failed to install a critical security update provided by the company.
+E. The data theft was a result of the plaintiff's own negligence in securing their network.
+F. The company had implemented industry-standard security practices at the time of release.
+G. The security vulnerability was introduced by a third-party service the company used.
+H. The company had a disclaimer of liability for such vulnerabilities in the user agreement.
+I. The plaintiff had previously agreed to a waiver of liability for any data breaches.
+J. The security breach was due to a flaw in a component provided by another manufacturer.
+Answer:
+]]]
+
+ - Output - 
+
+[[[The answer is (F).
+
+**Analysis:**  
+In a negligence claim, the plaintiff must prove the defendant breached a duty of care. If the company followed **industry-standard security practices at the time of release (F)**, it demonstrates they met the expected standard of care, even if a vulnerability later caused harm. This defense directly addresses negligence by showing the company acted reasonably according to prevailing norms. Other options like (C) (lack of knowledge) or (G/J) (third-party flaws) are weaker because negligence hinges on whether the company exercised due diligence, not mere ignorance or external factors. Similarly, defenses like (D) (failure to install updates) or (E) (plaintiff’s negligence) depend on unstated timelines or causation, whereas (F) aligns with the core issue of whether the company’s original practices were adequate. Disclaimers (H/I) are often unenforceable against negligence, and (B) (sophisticated attack) is less compelling if the vulnerability existed at release. Thus, (F) is the strongest defense.  
+
+The answer is ($\boxed{F}$).</s>]]]
+
+ ===== Example 3 ===== 
+
+ - Input - 
+
+[[[<s> Question:
+Question:
+In a hypothetical network protocol stack, a new layer, the "Security Layer," is introduced between the Transport Layer and the Application Layer. This layer is designed to handle encryption, authentication, and integrity checks. Which of the following statements accurately describes the impact of this new layer on the existing protocol stack, considering both the OSI and TCP/IP models?
+Choices:
+A. The Security Layer would replace the Transport Layer in both models.
+B. The Security Layer would be integrated into the existing Application Layer in both models.
+C. The Security Layer would be added as a new layer in the OSI model but not in the TCP/IP model.
+D. The Security Layer would be added as a new layer in the TCP/IP model but not in the OSI model.
+E. The Security Layer would be added as a sub-layer within the Application Layer in the OSI model and as a new layer in the TCP/IP model.
+F. The Security Layer would be added as a sub-layer within the Transport Layer in both models.
+G. The Security Layer would be added as a new layer between the Transport Layer and the Application Layer in both models.
+H. The Security Layer would be added as a sub-layer within the Transport Layer in the OSI model and as a new layer in the TCP/IP model.
+I. The Security Layer would be added as a sub-layer within the Application Layer in the TCP/IP model and as a new layer in the OSI model.
+J. The Security Layer would be integrated into the existing Session Layer in the OSI model and the Internet Layer in the TCP/IP model.
+Answer:
+]]]
+
+ - Output - 
+
+[[[The introduction of a new Security Layer between the Transport and Application Layers in a hypothetical network protocol stack impacts the OSI and TCP/IP models differently:
+
+1. **OSI Model**: The OSI model has a fixed structure with seven layers, where layers 5 (Session), 6 (Presentation), and 7 (Application) already reside above the Transport Layer (layer 4). The Security Layer's functions (encryption, authentication, integrity) align with the existing Presentation Layer (layer 6), which traditionally handles encryption and data representation. Therefore, the Security Layer would **not** be added as a new layer in the OSI model but integrated into the Presentation Layer or other existing layers.
+
+2. **TCP/IP Model**: The TCP/IP model has a more flexible structure with four layers: Network Interface, Internet, Transport, and Application. The Application Layer in TCP/IP combines functionalities from OSI’s Session, Presentation, and Application Layers. Adding a Security Layer between Transport and Application in this model effectively creates a **new layer** in TCP/IP, as there are no predefined layers above Transport to absorb these security functions.
+
+**Analysis of Options**:
+- **G**: Incorrect. The Security Layer cannot be added as a new layer in both models because the OSI model’s fixed structure does not allow inserting a new layer between Transport and Application.
+- **C**: Incorrect. The Security Layer is not added as a new layer in the OSI model, as its functions overlap with existing layers.
+- **D**: Correct. The Security Layer is added as a new layer in the TCP/IP model (between Transport and Application), while it is integrated into the Presentation Layer in the OSI model, avoiding a new layer there.
+
+The answer is **$\boxed{D}$**.</s>]]]
+
+ ===== Example 4 ===== 
+
+ - Input - 
+
+[[[<s> Instructions:
+Provide a step-by-step explanation of your reasoning for the multiple choice question below, with your final answer as a letter at the end.
+Question:
+Question:
+Consider a complex electrical network with multiple independent voltage and current sources. When applying the Superposition Theorem to find the current through a specific resistor \( R \), you need to deactivate all sources except one. Which of the following actions should be taken for each type of source when it is not the one being considered?
+Choices:
+A. Replace all voltage sources with open circuits and all current sources with short circuits.
+B. Replace all voltage sources with short circuits and all current sources with open circuits.
+C. Replace all voltage sources with their internal resistances and all current sources with open circuits.
+D. Replace all voltage sources with short circuits and all current sources with their internal resistances.
+E. Replace all voltage sources with their internal resistances and all current sources with their internal resistances.
+F. Replace all voltage sources with short circuits and all current sources with ideal voltage sources.
+G. Replace all voltage sources with open circuits and all current sources with ideal current sources.
+H. Replace all voltage sources with ideal current sources and all current sources with ideal voltage sources.
+I. Replace all voltage sources with their open circuits and all current sources with their short circuits.
+J. Replace all voltage sources with their short circuits and all current sources with their open circuits.
+Answer:
+]]]
+
+ - Output - 
+
+[[[The Superposition Theorem involves analyzing a circuit by considering one independent source at a time while deactivating all others. When deactivating sources:
+
+1. **Voltage Sources**: A deactivated voltage source (set to zero voltage) behaves like a **short circuit** because it has no voltage difference across it, effectively acting as a wire.
+2. **Current Sources**: A deactivated current source (set to zero current) behaves like an **open circuit** because it allows no current to flow, effectively breaking the path.
+
+Reviewing the options:
+- **Option A** incorrectly swaps the replacements: voltage sources are replaced with open circuits, and current sources with short circuits.
+- **Option B** correctly states: **voltage sources → short circuits, current sources → open circuits**.
+- Options **C, D, E** involve internal resistances, which are not part of the standard Superposition Theorem procedure for ideal sources.
+- Options **F, G, H, I, J** either introduce incorrect replacements or mix source types inappropriately.
+
+The correct answer is **B**, as it aligns with the proper method of deactivating sources: shorting voltage sources and opening current sources.
+
+The answer is ($\boxed{B}$).</s>]]]
+
+ ===== Example 5 ===== 
+
+ - Input - 
+
+[[[<s> Question:
+Question:
+In a certain ecosystem, there are several species of plants and animals interacting with each other. One particular plant species, Plant B, produces a chemical that attracts a specific species of pollinating insect but repels herbivores. Additionally, there is a predator species that preys on the herbivores. Which of the following scenarios best describes the complex ecological interactions in this ecosystem?
+Choices:
+A. The pollinating insect and Plant B have a mutualistic relationship, while the predator and herbivores have a predator-prey relationship.
+B. The pollinating insect and Plant B have a commensal relationship, and the predator and herbivores have a competitive relationship.
+C. The pollinating insect and Plant B have a parasitic relationship, while the predator and herbivores have a mutualistic relationship.
+D. The pollinating insect and Plant B have a mutualistic relationship, and the predator and herbivores have a competitive relationship.
+E. The pollinating insect and Plant B have a commensal relationship, while the predator and herbivores have a predator-prey relationship.
+F. The pollinating insect and Plant B have a parasitic relationship, and the predator and herbivores have a commensal relationship.
+G. The pollinating insect and Plant B have a predator-prey relationship, while the predator and herbivores have a mutualistic relationship.
+H. The pollinating insect and Plant B have a competitive relationship, and the predator and herbivores have a commensal relationship.
+I. The pollinating insect and Plant B have a competitive relationship, while the predator and herbivores have a parasitic relationship.
+J. The pollinating insect and Plant B have a mutualistic relationship, and the predator and herbivores have a parasitic relationship.
+Answer:
+]]]
+
+ - Output - 
+
+[[[A 
+Explanation:
+The answer is ($\boxed{A}$)  
+
+**Explanation:**  
+- **Plant B and Pollinating Insect:** The plant produces a chemical that attracts the insect for pollination, while the insect aids in the plant's reproduction. This mutual benefit defines a **mutualistic relationship**.  
+- **Predator and Herbivores:** The predator preys on the herbivores, which is a classic **predator-prey relationship**.  
+
+Other options can be ruled out because:  
+- Competitive or commensal relationships (e.g., options B, E) do not describe the clear mutualism between Plant B and its pollinator.  
+- Predator-prey dynamics are distinct from competition (options D, B incorrectly label this interaction).  
+- Parasitic or other relationships (options C, F, J) are not supported by the scenario.  
+
+Thus, **(A)** correctly identifies the mutualism and predator-prey relationships.</s>]]]
+
+ ===== Example 6 ===== 
+
+ - Input - 
+
+[[[<s> Instructions:
+Select the letter of the correct answer to the question below, and explain why it is correct.
+Question:
+Question:
+In a company facing rapid technological changes, which of the following actions best illustrates a proactive approach to overcoming organizational inertia?
+Choices:
+A. The company sticks to traditional methods because they have been successful in the past.
+B. The company forms a cross-functional team to explore and implement new technologies.
+C. The company maintains a rigid hierarchy that resists any changes to existing processes.
+D. The company refuses to invest in employee training for new technologies.
+E. The company frequently restructures but fails to adapt its core business model.
+F. The company diversifies its product line without researching market needs.
+G. The company implements a flat organizational structure but avoids adopting new technologies.
+H. The company clings to outdated policies and processes, despite industry changes.
+I. The company fosters a culture of innovation and continuous improvement by encouraging employee suggestions.
+J. The company merges with another to gain a competitive edge but fails to integrate new practices.
+Answer:
+]]]
+
+ - Output - 
+
+[[[B 
+Explanation:
+The question asks which action best illustrates a proactive approach to overcoming organizational inertia in a company facing rapid technological changes. Organizational inertia refers to resistance to change, often due to rigid structures, outdated practices, or cultural complacency. A proactive approach would involve measures that anticipate and adapt to technological shifts rather than resisting them.
+
+**Option A** (sticking to traditional methods) and **H** (clinging to outdated policies) explicitly reinforce inertia by resisting change. **C** (rigid hierarchy), **D** (no training), **E** (ineffective restructuring), **F** (unresearched diversification), **G** (flat structure without tech adoption), and **J** (merger without integration) are similarly passive or counterproductive. This narrows the viable choices to **B** (cross-functional team for new tech) and **I** (culture of innovation).
+
+- **Option B** involves forming a cross-functional team to explore and implement new technologies. This directly addresses technological changes by breaking down silos, leveraging diverse expertise, and driving actionable steps to adopt innovations. It is a structural intervention that enables rapid adaptation.  
+- **Option I** fosters a culture of innovation and continuous improvement by encouraging employee suggestions. This creates a systemic environment where adaptability is ingrained in the organizational DNA, promoting ongoing responsiveness to change.  
+
+While both are proactive, **B** is more narrowly tailored to the context of "rapid technological changes." Cross-functional teams are a recognized structural mechanism for addressing technological disruptions, as they focus explicitly on exploring and implementing new tools and processes. **I**, though foundational, is broader and less specific to the technological focus of the question.  
+
+**Answer**: **B** aligns most closely with the immediate need to tackle technological shifts through concrete action, making it the best illustration of a proactive approach in this scenario.  
+
+The answer is ($\boxed{B}$).</s>]]]
+
+ ===== Example 7 ===== 
+
+ - Input - 
+
+[[[<s> Question:
+Question:
+Which of the following statements best describes the relationship between ethics and morality in contemporary philosophical discussions?
+Choices:
+A. Ethics is a subset of morality, where morality is the broader concept encompassing all ethical principles and norms.
+B. Morality is a subset of ethics, where ethics is the broader concept that includes all moral principles and norms.
+C. Ethics and morality are entirely independent concepts with no overlap.
+D. Ethics and morality are synonymous terms that can be used interchangeably in all contexts.
+E. Ethics is defined by its adherence to societal norms and rules, whereas morality thrives in the absence of such constraints.
+F. Morality is the process by which ethical principles are established, but not all moral principles are ethical.
+G. The distinction between ethics and morality is irrelevant in contemporary philosophical discourse.
+H. Ethics is a form of rational analysis, whereas morality is the emotional response that underlies ethical behavior.
+I. Morality is a necessary but not sufficient condition for the application of ethical principles.
+J. Ethics and morality are mutually exclusive concepts that cannot coexist in a single action or decision.
+Answer:
+]]]
+
+ - Output - 
+
+[[[The answer is ($\boxed{B}$)
+
+In contemporary philosophical discussions, ethics and morality are often distinguished by their scope and application. Ethics is generally understood as the broader field that encompasses the systematic study and analysis of moral principles, norms, and values. Morality, on the other hand, refers to the specific set of principles, rules, or codes of conduct that guide individual or societal behavior. Under this framework, morality can be seen as a subset of ethics because ethics includes not only the moral principles themselves but also the philosophical examination, justification, and critique of those principles. This distinction aligns with the view that ethics serves as the theoretical foundation for evaluating and understanding moral practices, making option B the most accurate description of their relationship. Other options, such as treating the terms as synonyms (D) or mutually exclusive (J), fail to capture the nuanced interplay between the two concepts in philosophical discourse.</s>]]]
+
+ ===== Example 8 ===== 
+
+ - Input - 
+
+[[[<s> Question:
+Question:
+Which of the following hormones is primarily responsible for increasing blood glucose levels by stimulating the breakdown of glycogen into glucose in the liver and the production of glucose from non-carbohydrate sources, and also plays a role in the negative feedback loop that inhibits its own secretion?
+Choices:
+A. Glucagon
+B. Insulin
+C. Cortisol
+D. Epinephrine
+E. Thyroxine
+F. Growth hormone
+G. Adrenaline
+H. Estrogen
+I. Progesterone
+J. Oxytocin
+Answer:
+]]]
+
+ - Output - 
+
+[[[A 
+Explanation:
+The hormone in question must increase blood glucose by stimulating glycogenolysis (breakdown of glycogen into glucose) in the liver and promoting gluconeogenesis (production of glucose from non-carbohydrate sources). Additionally, it must participate in a negative feedback loop that inhibits its own secretion. 
+
+- **Insulin (B)** lowers blood glucose, so it is eliminated.  
+- **Cortisol (C)** promotes gluconeogenesis but primarily acts in longer-term stress responses and does not directly trigger glycogenolysis as rapidly as glucagon. Its secretion is regulated by the HPA axis, not directly by its own effects on blood glucose.  
+- **Epinephrine/Adrenaline (D/G)** increases blood glucose through glycogenolysis and gluconeogenesis but is released during acute stress. Its secretion is controlled by the sympathetic nervous system, not a direct feedback loop tied to blood glucose levels.  
+- **Glucagon (A)**, released by pancreatic α-cells, directly triggers both glycogenolysis and gluconeogenesis in the liver. When blood glucose levels rise due to glucagon's actions, this increase inhibits further glucagon secretion via negative feedback. This aligns perfectly with the described functions and feedback mechanism.  
+
+Other hormones (thyroxine, growth hormone, estrogen, progesterone, oxytocin) do not directly regulate acute blood glucose levels in this manner. Thus, the hormone fulfilling all criteria is **glucagon**.  
+
+The answer is ($\boxed{A}$).</s>]]]
+
+ ===== Example 9 ===== 
+
+ - Input - 
+
+[[[<s> Question:
+Question:
+Which of the following techniques is commonly used to determine the three-dimensional structure of a protein?
+Choices:
+A. Polymerase Chain Reaction (PCR)
+B. Gel Electrophoresis
+C. X-ray Crystallography
+D. Northern Blotting
+E. Southern Blotting
+F. Mass Spectrometry
+G. Reverse Transcription
+H. Fluorescence In Situ Hybridization (FISH)
+I. Enzyme-Linked Immunosorbent Assay (ELISA)
+J. Restriction Fragment Length Polymorphism (RFLP)
+Answer:
+]]]
+
+ - Output - 
+
+[[[C 
+Explanation:
+The answer is (C). To determine the three-dimensional structure of a protein, X-ray crystallography (C) is a widely used technique. It involves analyzing the diffraction patterns of X-rays passed through a crystallized protein to deduce its atomic arrangement. Other methods like PCR (A), gel electrophoresis (B), or techniques focused on nucleic acids (D, E, G, H, J) are unrelated to 3D protein structure determination. Mass spectrometry (F) identifies proteins or sequences but does not provide structural details, while ELISA (I) detects specific antigens. X-ray crystallography remains the most directly relevant choice among the options. 
+
+The answer is ($\boxed{C}$)</s>]]]

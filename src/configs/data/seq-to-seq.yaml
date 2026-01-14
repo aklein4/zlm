@@ -1,0 +1,16 @@
+
+dataset:
+    name: aklein4/mixed-pretraining-tokenized
+    split: train
+
+    streaming: true
+
+collator_class: seq_to_seq.SeqToSeqCollator
+collator_kwargs:
+
+    input_length: 512
+    output_length: 512
+    
+    pad_token_id: 32000
+    vocab_size: 32001
+    

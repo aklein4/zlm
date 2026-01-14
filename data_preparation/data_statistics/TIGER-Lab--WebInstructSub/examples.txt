@@ -1,0 +1,219 @@
+
+
+ ========== Example 0 ==========
+
+ --- Input --- 
+
+[[[<|im_start|>user
+What is an activated complex?<|im_end|>
+<|im_start|>assistant
+]]]
+
+ --- Output --- 
+
+[[[The activated complex is formed when the reactants collide with each other and begin to rearrange their atoms and bonds to form the products. This process requires energy, which is why the activated complex has a higher energy than the reactants. The energy required to reach the activated complex is called the activation energy.
+
+Once the activated complex is formed, it can either decompose back into the reactants or proceed to form the products. The probability of the activated complex decomposing back into the reactants is determined by the activation energy. If the activation energy is high, then the activated complex is more likely to decompose back into the reactants. If the activation energy is low, then the activated complex is more likely to proceed to form the products.
+
+The activated complex is a key concept in understanding chemical reactions. It helps to explain why some reactions occur quickly and others occur slowly. It also helps to explain why some reactions require a catalyst to occur.
+####
+An activated complex is a high-energy, unstable intermediate state that forms during a chemical reaction. It is the transition state between the reactants and the products. The activated complex has a higher energy than both the reactants and the products, and it represents the maximum energy that must be overcome for the reaction to occur.<|im_end|><|endoftext|>]]]
+
+ ========== Example 1 ==========
+
+ --- Input --- 
+
+[[[<|im_start|>user
+Why does gravity cause planets to be round?<|im_end|>
+<|im_start|>assistant
+]]]
+
+ --- Output --- 
+
+[[[The gravitational force of a planet pulls matter towards its center. This force is strongest at the center of the planet and weakest at the surface. As a result, matter is pulled towards the center of the planet, causing it to take on a spherical shape.
+
+A sphere is the shape with the lowest surface area for a given volume. This means that a planet with a spherical shape has the least amount of potential energy. Potential energy is the energy that an object has due to its position or condition. In the case of a planet, its potential energy is due to its gravitational force.
+
+The lower the potential energy of a planet, the more stable it is. This is because a planet with a lower potential energy is less likely to change its shape. As a result, planets tend to be spherical in shape.
+####
+Gravity causes planets to be round because a sphere is the shape with the lowest surface area for a given volume. This means that a planet with a spherical shape has the least amount of potential energy, which is the energy that an object has due to its position or condition. Gravity pulls matter towards the center of a planet, and this force is strongest at the center. As a result, matter is pulled towards the center of the planet, causing it to take on a spherical shape.<|im_end|><|endoftext|>]]]
+
+ ========== Example 2 ==========
+
+ --- Input --- 
+
+[[[<|im_start|>user
+How many carbon atoms are present in a 5.85-gram sample of carbon tetrabromide (CBr4)?<|im_end|>
+<|im_start|>assistant
+]]]
+
+ --- Output --- 
+
+[[[There are approximately \(1 \times 10^{22}\) carbon atoms in the given sample.
+
+Explanation:
+To determine the number of carbon atoms, we first need to calculate the molar amount of CBr4. The molar mass of CBr4 is 331.63 g/mol. So, we have:
+
+\[
+\frac{5.85\ g}{331.63\ g/mol} = 0.0176\ mol
+\]
+
+Since one molecule of CBr4 contains one carbon atom and four bromine atoms, there are:
+
+\[
+1 \times 0.0176\ mol = 0.0176\ mol\ of\ carbon\ atoms
+\]
+
+Now, multiplying the molar quantity by Avogadro's number (6.022 × 10^23 mol^(-1)) gives us the number of individual carbon atoms:
+
+\[
+0.0176\ mol \times 6.022 \times 10^{23}\ mol^{-1} = 1.06 \times 10^{22}\ carbon\ atoms
+\]
+
+Therefore, there are approximately \(1 \times 10^{22}\) carbon atoms in a 5.85-gram sample of CBr4.<|im_end|><|endoftext|>]]]
+
+ ========== Example 3 ==========
+
+ --- Input --- 
+
+[[[<|im_start|>user
+Describe the properties and uses of the chemical compound with the formula #K_2CrO_4#.<|im_end|>
+<|im_start|>assistant
+]]]
+
+ --- Output --- 
+
+[[[Potassium chromate is a bright yellow salt with a transition metal oxidation state of +VI. It is commonly used as an oxidizing agent in organic chemistry.<|im_end|><|endoftext|>]]]
+
+ ========== Example 4 ==========
+
+ --- Input --- 
+
+[[[<|im_start|>user
+How can the derivative of the function \( y = (1+4x)^5(3+x-x^2)^8 \) be found using the chain rule and the product rule?<|im_end|>
+<|im_start|>assistant
+]]]
+
+ --- Output --- 
+
+[[[The derivative \( y' \) can be calculated as follows:
+
+1. Identify the two functions being multiplied: \( f(x) = (1+4x)^5 \) and \( g(x) = (3+x-x^2)^8 \).
+2. Apply the chain rule to each function:
+   - \( f'(x) = 5(1+4x)^4 \cdot 4 \) (since the derivative of \( (1+4x)^5 \) with respect to \( 1+4x \) is \( 5(1+4x)^4 \) and then multiply by the derivative of \( 1+4x \) with respect to \( x \), which is 4).
+   - \( g'(x) = 8(3+x-x^2)^7 \cdot (1-2x) \) (using similar logic).
+3. Apply the product rule, \( (fg)' = f'g + fg' \):
+   - \( y' = f'(x)g(x) + f(x)g'(x) \).
+   - \( y' = [5(1+4x)^4 \cdot 4] \cdot (3+x-x^2)^8 + (1+4x)^5 \cdot [8(3+x-x^2)^7 \cdot (1-2x)] \).
+4. Simplify the expression:
+   - \( y' = 20(1+4x)^4(3+x-x^2)^8 + 8(1+4x)^5(3+x-x^2)^7(1-2x) \).
+
+Thus, the derivative of the given function is \( y' = 20(1+4x)^4(3+x-x^2)^8 + 8(1+4x)^5(3+x-x^2)^7(1-2x) \).<|im_end|><|endoftext|>]]]
+
+ ========== Example 5 ==========
+
+ --- Input --- 
+
+[[[<|im_start|>user
+In the decomposition reaction \(2KClO_3 \rightarrow 2KCl + 3O_2\), if 5.0 grams of \(KClO_3\) is decomposed, what volume of \(O_2\) will be produced at STP (Standard Temperature and Pressure)?<|im_end|>
+<|im_start|>assistant
+]]]
+
+ --- Output --- 
+
+[[[The volume of \(O_2\) produced can be calculated as follows:
+
+1. First, determine the molar mass of \(KClO_3\):
+\(39.0983g/mol (K) + 35.453g/mol (Cl) + 3 \times 16.00g/mol (O) = 122.55g/mol\)
+
+2. Next, find the number of moles of \(KClO_3\):
+\(\frac{5.0g}{122.55g/mol} = 0.0408mol\)
+
+3. From the balanced equation, the mole ratio of \(KClO_3\) to \(O_2\) is \(2:3\):
+So, moles of \(O_2\) produced = \(0.0408mol \times \frac{3}{2} = 0.0612mol\)
+
+4. At STP, 1 mole of an ideal gas occupies 22.4 liters:
+Volume of \(O_2\) = \(0.0612mol \times 22.4L/mol = 1.371L\)
+
+Therefore, the volume of \(O_2\) produced at STP is approximately 1.371 liters.<|im_end|><|endoftext|>]]]
+
+ ========== Example 6 ==========
+
+ --- Input --- 
+
+[[[<|im_start|>user
+What is the magnitude of the cross product of the vectors v = 3i - 2j and w = 2i + 2j?<|im_end|>
+<|im_start|>assistant
+]]]
+
+ --- Output --- 
+
+[[[Compute the cross-product:
+(v x w) = (3i - 2j) x (2i + 2j)
+(v x w) = (3)(2)k - (3)(2)(-k) - (2)(2)(-k) + (2)(2)k
+(v x w) = 12k
+
+Compute the magnitude:
+(v x w) = sqrt(12^2)
+(v x w) = 12<|im_end|><|endoftext|>]]]
+
+ ========== Example 7 ==========
+
+ --- Input --- 
+
+[[[<|im_start|>user
+What is the integral of tan(5x)dx?<|im_end|>
+<|im_start|>assistant
+]]]
+
+ --- Output --- 
+
+[[[We can use the substitution method to evaluate this integral. Let u = cos(5x). Then du = -5 sin(5x) dx. Substituting into the integral, we get:
+
+∫ tan(5x) dx = ∫ sin(5x) / cos(5x) dx
+= -1/5 ∫ du / u
+= -1/5 ln|u| + C
+= -1/5 ln|cos(5x)| + C
+####
+The answer is -1/5 ln|cos(5x)| + C<|im_end|><|endoftext|>]]]
+
+ ========== Example 8 ==========
+
+ --- Input --- 
+
+[[[<|im_start|>user
+What is the explicit formula for the arithmetic sequence 3, 7, 11, 15, ...?<|im_end|>
+<|im_start|>assistant
+]]]
+
+ --- Output --- 
+
+[[[The explicit formula for this arithmetic sequence can be determined as follows:
+
+Given the sequence: 3, 7, 11, 15, ...
+- The first term, a1, is 3.
+- The common difference, d, can be found by subtracting the first term from the second term: 7 - 3 = 4.
+
+The general formula for an arithmetic sequence is:
+an = a1 + (n - 1) * d
+
+Substituting the known values into the formula, we have:
+an = 3 + (n - 1) * 4
+
+Simplifying the expression, we get the explicit formula:
+an = 4n - 1
+
+This formula holds for all positive integer values of n.<|im_end|><|endoftext|>]]]
+
+ ========== Example 9 ==========
+
+ --- Input --- 
+
+[[[<|im_start|>user
+What additional information is required to find the equation of a curve passing through the lines x=-3, x=2, and y=-3?<|im_end|>
+<|im_start|>assistant
+]]]
+
+ --- Output --- 
+
+[[[Specific points on the lines or the type of curve (e.g., linear, quadratic, etc.) is needed.<|im_end|><|endoftext|>]]]

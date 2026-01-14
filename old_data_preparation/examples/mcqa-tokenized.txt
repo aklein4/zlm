@@ -1,0 +1,210 @@
+
+ ===== Example 0 ===== 
+
+ - Input - 
+
+[[[<s> Instructions:
+For this question, give the letter of the correct answer and then explain your reasoning.
+Question:
+You're finishing up your history homework when your cell phone rings. You've got 30 minutes to reach head-quarters, get your equipment packed and receive your task. There's a lost hiker in the mountains near the edge of town. Your task: find the missing person; provide emergency medical treatment, if necessary; and be prepared to operate 48 hours on your own with only the supplies you carry. Sounds like some kind of film's plot? Not if you're a member of the Arapahoe teen rescue patrol in the suburbs of Denver. About 25 teen guys and girls are active members of this search, rescue and emergency organization, and they know firsthand that you don't have to be an adult to save lives. These 9th-through-12th graders are the real deal when it comes to emergency services. In fact, they're the only teen-commanded patrol in the nation. Sure they have adult advisers to turn to if necessary, but in the field it's a teen patrol officer calling the shots -- sometimes even giving direction to adults. Members are trained in rock-high-angle,swift-water and avalanche rescue  , winter and alpine operation , wilderness life support and emergency care, among other skills. They also regularly ride along with the local fire and police departments, providing support such as security details and evidence searching. When asked what qualities make a good patrol member, founder and president Stan Bush named good physical conditioning and an interest in helping people. "We put in lots and lots of hours helping people in trouble," he says. "So if a person is not really interested in doing that kind of thing, he won't last as a member." Which of the following is NOT true about the Arapahoe teen rescue patrol?
+Choices:
+A. They are trained to have many special skills.
+B. They also work with local firemen and policemen.
+C. They turn to adults for help sometimes.
+D. They think they can save lives only when growing up.
+Answer:
+]]]
+
+ - Output - 
+
+[[[D 
+Explanation:
+The correct answer is D because the passage explicitly states that "you don't have to be an adult to save lives" and that these teenagers are the "real deal when it comes to emergency services," implying they can and do save lives before adulthood. Options A, B, and C are all directly supported by the text: A is true because they are trained in rock-high-angle, swift-water, avalanche rescue, winter and alpine operations, wilderness life support, and emergency care; B is true as they "regularly ride along with the local fire and police departments"; and C is true because they have "adult advisers to turn to if necessary."</s>]]]
+
+ ===== Example 1 ===== 
+
+ - Input - 
+
+[[[<s> Question:
+Don't you think your schoolbag is too heavy to bear? The e-schoolbag will free you from the weight. It is said that e-schoolbags are going to be brought into use in Chinese middle schools soon. An experiment with several hundred e-schoolbags will begin in seven cities: Beijing, Shanghai, Dalian, Shenzhen, Chongqing, Taiyuan and Shijiazhuang. And the e-schoolbags are going to cover all over China if the experiment proves to be successful. In fact, the e-schoolbag should perhaps be called an e-notebook. It is a small hand-held computer for school students. Heavy schoolbags have long been a serious problem for school students. The average schoolbag of middle school students weighs up to 5 kilos. But the e-schoolbag will change everything. It is much lighter than a usual schoolbag, weighing under 1 kilo. Also, it is no bigger than a usual book, but it can still hold all the things for study, such as a textbook, a notebook and exercise book. They could be made into chips that are as small as a stamp. The students can read the text page by page on the screen. They can still take notes using a special electronic pen. If they want to know the meaning or the pronunciation of a new word, or even e-mail their teachers, it's just a press of a button. In some foreign countries, it is becoming common. But it is hard to tell when people will receive this new form of study. Some say that e-textbooks can be easily broken, some say that it is not good to students' eyesight to look at the screen for long.  But only time will tell. Which of the following statement is TRUE?
+Choices:
+A. All the students in China will be required to use this new schoolbag soon.
+B. All the people think highly of e-textbooks.
+C. E-notebooks are very convenient to students.
+D. We will not make notes because the e-notebook can make all by itself.
+Answer:
+]]]
+
+ - Output - 
+
+[[[C 
+Explanation:
+The correct answer is C because the passage explicitly states that the e-schoolbag, also referred to as an e-notebook, is much lighter than a traditional schoolbag and can hold all necessary study materials within a small, handheld device, highlighting its convenience for students. Option A is incorrect because the passage mentions an experiment will begin in seven cities and will only be implemented nationwide if successful, not that all students will be required to use it soon. Option B is incorrect as the text notes some concerns about e-textbooks, such as being easily broken and potentially affecting eyesight, indicating that not all people think highly of them. Option D is false because the passage clearly states students can "take notes using a special electronic pen," meaning the e-notebook does not make notes by itself.</s>]]]
+
+ ===== Example 2 ===== 
+
+ - Input - 
+
+[[[<s> Question:
+Scientists have found that human eyes are more likely to be damaged by UV rays  while skiing in the snow-covered areas than sitting on the beach, according to a report by the UK newspaper The Telegraph. The researchers at Kanazawa Medical University, Japan and American company Johnson conducted the study together. They looked at the effects of light reflection on newly fallen snow on a ski trail (a rough path) in Ishikawa District, northern Japan. They compared the results with the levels of UV rays on a sand beach in southern Japan's Okinawa District. They found that on the beach, eyes are exposed to a daily 260 kilojoules   of UV a square meter compared to 658 kilojoules in snow-covered areas. The findings are supported by the Japan Meteorological Agency. According to the agency, the reflection rate of UV light on beaches is often between 10 and 25 percent, compared to 80 percent in the new snow areas. The amount of light increased 4 percent with a 300-meter rise in height. Most of us know that UV rays can harm the skin. That's why we wear sunscreen on our skin before we get out in the sun. But many of us may not realize that UV rays are also harmful to the eyes. If your eyes are exposed to large amounts of UV radiation over a short period of time, you may experience a kind of sunburn of the eye, which is harmful. Your eyes will become red and feel a strange feeling. They may be sensitive to light. Fortunately, this is usually temporary and seldom causes permanent damage to the eyes. Long-term exposure to UV radiation, however, can be more serious. Scientific studies and researches have shown that exposure to small amounts of UV radiation over a period of many years increases the chance of eye damage, which could lead to total blindness. If a place is 1500 meters higher, the amount of light increases  _  .
+Choices:
+A. 15 percent
+B. 20 percent
+C. 25 percent
+D. 30 percent
+Answer:
+]]]
+
+ - Output - 
+
+[[[B 
+Explanation:
+The question asks how much the amount of light increases if a place is 1500 meters higher. The provided text states, "The amount of light increased 4 percent with a 300-meter rise in height." To find the increase for a 1500-meter rise, we can set up a proportion: (4% / 300 meters) = (X% / 1500 meters). Solving for X, we get X = (4% * 1500 meters) / 300 meters, which simplifies to X = 4% * 5, or X = 20%. Therefore, the amount of light increases by 20 percent for a 1500-meter rise in height.</s>]]]
+
+ ===== Example 3 ===== 
+
+ - Input - 
+
+[[[<s> Question:
+Walking along a lake in the cold winter, Birbal and the king made a bet that a man would do anything for money. The king said, "I don't think a man would spend an entire night in the cold water of this lake for money." Birbal replied, " I'm sure I can find such a person." The king asked Birbal to find such a person and said that he would reward the person with a thousand gold coins. Birbal searched far and wide and finally found a poor man. When he entered the lake, the king had guards around him to make sure that he really did as promised. The poor man made it. He told the king that there had been a street lamp nearby and that he had kept his attention on the lamp and managed to avoid the cold. The king then said that there would be no reward as he relied on the warmth of the street lamp. The poor man went to Birbal for help. The next day, Birbal did not go to court . The king went to Birbal's house and see what he was up to. He found Birbal sitting on the floor near some burning branches and a bowl filled with rice hanging five feet above the fire. The king and his followers couldn't help but laugh. The king then said to Birbal, "How can the rice be cooked if it is so far away from the fire?" Birbal answered, "The same way the poor man received heat from a street lamp that was more than two thousand meters away." Finally, the king gave the poor man his reward. What can we infer from the passage?
+Choices:
+A. The poor man did not get his reward in the end.
+B. Birbal was wise and kind.
+C. The story happened during a warm spring.
+D. Birbal was not liked by the king.
+Answer:
+]]]
+
+ - Output - 
+
+[[[B 
+Explanation:
+The correct answer is B because the passage clearly demonstrates Birbal's wisdom and kindness. He devised a clever argument by creating a parallel situation where cooking rice from a distance was impossible, directly contrasting it with the king's logic about the poor man surviving the cold by focusing on a distant lamp. This intellectual maneuver successfully convinced the king to honor his bet and reward the poor man, showcasing Birbal's strategic thinking and his compassion for the disadvantaged. The other options are incorrect: A is false because the poor man *did* receive his reward; C is false because the passage explicitly states it was "cold winter"; and D is false because the king sought Birbal out when he wasn't at court, indicating a relationship beyond dislike.</s>]]]
+
+ ===== Example 4 ===== 
+
+ - Input - 
+
+[[[<s> Question:
+What is the latin name for mercury?
+Choices:
+A. hydrargyrum
+B. trichina
+C. stibium
+D. spirogyra
+Answer:
+]]]
+
+ - Output - 
+
+[[[A 
+Explanation:
+The correct Latin name for mercury is **hydrargyrum**. This name originates from the Greek words "hydor" (water) and "argyros" (silver), reflecting its silvery, liquid appearance. Looking at the other options, "trichina" refers to a parasitic worm, "stibium" is the Latin name for antimony, and "spirogyra" is a type of filamentous green algae, none of which are associated with the element mercury. Therefore, hydrargyrum is the only correct Latin designation.</s>]]]
+
+ ===== Example 5 ===== 
+
+ - Input - 
+
+[[[<s> Instructions:
+Determine the letter of the correct answer to the question, and provide an explanation of your choice.
+Question:
+Barbara was driving her six-year-old son, Benjamin, to his piano lesson. They were late. There was always so much to do, and Barbara, a night-duty nurse at the local hospital, had recently worked extra hours. She was tired. "Mom!" Ben cried. "Look!" Just ahead, a car had lost control   on the icy road and wildly rolled over, and then crashed   into a telephone pole. Barbara went over. Thank goodness she was a nurse -- she might be able to help these unfortunate passengers. Then she stopped. What about Ben? She couldn't take him with her. Little boys shouldn't see scenes   like this one. But was it safe to leave him alone? For a little moment Barbara thought of going on her way. Someone else was sure to come along. No! "Ben, honey, promise me you'll stay in the car!" "I will, Mommy," he said as she ran. Two girls of high school age were in the car. One was dead and the driver was still breathing. But if help came soon, the girl would live. A trucker had pulled up and was calling for help on his cell phone. Soon Barbara heard the ambulance sirens  . Later, Barbara was able to meet the families of the victims  . They expressed their gratitude   for the help she had provided. What was the weather probably like that day?   _
+Choices:
+A. Rainy.
+B. Sunny.
+C. Snowy.
+D. Windy.
+Answer:
+]]]
+
+ - Output - 
+
+[[[C 
+Explanation:
+The passage explicitly states that the car "had lost control on the icy road," which directly indicates that the weather conditions were characterized by ice. Of the choices provided, snowy weather is the most likely condition to produce icy roads, as snow often melts and refreezes, or can itself create slippery conditions. While other weather conditions like rain can sometimes lead to ice (freezing rain), the direct mention of "icy road" makes snow the most probable and fitting weather scenario presented.</s>]]]
+
+ ===== Example 6 ===== 
+
+ - Input - 
+
+[[[<s> Instructions:
+Give the letter of the correct answer to this question, followed by an explanation of why the answer is correct.
+Question:
+Australian colour consultant Kylie Bartnicki is talking with a group of women in Pudong, Shanghai, who are interested in how colours affect people's confidence and help form people's first impressions . Kylie traces back her interest in colours to when she went for her first job interview at age 18. "My mother bought me a new red top to wear to my interview and she said, "Wear this, and it will be lucky."' Kylie recalls. "I wore it, had a great interview and got the job. Ever since then I started thinking about how powerful the colour is, how it makes us look and how it makes us feel." "When we wear clothes in a good colour, the colour will make our skin, hair and eyes shine and we look happy and smart," Kylie says. Winter and summer are "cool colourings" and autumn and spring are "warm colourings". Someone who loves "cool colouring" might have red or golden hair, brown eyes and gold or yellow skin. Chinese women belong to the "autumn season" if they have darker, peachy skin. Chinese women belong to the "winter season" if they have pale skin. Kylie says that Chinese women who have dark eyes and dark hair will look best in deep, rich colours. Light pinks and blues should be  avoided because they may wash our Chinese skin tones . Their talk usually lasts one and a half to two hours and costs 600 yuan (89 dollars). Kylie says her customers  are as young as five years old and as old as 90. The customers between their 30s and 50s always want some fresh ideas on developing their own personal style. Which of the following is NOT true according to the passage?
+Choices:
+A. Wearing clothes in a good colour will make us look happy.
+B. When Kylie was 18, she started to be interested in colours.
+C. Kylie's customers are in between their 30s and 50s.
+D. Autumn and spring are "warm clourings".
+Answer:
+]]]
+
+ - Output - 
+
+[[[C 
+Explanation:
+The correct answer is C because the passage states that Kylie's customers range from five to ninety years old, and specifically mentions that customers *between their 30s and 50s* are looking for fresh ideas. This implies that while this age group is a significant portion of her clientele, it is not the *only* age group she serves. The other options are directly supported by the text: A is true as Kylie states good colors "make us look happy," B is true as her interest began at age 18 after a positive experience with a red top, and D is true as the passage explicitly defines autumn and spring as "warm colourings."</s>]]]
+
+ ===== Example 7 ===== 
+
+ - Input - 
+
+[[[<s> Instructions:
+You must provide the letter of the correct answer to the question, followed by an explanation of your reasoning.
+Question:
+Timmy had the best grandmother ever. She was very nice because she would always help Timmy when he needed help with his homework. She would sit down with Timmy in the kitchen and help him with his spelling every night. Then she would go back to the living room and watch television when he worked on his math. After that she would cook Timmy a big dinner, and they would both eat it together before Timmy's mom and dad came to pick him up. When Timmy went home he would sometimes call his grandmother to say hello. Even when she was sleepy she would talk with him and tell him a bedtime story. One time she even told him a story about his grandfather who had been a farmer. Timmy loved this story because he never got to meet his grandfather. One day he wanted to be like him and be a farmer. Who helped Timmy with his homework?
+Choices:
+A. His dad
+B. His mom
+C. His grandmother
+D. His grandfather
+Answer:
+]]]
+
+ - Output - 
+
+[[[C 
+Explanation:
+The passage explicitly states, "She would sit down with Timmy in the kitchen and help him with his spelling every night." This sentence directly indicates that Timmy's grandmother was the one who assisted him with his homework, specifically his spelling, making option C the correct answer. Options A and B are incorrect because Timmy's parents are mentioned as coming to pick him up, not helping with homework. Option D is incorrect because while Timmy's grandfather was mentioned as a farmer and Timmy admired him, he was not present to help with homework as he had passed away before Timmy met him.</s>]]]
+
+ ===== Example 8 ===== 
+
+ - Input - 
+
+[[[<s> Question:
+A judge was working in his room one day when a neighbour ran in and said, "If one man's cow kills another's, is the owner of the first cow responsible?" "It depends," answered the judge. "Well," said the man, your cow has killed mine. "Oh," answered the judge. "Everyone knows that a cow cannot think like a man, so a cow is not responsible, and that means that its owner is not responsible either." "I am sorry, Judge," said the man. "I made a mistake. I meant that my cow killed yours." The judge thought for a few seconds and then said," When I think about it more carefully, this case is not as easy as I thought at first. "And then he turned to his clerk and said, "Please bring me that big black book from the shelf behind you." When the neighbour heard this, he told the judge that  _  .
+Choices:
+A. there was nothing happened
+B. his cow had been killed
+C. it was his cow that had killed the judge's
+D. both cows had been killed
+Answer:
+]]]
+
+ - Output - 
+
+[[[C 
+Explanation:
+The correct answer is C because the judge's change of heart and request for a "big black book" implies he's consulting a legal text to determine liability, suggesting a more complex legal situation than initially presented. The neighbor's quick retort, "I am sorry, Judge, I made a mistake. I meant that my cow killed yours," directly sets up the scenario where the owner of the first cow (the neighbor) is now asking if *his* cow killing the judge's cow makes *him* responsible. Therefore, to avoid further confusion and potentially anticipate the judge's legal inquiry, the neighbor clarifies that it was indeed his cow that killed the judge's cow, aligning with the judge's need to apply legal principles to the situation where his property was damaged.</s>]]]
+
+ ===== Example 9 ===== 
+
+ - Input - 
+
+[[[<s> Instructions:
+You must provide the letter of the correct answer to the question, followed by an explanation of your reasoning.
+Question:
+A survey by baidu.com showed there were 16 million bloggers  . Xu Jinglei was one of the first famous people that the website sina .com. invited to open blogs. The web log written by Xu Jinglei is now the world's most popular . Xu , an actress-turned -director, became famous overseas when she won a Best Director Award for the film. A  Letter From an Unknown Woman in 2004. Her blog has broken the domestic   record  with more than 10 million visits . Xu updates   her blog every other day . But if she feels very good she sometimes posts two or three articles in a day . Visitors leave thousands of messages about each of her articles , praising   her open, free writing style, commenting   on films. From the passage we know that   _   .
+Choices:
+A. a survey by baidu.com showed there were 16 million bloggers writing in English
+B. Xu Jinglei was the only one that the website sina.com invited to open blogs
+C. Xu Jinglei always posts one article in a day
+D. Visitors leave lots of messages about her articles in her blogs
+Answer:
+]]]
+
+ - Output - 
+
+[[[D 
+Explanation:
+The correct answer is D because the passage explicitly states, "Visitors leave thousands of messages about each of her articles, praising her open, free writing style, commenting on films." This directly supports the idea that visitors leave a lot of messages. Option A is incorrect because the passage does not specify the language of the bloggers. Option B is incorrect as the passage says Xu Jinglei was "one of the first" people invited, implying others were also invited. Option C is incorrect because the passage states she updates her blog "every other day" and "sometimes posts two or three articles in a day," contradicting the claim that she always posts one article per day.</s>]]]

@@ -1,0 +1,208 @@
+
+ ===== Example 0 ===== 
+
+ - Input - 
+
+[[[<s> |Quick Facts: Pest Control Workers|
+$33,040 per year
+$15.88 per hour
+|High school diploma or equivalent|
+|Moderate-term on-the-job training|
+|-1% (Little or no change)|
+Pest control workers remove]]]
+
+ - Output - 
+
+[[[unwanted creatures, such as roaches, rats, ants, bedbugs, and termites that infest buildings and surrounding areas.
+Pest control workers must travel to clients’ sites. Workers often kneel, bend, and crawl in tight spaces to inspect sites. Because there are health risks associated with pesticide use, workers are trained in pesticide safety and sometimes wear protective gear, including respirators, gloves, and goggles. Working evenings and weekends is common.
+State laws require pest control workers to be licensed. Most workers need a high school diploma and receive on-the-job training, usually lasting less than 3 months.
+The median annual wage for pest control workers was $33,040 in May 2016.
+Employment of pest control workers is projected to show little or no change from 2014 to 2024. Job opportunities should be good because of the limited number of people seeking work in pest control and the need to replace workers who leave this occupation.
+Explore resources for employment and wages by state and area for pest control workers.
+Compare the job duties, education, job growth, and pay of pest control workers with similar occupations.
+Learn more about pest control workers by visiting additional resources, including O*NET, a source on key characteristics of workers and occupations.</s>]]]
+
+ ===== Example 1 ===== 
+
+ - Input - 
+
+[[[<s> Marina Pollán, researcher at the Carlos III Institute of Health and one of the authors of the study explains that "biological and physiological changes in women caused by the menopause come with a greater risk of developing health problems in which diet plays an important role. These include diabetes, osteoporosis, cardiovascular disease and certain types of cancer."
+Therefore, the analysis of dietary patterns during and after the menopause is of particular interest because of its health implications. However, in Spain there have been very few studies that have assessed the]]]
+
+ - Output - 
+
+[[[diet of peri- and postmenopausal women.
+In order to study these dietary habits, the authors of the study analysed 3574 women from the age of 45 to 68 from October 2007 to July 2008. Each programme contained a minimum of 500 women from seven Spanish cities (La Coruña, Barcelona, Burgos, Palma de Mallorca, Pamplona, Valencia and Zaragoza) and involved a food frequency questionnaire validated by the Spanish population.
+The results show that obesity rates stand at 29 per cent whereas 42 per cent of subjects are overweight. Average calorie intake was 2053 kilocalories (with 43 per cent of energy intake coming from carbohydrates, 36 per cent from fats and 20 per cent from proteins). Researchers highlight that practically all of the women received the recommended intake of all the vitamins, apart from D and E.
+The case of vitamin D is striking given that none of the groups reached 50 per cent of their RDA (Recommended Daily Allowance). The average total intake was 2.14 micrograms per day, which constitutes just 39 per cent of the RDA for women of this age group.
+"A diet with less fat and protein that is high in vegetables, nuts, and carbohydrate-rich foods will even out the energy balance and corrects levels of vitamin D and E," according to the researchers. "This is especially important in places that are far away from the Mediterranean Sea where women have a greater tendency to fall short of the current recommendations."
+MEDICA.de; Source: Spanish Foundation for Science and Technology</s>]]]
+
+ ===== Example 2 ===== 
+
+ - Input - 
+
+[[[<s> The iPhone is perhaps the ultimate symbol of 21st-century technology. How peculiar then, that the Apple website gives its size in inches and its weight in ounces – units of measurement that the Vict]]]
+
+ - Output - 
+
+[[[orians would have heartily approved of, over a century ago. How odd too, that in the United States, oil is measured in barrels, land in acres and temperature in Fahrenheit.
+In Europe we have a more modern system that I want to tell you about. It’s called the metric system and it has some advantages over Imperial measurements. Mainly, you can actually do calculations with it, instead of just ripping out your hair in frustration.
+I know that many Americans believe the metric system to be a communist-inspired conspiracy to overturn civilization. And if God had meant us to count in tens, he would surely have given us ten fingers.
+I understand your nervousness. Sometimes units of measurement can be politically-inspired tools for control over populations. Like the Euro, for instance, or indeed, most currencies.
+But the metric system is innocent. It’s really just a way of measuring. I know that it was introduced by a bunch of murderous lunatics during the French Revolution, but that was a long time ago. Nowadays, the metric system is known as the International System of Units, and is used everywhere, except the US, Liberia and Myanmar.
+Like modern Americans, the Victorians were strongly in favour of the Imperial System of measurements. They knew where they were with furlongs, fathoms, knots and chains. They were also in favour of capital punishment, child labour, and strict divisions of social class.
+However, the Victorians also supported progress. And that’s why, in Britain at least, we don’t have those things any more, and it’s why we use the metric system.</s>]]]
+
+ ===== Example 3 ===== 
+
+ - Input - 
+
+[[[<s> Virtual Seminar via Zoom, Register for Link
+This seminar is now full. Thank you for your interest.
+]]]
+
+ - Output - 
+
+[[[Escaping Slavery by Sea in Antebellum America: A Labor History, Marcus Rediker
+This paper explores a neglected topic in the histories of slavery and abolitionism: how enslaved people escaped by sea and more specifically how the waterfront was a zone of struggle over slavery from roughly 1820 to 1865. Sailors, dockworkers, artisans, porters, carters, market women, and seagoing fugitives cooperated and conspired in an alternative “public sphere,” using connections within the maritime working class to unleash a powerful though little understood force of abolitionism from below.
+This seminar is now full. Please email firstname.lastname@example.org with any questions.</s>]]]
+
+ ===== Example 4 ===== 
+
+ - Input - 
+
+[[[<s> The Geometry of Decision Making
+A key challenge for animals is choosing between spatially distributed options - whether it's deciding between potential food sources, determining where to take refuge, or choosing who to associate with. Couzin conducts research on the connections between collective behavior and jointly made decisions. Studies of consensus building in a group can shed light on the evolution of complex social groups. Evidence for democratic behavior is found in certain animal species - observations regarding consensus building, conflict resolution, and mediator roles, for example, apply to both animal and human groups.
+Prof. Dr. Iain Couzin is one of]]]
+
+ - Output - 
+
+[[[the most influential scientists in the world. He is Director of the Max Planck Institute for Behavioral Biology in Radolfzell and Professor of Biodiversity and Collective Behavior at the University of Konstanz. In 2022 he received the Gottfried Wilhelm Leibniz Prize.
+In the framework of the International Science Festival - Geist Heidelberg
+Geist Heidelberg Lecture
+Prices plus fees
+Regular 9,90 €
+Reduced 5,90 €
+Member 4,90 €</s>]]]
+
+ ===== Example 5 ===== 
+
+ - Input - 
+
+[[[<s> An explanation of the properties and uses of superheated steam transfer’ for details on arithmetic and curve the steam is superheated. Superheater industrial boilers america manufacturers and designs superheaters to fit our boiler designs and superheated steam presents unique safety concerns. A burner on a boiler is used to burn fuel efficiently and generate both power for the boiler and steam is superheated steam generating boilers. The use of steam to preheat boiler feedwater was common when energy was cheap, but using surplus process heat instead therefore, it will be superheated.
+One atmosphere boilers generate superheated steam that is free of hga-s cx1300 details dry steam up to continuous superheated process steam for odor removal. For more details, please click on the steam boilers superheated steam boiler for supplying a chemical factory with process heat and space heating. Find steam superheaters related superheated steam we offer chromalox steam superheaters steam boilers can produce low quality steam that requires.
+High-pressure boilers are typically used for process loads and can have an operating pressure of 16 to some steam applications may require superheated steam. Types of superheater boiler – superheater is a subcritical boiler component that serves to heat the saturated steam, at constant working pressure, so it becomes superheated steam.
+And a quick reference for the steam system modeling tool boiler steam turbines condensate heat loss comparing • saturated steam • superheated steam. Find steam trap superheated boiler palm oil mill related suppliers, manufacturers, products and specifications on globalspec - a trusted source of steam trap superheated boiler palm oil mill information.
+5 process steam systems superheated steam the distribution system is critical because it carries the pressurized steam produced in the boilers. Superheated steam boiler]]]
+
+ - Output - 
+
+[[[/ biomass superheated water boilers we have steam we need know the details of biomass superheated steam boiler.
+How to trap superheated steam lines at first glance, this may seem confusing due to the idea that superheated steam produces no condensate therefore, the steam lines carrying superheated steam should not have any condensate in them. Online calculator with superheated steam table includes 53 different calculations equations displayed for easy reference.
+Superheated boiler in sugar mill steam is very important for the sugar mill steam boiler is used for heating, gelatinization, and saccharify, etc heating equipment is equipped under mash kettle, and then steam produced by superheated boiler enter into the heating equipment, and then heat the raw materials for starch hydrolysis. Miscellaneous boiler types, economisers and if superheated steam is additional heat is added to the saturated steam in water-tube boilers. Temperature of superheated steam plays a major role in the available enthalpy however in sliding pressure boilers the superheater steam outlet pressure is. • saturated or superheated steam victory energy has stock watertube boilers that are readily available for immediate shipment.
+Advantages of the use of superheated steam —in considering the saving possible by the use of superheated steam, it is too often assumed that there is only a saving in the prime movers, a saving which is at least partially offset by an increase in the fuel consumption of the boilers generating steam. Find all the manufacturers of saturated steam boiler and contact them directly on directindustry superheated steam boiler / saturated steam / hot water / natural. Modern steam generators (no drum) into which goes feed water and out of which comes saturated or superheated steam in actual units (boilers).Download</s>]]]
+
+ ===== Example 6 ===== 
+
+ - Input - 
+
+[[[<s> Buddhism does not encourage resignation or disengagement.
+There is a perception among some social progressives that Buddhism encourages people to disengage from the world. According to people who hold this perception, Buddhists meditate to change their mental outlooks so that they can accept the world as it is. Then Buddhists have an excuse to not work for social change, for example.
+Tara Brach, a Buddhist teacher and author, gave a dharma talk on “Genuine Acceptance*,” in which she clarified what acceptance really is, and in the process she shed light on some of the ways that Buddhist practices can help us to choose compassionate actions in the face of overwhelming suffering.
+Brach defined acceptance as “recognizing the truth of this moment without resistance.”
+She clarified that:
+Acceptance is opening to the actual feelings you have about [a situation]–the hurt or the anger–and being willing to just feel that. And it is out of that presence that you can respond. Wise behavior arises out of an accepting presence…
+Genuine acceptance in its purity is no different than love. The space that accepts is a loving space.
+Instead of reacting unconsciously through conditioned patterns of behavior, acceptance gives us an alternative. We can pause in the midst of our reactivity and make the intention to soften our resistance to opening to our emotions.
+Any attempt we make to control our internal experience—in response to suffering—is the opposite of acceptance.
+Brach explained that when we say to ourselves, “This situation is okay as it is,” but we don’t really mean it, that is a form of resignation, which is not acceptance. Resignation is not at all in line with Buddhist teachings. Resignation is a way for our egos to push a difficult experience away. But it is our awareness, not our egos, that opens to suffering. Brach stated:
+The ego self can’t accept. The ego self is designed to fight, [flee] or freeze. What accepts is awareness. The truth of what you are is what accepts. The most you can do is intend to accept. It is a willingness that aligns you with your awareness. The self can’t do it; the]]]
+
+ - Output - 
+
+[[[self is designed to react.
+Practicing meditation helps us to develop a loving, accepting presence.
+During meditation we start to experience our resistance to what is happening within us, and by staying with our moment-to-moment experience–including difficult feelings–we develop the capacity to pause and choose something other than our usual conditioned responses.
+Buddhists do not close their eyes to suffering in the world.
+The fourth of the 14 mindfulness trainings in the Zen Buddhist tradition of Thich Nhat Hanh is:
+Aware that looking deeply at the nature of suffering can help us develop compassion and find ways out of suffering, we are determined not to avoid or close our eyes before suffering. We are committed to finding ways, including personal contact, images, and sounds, to be with those who suffer, so we can understand their situation deeply and help them transform their suffering into compassion, peace, and joy.
+By keeping our eyes open in the face of suffering, we also choose to be present to everything that comes up in our minds and bodies when we see it, whether it be in ourselves or in the world. By making the intention to lean into the suffering in ourselves and in the world, we cultivate awareness and compassion.
+Training in Buddhist meditation helps us to come back, again and again, to raw awareness, so that when we encounter suffering, we are ready to face it consciously instead of allowing our egos to choose a pattern of reactivity for us. With awareness as our guide, we can consciously choose among many paths of compassionate loving action.
+Buddhists around the world are taking actions to reduce suffering which include working to protect the environment and to advance human rights. Buddhist organizations and groups that are actively working on such causes include:
+Buddhist Global Relief
+Buddhist Peace Fellowship
+Clear View Project
+Deer Park Monastery Go Solar! Project
+Dharma Gaia Trust
+Prison Dharma Network
+For more resources on engaged Buddhist organizations, see Rev. Danny Fisher’s website.
+Every one of us can do something to protect and care for our planet. ~ Thich Nhat Hanh
+*Tara Brach gave the dharma talk, “Genuine Acceptance,” on August</s>]]]
+
+ ===== Example 7 ===== 
+
+ - Input - 
+
+[[[<s> Egbert the Boy Inventor
+Baltimore Area Council
+This stunt can be used as a pastime for small groups, an audience participation stunt or worked into a skit, adding props if you wish. Divide the group into eight sections and assign one sound to each. As the story is read, the appropriate sound is made after each of the following words:
+Polish - Bubble, Bubble Brushes - Stamp feet
+Whistle - Whistle Hinge - Squeak, Squeak
+Motor - Clicketa, Clacketa, Spring - Boing-g-g
+Gears - Clap Hands Together Buzzer - Buzz, Buzz
+Machine - All Sounds Together Twice
+Everyone in town knew about Egbert! Egbert, the boy inventor of Brainsville. Afternoon after afternoon, while the other boys were out playing football or baseball, Egbert was in his basement working out the details of some new invention. Egbert did have one thing in common with the other boys, however he hated to shine his shoes! And so his latest contraption was to be a shoe shine MACHINE.
+First of all, Egbert mixed some water, some wax and some dye in a flask and boiled it to make the POLISH. From the flask, he arranged a glass tube with a device at the top that would WHISTLE when the mixture was ready. He set up a small MOTOR and fitted it with an arrangement of GEARS. These turned two BRUSHES, a glass tube was connected with a valve and HINGE, that opened to drip the POLISH. A SPRING kept them in position over the place where the shoes would be fastened. As a final touch, Egbert added a BUZZER, which would sound when the shoes were completely shined.
+When everything was assembled, Egbert looked at his MACHINE with satisfaction. The POLISH was boiling and the WHISTLE sang out loud and clear. The MOTOR hummed smoothly, the BRUSHES revolved and the SPRING held fast. Only the GEARS were a little noisy and the HINGE squeaked, but there were minor matters. The BUZZER control]]]
+
+ - Output - 
+
+[[[looked good.
+Egbert disconnected the plug, ran upstairs and brought down his dirtiest pair of oxfords. Full of confidence, he clamped them under his contraption and plugged in the electricity. For a moment, everything ran beautifully and he beamed at his MACHINE. And then, disaster struck! In his excitement, Egbert had neglected to remove the shoe strings and one of them became twisted in the revolving BRUSHES. Across the room flew the SPRING. The GEARS jammed as they chewed up the shoes, making the MOTOR burn out with a loud splitting sound. The whole liquid assembly shuddered. The HINGE stayed open and the POLISH shot out all over Egbert. For some strange reason, only the WHISTLE and the BUZZER, continued to sound alternately--WHISTLE, BUZZER, WHISTLE, BUZZER, until poor Egbert’s genius brain practically rattled. He looked around at the mess and promptly fainted. It was not one of Egbert’s most successful MACHINES!
+Norman the Genius
+Baltimore Area Council
+Instead of assigning parts for this one, why not try it with everyone doing all the parts?? CD
+NORMAN: Oh, My (raise both hands)
+GENIUS: All clap and cheer
+RIGHT: This (raise right hand)
+LEFT: That (raise left hand)
+THIS: Right (raise right hand)
+THAT: Left (raise left hand)
+This is the story of NORMAN, a boy who wanted very much to be a GENIUS. But not matter how hard he tried, it just didn’t work out. You see, NORMAN had a problem -- he could not tell RIGHT from LEFT.
+At school, the teacher would say, “When you know the answer, raise your RIGHT hand”. By the time NORMAN figured which hand was which, it was too late. At home, it was the same. It was “NORMAN, you have your LEFT shoe on your RIGHT foot.”
+Things weren’t any better outside. In football, they’d send him in at LEFT end and he’d be RIGHT</s>]]]
+
+ ===== Example 8 ===== 
+
+ - Input - 
+
+[[[<s> Phonics and Reading
+We are going to begin our kindergarten reading adventure with ABC Bootcamp. After the first couple days of school, we will begin our bootcamp experience by learning all 26 letters in 26 days. I know that this may seem fast for some, but we will be singing]]]
+
+ - Output - 
+
+[[[, reading, writing, and drawing about the letter of the day. My goal with ABC Bootcamp is to make sure all students have been introduced to each letter so that we can work on blending and building words. I do not expect that all students will have all 26 letters mastered by the end of the 26th day, but I know that some will. I will be assessing students prior to and after bootcamp to determine where we are and what we still need to do. I am really excited to get us started in our reading adventure!
+During writing time the students will be working on writing simple stories. They will be adding details to their pictures and with a quicker introduction of sounds hopefully that will also help in our spelling of words in our writing.
+We will be spending the first few weeks of the year working on the unit "Understanding Counting" The goal for this unit is that the students can count to 5 with one to one correspondence. They will also be working on making the numbers through 5 and comparing two groups of things that have five or less in them. If your child already knows how to count to five, I would spend time in conversation asking about ways to make each number. For example if I have three flowers and 1 is red and the rest are blue how many are blue. This will be a challenge for many, but a great activity to help them eventually make connections to addition.
+For theme we will spend a little bit of time daily talking about different science, social studies, or math topics. In August we will begin discussing colors and will then spend a few days working on some shape activities. This is a fun time for students to create and explore!
+This year is going to be filled with so many wonderful learning opportunities! I am truly excited to see what fun we can have learning and becoming our best selves. I will do my best to keep you updated as we move through these topics, but please feel free to contact me with any questions you may have regarding any concepts that we are covering.</s>]]]
+
+ ===== Example 9 ===== 
+
+ - Input - 
+
+[[[<s> Did you know that Texas 4-H has a Range Judging component? The AgriLife Extension Explore Handbook has everything you need to know and more on how to get involved in Texas 4-H Range]]]
+
+ - Output - 
+
+[[[Judging.
+The range judging contest is a great opportunity for members to learn about rangeland ecology, practical application, and decision-making skills that are essential to range management. By preparing and participating in these contests, participants will become familiar with grasses, forbs, woody plants, different ecological sites, and the effects of grazing animals. They will also be introduced to the differences in plant types and how grazing affects plant growth. Learning these skills will not only be vital for a 4-H members career but also as they continue into higher education and their future careers.
+The contest is broken up into three separate age divisions, Junior, Intermediate, and Senior. There are three separate parts to this contest which include, plant identification, range evaluation, and range health.
+Section 1 – Plant Identification
+In this part of the contest, participants will be asked to identify the plant by writing its common name and checking off its plant characteristics on the scorecard that is provided. It is important to note that plants are going to vary in stages of growth, so it is vital that all stages of plant growth be studied.
+Section 2 – Range Evaluation
+In this part of the contest, an area is staked and roped off. This area could represent an entire ranch, one or more pastures, or a small part of a pasture. There will be seven sections on the score card for the participant to complete including: degree of utilization, kind of site, successional stage, similarity index, vegetative state, recommended stocking rate, and management decisions. The coordinator of the contest will provide participants with conditions to consider when evaluating the selected plot. To prepare for this section, it is important to travel to practice contests and clinics to strengthen the skills needed for this section of the contest.
+Section 2 – Rangeland Health
+In this part of the contest, four square plots will be staked off and numbered as well as a reference plot. To determine the range health, the participant will make their selection based on the number of problem indicators that they observe.
+Interested in learning more about this contest and how to get involved, get all the information here.</s>]]]

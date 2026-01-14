@@ -1,0 +1,924 @@
+
+
+ ========== Example 0 ==========
+
+ --- Input --- 
+
+[[[<|im_start|>user
+Problem description.
+Vipul is a hardworking super-hero who maintains the bracket ratio of all the strings in the world. Recently he indulged himself in saving the string population so much that he lost his ability for checking brackets (luckily, not permanently ).Being his super-hero friend help him in his time of hardship.
+Input
+
+The first line of the input contains an integer T denoting the number of test cases. The description of T test cases follows.
+The first line of each test case contains a single string S denoting the string to be checked.
+
+
+Output
+
+For each test case, output a single line printing "YES" or "NO" (without " " and in uppercase only) , denoting if the brackets in the given string is balanced or not .
+
+
+Constraints
+
+1 ≤ T ≤ 10
+1 ≤ length of S ≤ 60
+
+
+Example
+Input:
+3
+((()))
+(())()
+()(()
+
+Output:
+YES
+YES
+NO
+
+ 
+
+Explanation
+Example is self-explanatory.<|im_end|>
+<|im_start|>assistant
+]]]
+
+ --- Output --- 
+
+[[[```python
+T = int(input())
+for _ in range(T):
+    s = input().strip()
+    stack = []
+    valid = True
+    for c in s:
+        if c == '(':
+            stack.append(c)
+        elif c == ')':
+            if not stack:
+                valid = False
+                break
+            stack.pop()
+    if valid and not stack:
+        print("YES")
+    else:
+        print("NO")
+```<|im_end|><|endoftext|>]]]
+
+ ========== Example 1 ==========
+
+ --- Input --- 
+
+[[[<|im_start|>user
+The Chef likes to stay in touch with his staff. So, the Chef, the head server, and the sous-chef all carry two-way transceivers so they can stay in constant contact. Of course, these transceivers have a limited range so if two are too far apart, they cannot communicate directly.
+
+
+The Chef invested in top-of-the-line transceivers which have a few advanced features. One is that even if two people cannot talk directly because they are out of range, if there is another transceiver that is close enough to both, then the two transceivers can still communicate with each other using the third transceiver as an intermediate device.
+
+
+There has been a minor emergency in the Chef's restaurant
+and he needs to communicate with both the head server and the sous-chef right away. Help the Chef determine if it is possible for all three people to communicate with each other, even if two must communicate through the third because they are too far apart.
+Input
+
+The first line contains a single positive integer T ≤ 100 indicating the number of test cases to follow. The first line of each test case contains a positive integer R ≤ 1,000 indicating that two transceivers can communicate directly without an intermediate transceiver if they are at most R meters away from each other. The remaining three lines of the test case describe the current locations of the Chef, the head server, and the sous-chef, respectively. Each such line contains two integers X,Y (at most 10,000 in absolute value) indicating that the respective person is located at position X,Y.
+
+
+Output
+
+For each test case you are to output a single line containing a single string. If it is possible for all three to communicate then you should output "yes". Otherwise, you should output "no".
+
+
+To be clear, we say that two transceivers are close enough to communicate directly if the length of the straight line connecting their X,Y coordinates is at most R.
+
+
+Example
+
+Input:
+3
+1
+0 1
+0 0
+1 0
+2
+0 1
+0 0
+1 0
+2
+0 0
+0 2
+2 1
+
+
+Output:
+yes
+yes
+no<|im_end|>
+<|im_start|>assistant
+]]]
+
+ --- Output --- 
+
+[[[```python
+import sys
+
+def main():
+    T = int(sys.stdin.readline())
+    for _ in range(T):
+        R = int(sys.stdin.readline())
+        R_sq = R * R
+        points = []
+        for _ in range(3):
+            x, y = map(int, sys.stdin.readline().split())
+            points.append((x, y))
+        # Compute pairwise squared distances
+        a, b, c = points
+        d_ab = (a[0] - b[0])**2 + (a[1] - b[1])**2
+        d_ac = (a[0] - c[0])**2 + (a[1] - c[1])**2
+        d_bc = (b[0] - c[0])**2 + (b[1] - c[1])**2
+        count = 0
+        if d_ab <= R_sq:
+            count += 1
+        if d_ac <= R_sq:
+            count += 1
+        if d_bc <= R_sq:
+            count += 1
+        print("yes" if count >= 2 else "no")
+
+if __name__ == "__main__":
+    main()
+```<|im_end|><|endoftext|>]]]
+
+ ========== Example 2 ==========
+
+ --- Input --- 
+
+[[[<|im_start|>user
+Frank explained its friend Felman the algorithm of Euclides to calculate the GCD 
+of two numbers. Then Felman implements it algorithm 
+
+
+int gcd(int a, int b)
+{
+	if (b==0)
+		return a;
+	else
+		return gcd(b,a%b);
+}
+
+and it proposes to Frank that makes it 
+but with a little integer and another integer that has up to 250 digits. 
+Your task is to help Frank programming an efficient code for the challenge of Felman.
+Input
+The first line of the input file contains a number representing the number of lines to follow.
+Each line consists of two number A and B (0 ≤ A ≤ 40000 and A ≤ B < 10^250).
+
+
+Output
+Print for each pair (A,B) in the input one integer representing the GCD of A and B.
+
+
+
+Example
+
+Input:
+2
+2 6
+10 11
+
+
+Output:
+2
+1<|im_end|>
+<|im_start|>assistant
+]]]
+
+ --- Output --- 
+
+[[[```python
+import math
+
+n = int(input())
+for _ in range(n):
+    a_str, b_str = input().split()
+    a = int(a_str)
+    if a == 0:
+        if all(c == '0' for c in b_str):
+            print(0)
+        else:
+            print(int(b_str))
+    else:
+        mod = 0
+        for c in b_str:
+            mod = (mod * 10 + int(c)) % a
+        print(math.gcd(a, mod))
+```<|im_end|><|endoftext|>]]]
+
+ ========== Example 3 ==========
+
+ --- Input --- 
+
+[[[<|im_start|>user
+A Little Elephant from the Zoo of Lviv likes lucky strings, i.e., the strings that consist only of the lucky digits 4 and 7.
+The Little Elephant calls some string T of the length M balanced if there exists at least one integer X (1 ≤ X ≤ M) such that the number of digits 4 in the substring T[1, X - 1] is equal to the number of digits 7 in the substring T[X, M]. For example, the string S = 7477447 is balanced since S[1, 4] = 7477 has 1 digit 4 and S[5, 7] = 447 has 1 digit 7. On the other hand, one can verify that the string S = 7 is not balanced.
+ The Little Elephant has the string S of the length N. He wants to know the number of such pairs of integers (L; R) that 1 ≤ L ≤ R ≤ N and the substring S[L, R]  is balanced. Help him to find this number.
+Notes.
+
+Let S be some lucky string. Then
+
+
+|S| denotes the length of the string S;
+
+S[i] (1 ≤ i ≤ |S|) denotes the i^th character of S (the numeration of characters starts from 1);
+
+ S[L, R] (1 ≤ L ≤ R ≤ |S|) denotes the string with the following sequence of characters: S[L], S[L + 1], ..., S[R], and is called a substring of S. For L > R we mean by S[L, R] an empty string.
+Input
+The first line of the input file contains a single integer T, the number of test cases. Each of the following T lines contains one string, the string S for the corresponding test case. The input file does not contain any whitespaces.
+
+Output
+For each test case output a single line containing the answer for this test case.
+
+
+Constraints
+ 1 ≤ T ≤ 10
+ 1 ≤ |S| ≤ 100000
+ S consists only of the lucky digits 4 and 7.
+
+
+
+Example
+
+Input:
+4
+47
+74
+477
+4747477
+
+Output:
+2
+2
+3
+23
+
+
+
+Explanation
+In the first test case balance substrings are S[1, 1] = 4 and S[1, 2] = 47.
+In the second test case balance substrings are S[2, 2] = 4 and S[1, 2] = 74.
+Unfortunately, we can't provide you with the explanations of the third and the fourth test cases. You should figure it out by yourself. Please, don't ask about this in comments.<|im_end|>
+<|im_start|>assistant
+]]]
+
+ --- Output --- 
+
+[[[```python
+import bisect
+
+def count_balanced_substrings(s):
+    n = len(s)
+    count_4 = [0] * (n + 1)
+    for i in range(1, n+1):
+        count_4[i] = count_4[i-1] + (1 if s[i-1] == '4' else 0)
+    ans = 0
+    for L in range(1, n+1):
+        a = count_4[L-1]
+        # Binary search for the smallest R >= L where count_4[R] > a
+        # The count_4 array is non-decreasing, so we can use bisect
+        # We need to search in the subarray count_4[L..n]
+        # Using bisect_right to find the first element > a
+        R = bisect.bisect_right(count_4, a, lo=L, hi=n+1)
+        if R <= n:
+            ans += (n - R + 1)
+    return ans
+
+T = int(input())
+for _ in range(T):
+    s = input().strip()
+    print(count_balanced_substrings(s))
+```<|im_end|><|endoftext|>]]]
+
+ ========== Example 4 ==========
+
+ --- Input --- 
+
+[[[<|im_start|>user
+Given a string s. Can you make it a palindrome by deleting exactly one character? Note that size of the string after deletion would be one less than it was before.
+Input
+First line of the input contains a single integer T denoting number of test cases.
+For each test case, you are given a single line containing string  s. 
+
+Output
+For each test case, print YES or NO depending on the answer of the problem. 
+
+Constraints
+
+ Example
+Input:
+4
+aaa
+abc
+abdbca
+abba
+
+Output:
+YES
+NO
+YES
+YES
+
+Explanation
+Example case 1. Delete any one 'a', resulting string is "aa" which is a palindrome.
+Example case 2. It is not possible to delete exactly one character and having a palindrome.
+Example case 3. Delete 'c', resulting string is "abdba" which is a palindrome. 
+Example case 4. Delete 'b', resulting string is "aba" which is a palindrome.<|im_end|>
+<|im_start|>assistant
+]]]
+
+ --- Output --- 
+
+[[[```python
+def is_palindrome(s):
+    return s == s[::-1]
+
+T = int(input())
+for _ in range(T):
+    s = input().strip()
+    if is_palindrome(s):
+        print("YES")
+        continue
+    left = 0
+    right = len(s) - 1
+    found = False
+    while left < right:
+        if s[left] == s[right]:
+            left += 1
+            right -= 1
+        else:
+            # Check two possibilities: delete left or delete right
+            s1 = s[left+1 : right+1]  # Delete left character
+            s2 = s[left : right]      # Delete right character
+            if is_palindrome(s1) or is_palindrome(s2):
+                print("YES")
+            else:
+                print("NO")
+            found = True
+            break
+    if not found:
+        print("YES")
+```<|im_end|><|endoftext|>]]]
+
+ ========== Example 5 ==========
+
+ --- Input --- 
+
+[[[<|im_start|>user
+An established group of scientists are working on finding solution to NP hard problems. They claim Subset Sum  as an NP-hard problem. The problem is to determine whether there exists a subset of a given set S whose sum is a given number K.  
+You are a computer engineer and you claim to solve this problem given that all numbers in the set are non-negative. Given a set S of size N of non-negative integers, find whether there exists a subset whose sum is K.
+Input
+First line of input contains T, the number of test cases. T test cases follow. 
+Each test case contains 2 lines. First line contains two integers N and K. Next line contains N space separated non-negative integers (each less than 100000).
+0 < T < 1000
+0 < N < 1000
+0 < K < 1000
+
+Output
+Output T lines, one for each test case. Every line should be either 0 or 1 depending on whether such a subset exists or not.
+
+Example
+
+Input:
+2
+5 10
+3 4 6 1 9
+3 2
+1 3 4
+
+Output:
+1
+0<|im_end|>
+<|im_start|>assistant
+]]]
+
+ --- Output --- 
+
+[[[```python
+import sys
+
+def main():
+    input = sys.stdin.read().split()
+    idx = 0
+    T = int(input[idx])
+    idx +=1
+    for _ in range(T):
+        N, K = int(input[idx]), int(input[idx+1])
+        idx +=2
+        S = list(map(int, input[idx:idx+N]))
+        idx +=N
+        mask = 1
+        for num in S:
+            if num == 0 or num > K:
+                continue
+            mask |= mask << num
+            mask &= (1 << (K+1)) -1  # Keep only up to K bits
+        if mask & (1 << K):
+            print(1)
+        else:
+            print(0)
+
+if __name__ == "__main__":
+    main()
+```<|im_end|><|endoftext|>]]]
+
+ ========== Example 6 ==========
+
+ --- Input --- 
+
+[[[<|im_start|>user
+There are n persons who initially don't know each other. On each morning, two of them, who were not friends before, become friends.
+
+We want to plan a trip for every evening of m days. On each trip, you have to select a group of people that will go on the trip. For every person, one of the following should hold: 
+
+  * Either this person does not go on the trip, 
+  * Or at least k of his friends also go on the trip. 
+
+
+
+Note that the friendship is not transitive. That is, if a and b are friends and b and c are friends, it does not necessarily imply that a and c are friends.
+
+For each day, find the maximum number of people that can go on the trip on that day.
+Input
+
+The first line contains three integers n, m, and k (2 ≤ n ≤ 2 ⋅ 10^5, 1 ≤ m ≤ 2 ⋅ 10^5, 1 ≤ k < n) — the number of people, the number of days and the number of friends each person on the trip should have in the group.
+
+The i-th (1 ≤ i ≤ m) of the next m lines contains two integers x and y (1≤ x, y≤ n, x≠ y), meaning that persons x and y become friends on the morning of day i. It is guaranteed that x and y were not friends before.
+
+Output
+
+Print exactly m lines, where the i-th of them (1≤ i≤ m) contains the maximum number of people that can go on the trip on the evening of the day i.
+
+Examples
+
+Input
+
+4 4 2
+2 3
+1 2
+1 3
+1 4
+
+
+Output
+
+0
+0
+3
+3
+
+
+Input
+
+5 8 2
+2 1
+4 2
+5 4
+5 2
+4 3
+5 1
+4 1
+3 2
+
+
+Output
+
+0
+0
+0
+3
+3
+4
+4
+5
+
+
+Input
+
+5 7 2
+1 5
+3 2
+2 5
+3 4
+1 2
+5 3
+1 3
+
+
+Output
+
+0
+0
+0
+0
+3
+4
+4
+
+Note
+
+In the first example, 
+
+  * 1,2,3 can go on day 3 and 4. 
+
+
+
+In the second example, 
+
+  * 2,4,5 can go on day 4 and 5. 
+  * 1,2,4,5 can go on day 6 and 7. 
+  * 1,2,3,4,5 can go on day 8. 
+
+
+
+In the third example, 
+
+  * 1,2,5 can go on day 5. 
+  * 1,2,3,5 can go on day 6 and 7.<|im_end|>
+<|im_start|>assistant
+]]]
+
+ --- Output --- 
+
+[[[```python
+import sys
+from collections import deque
+
+def main():
+    input = sys.stdin.read().split()
+    idx = 0
+    n = int(input[idx]); idx += 1
+    m = int(input[idx]); idx += 1
+    k = int(input[idx]); idx += 1
+
+    adj = [[] for _ in range(n + 1)]  # 1-based indexing
+    core_degree = [0] * (n + 1)
+    in_core = [False] * (n + 1)
+    current_degree = [0] * (n + 1)
+    ans = []
+    core_size = 0
+
+    for _ in range(m):
+        u = int(input[idx]); idx += 1
+        v = int(input[idx]); idx += 1
+        adj[u].append(v)
+        adj[v].append(u)
+        current_degree[u] += 1
+        current_degree[v] += 1
+
+        queue = deque()
+        # Update core_degree for the nodes if their neighbors are in core
+        if in_core[u]:
+            core_degree[v] += 1
+            if not in_core[v] and core_degree[v] >= k:
+                queue.append(v)
+        if in_core[v]:
+            core_degree[u] += 1
+            if not in_core[u] and core_degree[u] >= k:
+                queue.append(u)
+        
+        # Also check if the nodes themselves can be added to the core now
+        if not in_core[u] and core_degree[u] >= k and current_degree[u] >= k:
+            queue.append(u)
+        if not in_core[v] and core_degree[v] >= k and current_degree[v] >= k:
+            queue.append(v)
+        
+        # Process the queue
+        while queue:
+            node = queue.popleft()
+            if in_core[node]:
+                continue
+            # Check again in case the core_degree was updated after being enqueued
+            if core_degree[node] >= k and current_degree[node] >= k:
+                in_core[node] = True
+                core_size += 1
+                for neighbor in adj[node]:
+                    if not in_core[neighbor]:
+                        core_degree[neighbor] += 1
+                        if core_degree[neighbor] >= k and current_degree[neighbor] >= k:
+                            queue.append(neighbor)
+        ans.append(core_size)
+    
+    for a in ans:
+        print(a)
+
+if __name__ == '__main__':
+    main()
+```<|im_end|><|endoftext|>]]]
+
+ ========== Example 7 ==========
+
+ --- Input --- 
+
+[[[<|im_start|>user
+Let's call a string a phone number if it has length 11 and fits the pattern "8xxxxxxxxxx", where each "x" is replaced by a digit.
+
+For example, "80123456789" and "80000000000" are phone numbers, while "8012345678" and "79000000000" are not.
+
+You have n cards with digits, and you want to use them to make as many phone numbers as possible. Each card must be used in at most one phone number, and you don't have to use all cards. The phone numbers do not necessarily have to be distinct.
+Input
+
+The first line contains an integer n — the number of cards with digits that you have (1 ≤ n ≤ 100).
+
+The second line contains a string of n digits (characters "0", "1", ..., "9") s_1, s_2, …, s_n. The string will not contain any other characters, such as leading or trailing spaces.
+
+Output
+
+If at least one phone number can be made from these cards, output the maximum number of phone numbers that can be made. Otherwise, output 0.
+
+Examples
+
+Input
+
+11
+00000000008
+
+
+Output
+
+1
+
+
+Input
+
+22
+0011223344556677889988
+
+
+Output
+
+2
+
+
+Input
+
+11
+31415926535
+
+
+Output
+
+0
+
+Note
+
+In the first example, one phone number, "8000000000", can be made from these cards.
+
+In the second example, you can make two phone numbers from the cards, for example, "80123456789" and "80123456789".
+
+In the third example you can't make any phone number from the given cards.<|im_end|>
+<|im_start|>assistant
+]]]
+
+ --- Output --- 
+
+[[[```python
+n = int(input())
+s = input().strip()
+count_8 = s.count('8')
+max_phones = n // 11
+print(min(count_8, max_phones))
+```<|im_end|><|endoftext|>]]]
+
+ ========== Example 8 ==========
+
+ --- Input --- 
+
+[[[<|im_start|>user
+You are given q queries in the following form:
+
+Given three integers l_i, r_i and d_i, find minimum positive integer x_i such that it is divisible by d_i and it does not belong to the segment [l_i, r_i].
+
+Can you answer all the queries?
+
+Recall that a number x belongs to segment [l, r] if l ≤ x ≤ r.
+Input
+
+The first line contains one integer q (1 ≤ q ≤ 500) — the number of queries.
+
+Then q lines follow, each containing a query given in the format l_i r_i d_i (1 ≤ l_i ≤ r_i ≤ 10^9, 1 ≤ d_i ≤ 10^9). l_i, r_i and d_i are integers.
+
+Output
+
+For each query print one integer: the answer to this query.
+
+Example
+
+Input
+
+
+5
+2 4 2
+5 10 4
+3 10 1
+1 2 3
+4 6 5
+
+
+Output
+
+
+6
+4
+1
+3
+10<|im_end|>
+<|im_start|>assistant
+]]]
+
+ --- Output --- 
+
+[[[```python
+q = int(input())
+for _ in range(q):
+    l, r, d = map(int, input().split())
+    if d < l:
+        print(d)
+    else:
+        print(((r // d) + 1) * d)
+```<|im_end|><|endoftext|>]]]
+
+ ========== Example 9 ==========
+
+ --- Input --- 
+
+[[[<|im_start|>user
+In Byteland, there are two political parties fighting for seats in the Parliament in the upcoming elections: Wrong Answer Party and Time Limit Exceeded Party. As they want to convince as many citizens as possible to cast their votes on them, they keep promising lower and lower taxes.
+
+There are n cities in Byteland, connected by m one-way roads. Interestingly enough, the road network has no cycles — it's impossible to start in any city, follow a number of roads, and return to that city. Last year, citizens of the i-th city had to pay h_i bourles of tax.
+
+Parties will now alternately hold the election conventions in various cities. If a party holds a convention in city v, the party needs to decrease the taxes in this city to a non-negative integer amount of bourles. However, at the same time they can arbitrarily modify the taxes in each of the cities that can be reached from v using a single road. The only condition that must be fulfilled that the tax in each city has to remain a non-negative integer amount of bourles.
+
+The first party to hold the convention is Wrong Answer Party. It's predicted that the party to hold the last convention will win the election. Can Wrong Answer Party win regardless of Time Limit Exceeded Party's moves?
+Input
+
+The first line of the input contains two integers n, m (1 ≤ n ≤ 200 000, 0 ≤ m ≤ 200 000) — the number of cities and roads in Byteland.
+
+The next line contains n space-separated integers h_1, h_2, ..., h_n (0 ≤ h_i ≤ 10^9); h_i denotes the amount of taxes paid in the i-th city.
+
+Each of the following m lines contains two integers (1 ≤ u, v ≤ n, u ≠ v), and describes a one-way road leading from the city u to the city v. There will be no cycles in the road network. No two roads will connect the same pair of cities.
+
+We can show that the conventions cannot be held indefinitely for any correct test case.
+
+Output
+
+If Wrong Answer Party can win the election, output WIN in the first line of your output. In this case, you're additionally asked to produce any convention allowing the party to win regardless of the opponent's actions. The second line should contain n non-negative integers h'_1, h'_2, ..., h'_n (0 ≤ h'_i ≤ 2 ⋅ 10^{18}) describing the amount of taxes paid in consecutive cities after the convention. If there are multiple answers, output any. We guarantee that if the party has any winning move, there exists a move after which no city has to pay more than 2 ⋅ 10^{18} bourles.
+
+If the party cannot assure their victory, output LOSE in the first and only line of the output.
+
+Examples
+
+Input
+
+
+4 2
+2 1 1 5
+1 2
+3 4
+
+
+Output
+
+
+WIN
+1 5 1 5 
+
+
+Input
+
+
+4 2
+1 5 1 5
+1 2
+3 4
+
+
+Output
+
+
+LOSE
+
+
+Input
+
+
+3 3
+314 159 265
+1 2
+1 3
+3 2
+
+
+Output
+
+
+WIN
+0 0 0 
+
+
+Input
+
+
+6 4
+2 2 5 5 6 6
+1 3
+2 4
+3 5
+4 6
+
+
+Output
+
+
+LOSE
+
+Note
+
+In the first example, Wrong Answer Party should hold the convention in the city 1. The party will decrease the taxes in this city to 1 bourle. As the city 2 is directly reachable from 1, we can arbitrarily modify the taxes in this city. The party should change the tax to 5 bourles. It can be easily proved that Time Limit Exceeded cannot win the election after this move if Wrong Answer Party plays optimally.
+
+The second example test presents the situation we created after a single move in the previous test; as it's Wrong Answer Party's move now, the party cannot win.
+
+In the third test, we should hold the convention in the first city. This allows us to change the taxes in any city to any desired value; we can for instance decide to set all the taxes to zero, which allows the Wrong Answer Party to win the election immediately.<|im_end|>
+<|im_start|>assistant
+]]]
+
+ --- Output --- 
+
+[[[```python
+import sys
+from sys import stdin
+from collections import deque
+
+def main():
+    sys.setrecursionlimit(1 << 25)
+    n, m = map(int, stdin.readline().split())
+    h = list(map(int, stdin.readline().split()))
+    adj = [[] for _ in range(n)]
+    in_degree = [0] * n
+    for _ in range(m):
+        u, v = map(int, stdin.readline().split())
+        u -= 1
+        v -= 1
+        adj[u].append(v)
+        in_degree[v] += 1
+
+    # Compute topological order
+    queue = deque()
+    for i in range(n):
+        if in_degree[i] == 0:
+            queue.append(i)
+    topo = []
+    while queue:
+        u = queue.popleft()
+        topo.append(u)
+        for v in adj[u]:
+            in_degree[v] -= 1
+            if in_degree[v] == 0:
+                queue.append(v)
+
+    # Compute grundy numbers in reverse topological order
+    grundy = [0] * n
+    for u in reversed(topo):
+        s = set()
+        for v in adj[u]:
+            s.add(grundy[v])
+        mex = 0
+        while mex in s:
+            mex += 1
+        grundy[u] = mex
+
+    total_xor = 0
+    for g in grundy:
+        total_xor ^= g
+
+    if total_xor == 0:
+        print("LOSE")
+        return
+
+    # Find a node v where total_xor ^ grundy[v] ^ xor_out == 0
+    for v in range(n):
+        xor_out = 0
+        for u in adj[v]:
+            xor_out ^= grundy[u]
+        if (total_xor ^ grundy[v] ^ xor_out) == 0:
+            # Set v and its out-neighbors to 0
+            new_h = h.copy()
+            new_h[v] = 0
+            for u in adj[v]:
+                new_h[u] = 0
+            print("WIN")
+            print(' '.join(map(str, new_h)))
+            return
+
+    print("LOSE")
+
+if __name__ == "__main__":
+    main()
+```<|im_end|><|endoftext|>]]]

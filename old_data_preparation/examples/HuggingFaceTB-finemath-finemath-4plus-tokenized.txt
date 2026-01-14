@@ -1,0 +1,530 @@
+
+ ===== Example 0 ===== 
+
+ - Input - 
+
+[[[<s> ×
+
+#### Thank you for registering.
+
+One of our academic counsellors will contact you within 1 working day.
+
+Click to Chat
+
+1800-1023-196
+
++91-120-4616500
+
+CART 0
+
+• 0
+
+MY CART (5)
+
+Use Coupon: CART20 and get 20% off on all online Study Material
+
+ITEM
+DETAILS
+MRP
+DISCOUNT
+FINAL PRICE
+Total Price: Rs.
+
+There are no items in this cart.
+Continue Shopping
+
+```Basic Definition of Differential Equation
+
+A differential equation is an equation which involves an unknown function of one or several variables that relates the values of the function itself and its derivatives of various orders. Differential equations play a vital role in various disciplines besides mathematics like engineering, physics, economics and biology.
+
+In other words, a differential equation may be defined as an equation containing an independent variable, dependent variable and differential coefficients of dependent variable with respect to independent variable.
+
+For Example: Listed below are the various examples of differential equations:
+
+xdy/dx =3y                               ......... (1)
+
+......... (2)
+
+√dy/dx + y = x                  .......... (3)
+
+......... (4)
+
+(d2y/dx2 )3 + (dy/dx)2 = x                 ......... (5)
+
+......... (6)
+
+Order and Degree of a Differential Equation:
+
+The order of differential equation is the order of highest order derivative appearing in the equation. So an equation of order 1 is called a first order equation, of order 2 is called a second order equation.
+
+For Example :
+
+Orders of differential equations (1), (2), (3), (4), (5) and (6) are 1, 2, 1, 3, 2 and 2 respectively.
+
+The differential equation y" + xy' – x3y = sin x is of second order since the highest derivative is y".
+
+The deg]]]
+
+ - Output - 
+
+[[[ree of differential equation is the degree of the highest order derivative involved in it, when the differential coefficients are free from radicals and fractions (i.e. write differential equations as polynomial in derivatives)
+
+For Example:
+
+Degrees of differential equations (1), (2), (3), (4), (5) and (6) are 1, 1, 1, 4, 3 and 2 respectively.
+
+For more on differential equations, you may refer the video
+
+Illustration 1: Find the order and degree (if defined) of the following differential equations:
+
+(i) (d3y/dx3 )2/3 = dy/dx +2.
+
+(ii)  d2y/dx2 = x (dy/dx)
+
+Solution :
+
+(i) The given differential equation can be re-written as
+
+(d3y/dx3 )2/3 = dy/dx +2.
+
+(d3y/dx3 )2= (dy/dx +2)3
+
+Hence its order is 3 and degree 2.
+
+(ii) d2y/dx2 = x (dy/dx)
+
+This is already in the standard form. Hence its order is 2 and degree 1.
+
+The differential equations can be classified into the ordinary or the partial differential equations:
+
+Ordinary Differential Equations: An ordinary differential equation is an equation involving a function and its derivatives. In other words, an equation involving one independent variable is called an ordinary differential equation. Mathematically, an Ordinary differential equation also called the ODE is expressed as
+
+F(x, y, y',…..,y (n) ) = 0, where y is a function of x and y' denotes the first derivative of y with respect to x, and y(n) = dny / dxn
+
+An ordinary differential equation of order n is said to be linear if
+
+an (x)y(n) + a n-1(x) y (n-1) + …. + a1 (x) y' + a0 (x) y = Q(x)
+
+Further, if in such an equation Q(x) = 0, then the equation is said to be homogeneous.
+
+Partial</s>]]]
+
+ ===== Example 1 ===== 
+
+ - Input - 
+
+[[[<s> This site is supported by donations to The OEIS Foundation.
+
+ Hints (Greetings from The On-Line Encyclopedia of Integer Sequences!)
+ A215850 Primes p such that 2*p + 1 divides Lucas(p). 2
+ 5, 29, 89, 179, 239, 359, 419, 509, 659, 719, 809, 1019, 1049, 1229, 1289, 1409, 1439, 1499, 1559, 1889, 2039, 2069, 2129, 2339, 2399, 2459, 2549, 2699, 2819, 2939, 2969, 3299, 3329, 3359, 3389, 3449, 3539, 3779, 4019, 4349, 4409, 4919, 5039, 5279, 5399, 5639 (list; graph; refs; listen; history; text; internal format)
+ OFFSET 1,1 COMMENTS An equivalent definition of this sequence: 5 together with primes p such that p == -1 (mod 30) and 2*p + 1 is also prime. Sequence without the initial 5 is the intersection of A005384 and A132236. These numbers do not occur in A137715. From Arkadiusz Wesolowski, Aug 25 2012: (Start) The sequence contains numbers like 1409 which are in A053027. a(n) is in A002515 if and only if a(n) is congruent to -1 mod 60. (End) LIN]]]
+
+ - Output - 
+
+[[[KS Arkadiusz Wesolowski, Table of n, a(n) for n = 1..10000 C. K. Caldwell, "Top Twenty" page, Lucas cofactor Eric Weisstein's World of Mathematics, Lucas Number EXAMPLE 29 is in the sequence since it is prime and 59 is a factor of Lucas(29) = 1149851. MATHEMATICA Select[Prime@Range[740], Divisible[LucasL[#], 2*# + 1] &] Prepend[Select[Range[29, 5639, 30], PrimeQ[#] && PrimeQ[2*# + 1] &], 5] PROG (MAGMA) [5] cat [n: n in [29..5639 by 30] | IsPrime(n) and IsPrime(2*n+1)]; (PARI) is_A215850(n)=isprime(n)&!real((Mod(2, 2*n+1)+quadgen(5))*quadgen(5)^n) \\ - M. F. Hasler, Aug 25 2012 CROSSREFS Supersequence of A230809. Cf. A000032, A132236. Sequence in context: A272650 A050409 A111937 * A190585 A197276 A211062 Adjacent sequences:  A215847 A215848 A215849 * A215851 A215852 A215853 KEYWORD nonn AUTHOR Arkadiusz Wesolowski, Aug 24 2012 STATUS approved
+
+Lookup | Welcome | Wiki | Register | Music | Plot 2 | Demos | Index | Browse | More | WebCam
+Contribute new seq. or comment | Format | Style Sheet | Transforms | Superseeker | Recent | More pages
+The O</s>]]]
+
+ ===== Example 2 ===== 
+
+ - Input - 
+
+[[[<s> Search a number
+14147 = 74347
+BaseRepresentation
+bin11011101000011
+3201101222
+43131003
+5423042
+6145255
+756150
+oct33503
+921358
+1014147
+11a6a1
+12822b
+136593
+145227
+1542d2
+hex3743
+
+14147 has 8 divisors (see below), whose sum is σ = 16896. Its totient is φ = 11592.
+
+The previous prime is 14143. The next prime is 14149. The reversal of 14147 is 74141.
+
+Adding to 14147 its reverse (74141), we get a palindrome (88288).
+
+It can be divided in two parts, 14 and 147, that added together give a palindrome (161).
+
+It is a sphenic number, since it is the product of 3 distinct primes.
+
+It is not a de Polignac number, because 14147 - 22 = 14143 is a prime.
+
+It is an alternating number because its digits alternate between odd and even.
+
+It is a Duffinian number.
+
+It is an inconsummate number, since it does not exist a number n which divided by its sum of digits gives 14147.
+
+It is not an unprimeable number, because it can be changed into a prime (14143) by changing a digit.
+
+It is a polite number, since it can be written in 7 ways as a sum of consecutive naturals, for example, 278 + ... + 324.
+
+It is an arithmetic number, because the mean of its divisors is]]]
+
+ - Output - 
+
+[[[an integer number (2112).
+
+214147 is an apocalyptic number.
+
+14147 is a deficient number, since it is larger than the sum of its proper divisors (2749).
+
+14147 is an equidigital number, since it uses as much as digits as its factorization.
+
+14147 is an evil number, because the sum of its binary digits is even.
+
+The sum of its prime factors is 97.
+
+The product of its digits is 112, while the sum is 17.
+
+The square root of 14147 is about 118.9411619247. The cubic root of 14147 is about 24.1854840889.
+
+The spelling of 14147 in words is "fourteen thousand, one hundred forty-seven", and thus it is an iban number.
+
+Divisors: 1 7 43 47 301 329 2021 14147</s>]]]
+
+ ===== Example 3 ===== 
+
+ - Input - 
+
+[[[<s> # The Three Caskets: a question of probability
+
+## Recommended Posts
+
+Here is a question I have always wondered how the answer is correct, because I can't manage to make it seem right.
+
+A chap at the fair is tring to find a prize that is hidden in one of three caskets. He chooses a casket, whereupon the man running the stall opens one of the other cases, which is empty. He then asks the chap if he wants to stick with the casket he chose originally, or switch to the remaining one. which casket will give the chap the greatest odds of winning?
+
+The answer in the back of the books states that if he switches, his chances of winning are doubled. so the chap should take the remaining casket.
+
+This always seems quite odd to me. It seems to work on the principle that at the beggining, he has a 2/3 chance of being wrong. but once one casket is opened, that should reduce the chances of being wrong to 1/2, shouldn't it? that there were originally three shouldn't make any difference, should it?
+
+Am I right, or is the book?
+
+##### Share on other sites
+
+The Monty Hall problem. Yes, the answer is correct — adding information changes the odds.
+
+What if there were 100 caskets, and after you chose, the barker opened up 98 of them?
+
+Edited by swansont
+typo
+##### Share on other sites
+
+The player begins with a 1/3 chance of having picked the winning casket, and this reality never changes despite what the barker reveals (and the barker can always reveal an empty casket), so the other unopened casket has a 2/3 chance of winning.
+
+##### Share on other sites
+
+Ok, sorry it's taken me a while to get back to this, but here we go...
+
+I've provided a spreadsheet showing why I think the answer is wrong. I have put it in more detail that I probably need to, but I want to know the flaw in my reasoning, and the more detail I provide, the easier it is to find.
+
+I haven't managed to find a way to show that]]]
+
+ - Output - 
+
+[[[you are 2x more likely to find it in the second case.
+
+Looking at what swansont said, I would have thought that the main info that changes the situation would be that you have one case less than you began with, which you could basically ignore the existence of. after all, 3-1=2
+
+So I'd say the question given by swansont would have the same answer as this question.
+
+Base chances.doc
+
+##### Share on other sites
+
+I think the example given by swansont was particularly instructive, since the numbers are so very different (rather than 3 and 2). Picking 1 out of 100 gives a 1/100 chance you got the right one, revealing 98 empty ones won't change that fact. However, if you know that the host was only going to reveal empty ones, then you know that the prize is in one of the two left and that your original choice has only 1 in 100 chance of being right, so the other has 99 in 100 of being the right choice. It would be a different story if the host had shown you 98 empty ones before you made your choice.
+
+##### Share on other sites
+
+It has everything to do with the man who is running the stall knowing where the price is, and always revealing an empty one that you did not pick.
+
+Your original pick is going to be right 1/3 of the time, and 2/3 of the time the price will be in one of the remaining caskets. So if we make the assumptions that the guy running the show knows where the price is and always reveals an empty one, 2/3 of the time the price is going to be in the casket you did not pick originally, and he did not reveal.
+
+##### Share on other sites
+
+It has everything to do with the man who is running the stall knowing where the price is, and always revealing an empty one that you did not pick.
+
+Your original pick is going to be right 1/3 of the time, and 2/3 of the time the price will be in one of the remaining caskets. So if we make the assumptions that the guy running the show knows where the price is and always reveals</s>]]]
+
+ ===== Example 4 ===== 
+
+ - Input - 
+
+[[[<s> 1. ## uniqueness of log
+
+Fix $b>1$ and $y>0$. Prove that there is a unique real $x$ such that $b^{x} = y$.
+
+So to show uniqueness we need to consider the following: if $b^{x} = y$ and $b^{l} = y$ then $y = l$. But first we want to show that $b^{x}$ is monotonically increasing.
+
+So for any positive integer $n$, $b^{n}-1 \geq n(b-1)$. We can show this by factoring the LHS as $(b-1)(b^{n-1}+b^{n-2}+b^{n-3} + \ldots + b^{2} + b+1) \geq (b-1)n$. So $b-1 \leq \frac{]]]
+
+ - Output - 
+
+[[[b^{n}-1}{n}$. Or $b-1 \geq n(b^{1/n}-1)$. From here what do we do?
+
+2. In other words the strategy is that we need to consider a set....show that $x$ is the supremum of that set...and then show uniqueness?
+
+3. See what is the point of showing that is is strictly increasing? I see. Because you can show uniqueness by exploiting monotonicity.
+
+4. Let us consider the slightly different problem of showing that there is a unique $b$. So we fix $x, y>0$. Then uniqueness follows because $0 < y_1 < y_2 \implies y_{1}^{n} < y_{2}^{n}$. And to show existence we consider the set of $t$'s such that $t^n < x$.
+
+So we use this same set in our problem. But we are trying to use this strategy: $\text{monotonic increasing} \implies \text{uniqueness}$.</s>]]]
+
+ ===== Example 5 ===== 
+
+ - Input - 
+
+[[[<s> Dream . Believe . Achieve
+
+Friday, March 31, 2023
+
+# SSB Officer Intelligence Rating (OIR) Test Quiz Online
+
+Attempt SSB Officer Intelligence Rating (OIR) Test Quiz Online, the passing percentage is 75% with a time limit of 10 minutes.
+
+#### The Pattern of Quiz:
+
+MON – Defence and Aviation Quiz
+TUE – History/Geo/Polity
+WED – SSB OIR
+THU – SSB OIR
+FRI – Static GK Quiz
+SAT – Current Affairs Quiz
+SUN – 50 Questions Test Series
+
++1
+0
++1
+0
++1
+0
++1
+0
+QuizSSB Officer Intelligence Rating (OIR) Test Quiz Online
+QuizSSB Officer Intelligence Rating (OIR) Test Quiz Online
+
+• Hey Shahid,
+6-
+Numerically consider A to Z as 1 to 26.
+S=19, C=3, R=18, A=1, P=16
+Add all the numbers except the middle number = 39
+Substract the middle number, 39-18= 21
+
+7-
+Add all the numbers in the first block, it equals to 150.
+Find the missing number in the second block to equal the sum for 1]]]
+
+ - Output - 
+
+[[[50.
+
+12-
+6 * 5 =30 and 6 – 5 = 1
+30 and 1 are in lower sections of first block.
+
+Follow the same pattern for second block.
+
+14-
+Add all the numbers in first block, it equals to 250.
+Find the missing number in the second block to equal the sum for 250.
+
+• Hey Sudhanshu,
+7-
+Add all the numbers in the first block, it equals to 150.
+Find the missing number in the second block to equal the sum for 150.
+
+14-
+Add all the numbers in first block, it equals to 250.
+Find the missing number in the second block to equal the sum for 250.
+
+18-
+Numerically consider A to Z as 1 to 26.
+A=1, R=18, C=3
+Add the first and last number, then substract the middle number.
+(18-(1+3))=14.
+
+• Numerically consider A to Z as 1 to 26.
+S=19, C=3, R=18, A=1, P=16
+Add all the numbers except the middle number = 39
+Substract the middle number, 39-18= 21
+
+• Hey Abhinav,
+10-
+Consider A to Z as 1 to 26
+A+10=K
+N+10=X
+I+10=S
+
+DDE editor
+DDE Editorial Team comprises of researchers & content writers. The source of write ups are individual researches, references, informants and documentations. If you wish to submit a write up or information please write to contactus@defencedirecteducation.com
+
+### Tips For Personal Interview In SSB [Questions,...
+
+#### Stay Connected
+
+98,000Fans
+295,000Followers
+5,772Followers
+1,470,000Subscribers</s>]]]
+
+ ===== Example 6 ===== 
+
+ - Input - 
+
+[[[<s> # Relatively prime
+
+(Redirected from Coprime)
+
+Two positive integers $m$ and $n$ are said to be relatively prime or coprime if they share no common divisors greater than 1. That is, their greatest common divisor is $\gcd(m, n) = 1$. Equivalently, $m$ and $n$ must have no prime divisors in common. The positive integers $m$ and $n$ are relatively prime if and only if $\frac{m}{n}$ is in lowest terms.
+
+## Number Theory
+
+Relatively prime numbers show up frequently in number theory formulas and derivations:
+
+Euler's totient function determines the number of positive integers less than any given positive integer that is relatively prime to that number.
+
+Consecutive positive integers are always relatively prime, since, if a prime $p$ divides both $n$ and $n+1$, then it must divide their difference $(n+1)-n = 1$, which is impossible since $p > 1$.
+
+Two integers $a$ and $b$ are relatively prime if and only if there exist some $x,y\in \mathbb{Z}$ such that $ax+by=1$ (a special case of Bezout's Lemma). The Euclidean Algorithm can be used to compute the coefficients $x,y$.
+]]]
+
+ - Output - 
+
+[[[
+For two relatively prime numbers, their least common multiple is their product. This pops up in Chinese Remainder Theorem.</s>]]]
+
+ ===== Example 7 ===== 
+
+ - Input - 
+
+[[[<s> # Ppt on two step equations
+
+##### 7-1 Solving Two-Step Equations PRE-ALGEBRA LESSON 7-1 Solve each equation. a. 15 = 8 + n n = 7 b. p – 19 = 4 p = 23.
+
+20 5 Check 5v – 12 = 8 5(4) – 12 8Replace v with 4. 20 – 12 8Multiply. 8 = 8Simplify. Quick Check 7-1 Solve 7 – 3b = 1. Solving Two-Step Equations PRE-ALGEBRA LESSON 7-1 7 – 3b = 1 –7 + 7 – 3b = –7 + 1 Add –7 to each side. 0 – 3b = –6Simplify. –3b = –60 –/the balance is paid off. To find how many weeks w it will take you to pay for the bicycle, solve 100 + 25w = 350. Solving Two-Step Equations PRE-ALGEBRA LESSON 7-1 It will take you 10 weeks to pay for the bicycle. 100 + 25w = 350 100 + 25w – 100 = 350/
+
+8x - 4 TOC What is the discriminant? How many roots? Answers: Discriminant is + Two roots 02/11/12 lntaylor © Finding the Roots TOC 02/11/12 lntaylor © Roots of a Quadratic Equation Definition Factor Roots are x intercepts Factoring is the quickest way to finding the roots CTSCompleting/one! f(x) = -2x² + 3x - 15 TOC 02/11/12 lntaylor © -2x² - 3x - 15 Step 1 Write down a, b, -b and c Step 2 Write down the formula Step 3 Set up the equation to solve Watch your signs!!!!]]]
+
+ - Output - 
+
+[[[a = -2 b = -3 -b = 3 c = -15 ______ -b /
+
+##### Oct. 29, 2012 AGENDA: 1 – Bell Ringer 2 – Kinematics Equations 3 – Exit Ticket Today’s Goal: Students will be able to identify which kinematic equation.
+
+! October 29th (p. 13) Objective: Students will be able to identify which kinematic equation to apply in each situation Bell Ringer: Let’s say two people are racing: The first person has a large initial velocity (20 m/s) but/time interval? Solving Kinematics Problems Step 1: Read the Problem, underline key quantities Step 2: Assign key quantities a variable Step 3: Identify the missing variable Step 4: Choose the pertinent equation: Step 5: Solve for the missing variable. Step 6: Substitute and solve. /
+
+##### 18-Oct-15Created by Mr. Lafferty Maths Department Solving Sim. Equations Graphically Simultaneous Equations www.mathsrevision.com Solving Simple Sim. Equations.
+
+solving simultaneous equation of two variables by elimination method. 3.Solve simple equations Straight Lines Nat 5 www.mathsrevision.com Simultaneous Equations Nat 5 Straight Lines 18-Oct-15Created by Mr. Lafferty Maths Department Example 1 Solve the equations x + 2y = 14 x + y = 9 by elimination www.mathsrevision.com Simultaneous Equations Nat 5 Straight Lines 18-Oct-15Created by Mr. Lafferty Maths Department Step 1: Label/
+
+##### Holt Algebra 1 2-3 Solving Two-Step and Multi-Step Equations 2-3 Solving Two-Step and Multi-Step Equations Holt Algebra 1 Warm Up Warm Up Lesson Quiz Lesson.
+
+both sides by 7 to undo the division. n = 0 Holt Algebra 1 2-3 Solving Two-Step and Multi-Step Equations Solve. Example </s>]]]
+
+ ===== Example 8 ===== 
+
+ - Input - 
+
+[[[<s> Real Estate Tycoon
+
+• Lesson
+6-8
+3
+
+In this year-long project, students design, "build," and "sell" a house; after which they simulate investment of the profits in the stock market. Along the way, students make scale drawings, compute with fractions and decimals in various contexts, and even solve simple equations. This lesson plan was adapted from an article by David B. Smith, which appeared in the September 2000 edition of Mathematics Teaching in the Middle School.
+
+The project can be divided into three units to correspond with three marking periods (fall, winter, and spring). The first part, Drafting, includes a basic introduction to mechanical drawing skills, design format, and function. The curriculum objectives are to review operations with fractions, practice measurement skills, introduce the multiplication property of equality, and apply each of these skills and concepts to designing a floor plan for a one-story summer cottage. The second part, Real Estate, introduces terms and practices through an elaborate simulation. Students are asked to select a cottage design from the first part, purchase a building site, build a cottage using current building costs, and try to sell this property for a profit. The objectives for this unit are to review operations with decimals and percents and apply those skills to determine brokers' fees and closing costs. In the third part, Investment, student teams invest the profits from their property sales in the stock market. This last part targets the relationship between fractions and decimals and demonstrates the value of memorizing conversions from basic fractional units, such as fourths, thirds, and eighths, to the corresponding decimals.
+
+Drafting
+
+To set the stage for success, the class should understand basic measurement skills, multiplication with fractions, and the multiplication property of equality. Using these skills, students should able to measure distances accurately with a ruler and convert inches to feet using a scale of ¼ inch = 1 foot. Students should then be introduced to drafting tools, including the T-square, drawing board, right triangles, and compass, and should have practice in drawing a rectangle, an L-shape, a T-shape, and design symbols.
+
+After completing]]]
+
+ - Output - 
+
+[[[these exercises, students are told they will be designing their cottages according to the following guidelines:
+
+• The maximum building size is 24 ft. × 36 ft.
+• The scale for the drawing must be ¼ inch = 1 foot or 1/8 inch = 1 foot.
+• The maximum number of rooms is five.
+
+The need for these parameters is essential, as middle school students often have no concept of appropriate room dimensions and, consequently, exhibit little understanding of form and function.
+
+The primary objective at this stage is to create a functional living space. First, ask students to cut out graph-paper models of appropriately sized rooms and to piece them together in functional patterns. For example, a bedroom, sun room, kitchen, and family room can be arranged to demonstrate a variety of walking patterns, light exposures, and proximity. In addition, once the pattern is selected, room dimensions can be altered slightly to lower building costs.
+
+The figure below shows two functional patterns that may be created.
+
+When the rough drafts are complete with room assignments and symbols for doors and windows, students can begin their final drawings using mechanical drawing tools. Students should choose one of two scales, ¼ inch = 1 foot or 1/8 inch = 1 foot, on the basis of the size of their designs. Remind students to draw pale lines with a pencil first, in case they make a mistake and need to erase.
+
+Once corrections are complete, the designs should be given numbers and placed on tables around the room for viewing. The names of the designers should be covered. Each student is given a ballot and asked to record the number of the drawing that best demonstrates the qualities of functional living space, solar efficiency, and creativity. Once the winning design is chosen, review what distinguishes it from the others.
+
+Below is an example of an "award-winning" design.
+
+Real Estate
+
+The goal at this stage is to purchase an appropriate building site for the award-winning design. Ask students to define a region for the search, using local newspaper or real estate information. Then, as a class, list the advantages and disadvantages of each property using the following criteria:
+
+</s>]]]
+
+ ===== Example 9 ===== 
+
+ - Input - 
+
+[[[<s> ## Time & Distance Mcqs
+
+MCQ: Two trains 120 miles apart travel towards each other. The 1st train travels at 70 mph while the 2nd at 50 mph. A bird starts flying from the location of the faster train towards the other train at 85 mph and when it reaches the slower train it turns back and flies in the other direction at the same speed. When it reaches the faster train it again turns around and repeats the same procedure again and again. When the train collide, how far will the bird have flown?
+
+1. 85 miles
+2. 70 miles
+3. 50 miles
+4. 120 miles
+
+This above question "Two trains 120 miles apart travel towards each other. The 1st train travels at 70 mph while the 2nd at 50 mph. A bird starts flying from the location of the faster train towards the other train at 85 mph and when it reaches the slower train it turns back and flies in the other direction at the same speed. When it reaches the faster train it again turns around and repeats the same procedure again and again. When the train collide, how far will the bird have flown?" taken from a category of Mathematics Quizzes, if you learn all question of this topic click on it "Mathematics Quizzes". It takes five to ten minutes to complete this free Quantitative MCQs paper 1 test. You will see 4 or 5 option of each question. You must choose / think only one option and then press on answer key for check right answer. Practice "Quantitative MCQs paper 1" MCQs and share with your friends, brothers, sisters.
+
+## Time & Distance Mcqs
+
+MCQ: A train covers a distance of 10 km in 12 minutes. If its speed is decreased by 5 km /hr, the time taken by it to cover the same distance will be :__________?
+
+MCQ: A car traveling with 5/7 of its actual speed covers 42 km in 1 hr 40 min 48 sec. What is the actual speed of the car?
+
+MCQ: Three towns X, Y, and Z are on a river]]]
+
+ - Output - 
+
+[[[which flows uniformly. Y is equidistant from X and Z. If a boats man rows from X to Y and back in 10 hours and X to Z in 4 hours, find the ratio of speed of the boats man in still water to the speed of the current.
+
+MCQ: Rayan crosses a 400m bridge in 3 minutes. What is speed?
+
+MCQ: A man covered a certain distance at some speed. If he had moved 3 kmph faster, he would have taken 40 minutes less. If he had moved 2 kmph slower, he would have taken 40 minutes more. What is the the distance in km?
+
+MCQ: Walking at 80% of his usual speed, a man is 10 mins late to his office. Find the usual time taken by hime to reach his office.
+
+MCQ: Two trains 140 metres and 120 metres are running in the same direction with speeds 40 kmph and 60 kmph respectively. In what time will the faster train pass the slower one?
+
+MCQ: An express train travelled at an average speed of 100 km / hr, stopping for 3 minutes after every 75 km. How long did it take to reach its destination 600 km from the starting point ?
+
+MCQ: Excluding stoppages, the average speed of a bus is 54 kmph and including stoppages, it is 45 kmph. For how many minutes does the bus stop per hour?
+
+MCQ: A man travels a distance of 2 km by walking at a speed of 6 km/hr. He returns back at a speed of 4 km/hr. What is his average speed?
+
+MCQ: If the ratio of the speeds of A and B to cover a distance of 200 m is 3:4, then the ratio of the time taken to cover the same distance is________?
+
+MCQ: In a journey of 24 miles, two thirds of the distance was travelled with a speed of 40 mph and the remaining with 60 mph. How much time did the journey take?
+
+MCQ: Danish his car at a speed of 120 kmph for the first 2 hours</s>]]]

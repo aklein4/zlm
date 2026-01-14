@@ -1,0 +1,314 @@
+
+
+ ========== Example 0 ==========
+
+ --- Input --- 
+
+[[[<|im_start|>user
+In the "Super Brain" quiz organized by the study group, the scores of 11 participants are shown in the table below. What are the median and mode of the scores of these 11 participants?
+
+| Score | 60 | 80 | 90 | 95 |
+|-------|----|----|----|----|
+| Number of Participants | 2 | 2 | 3 | 4 |
+
+A: 86.5 and 90
+
+B: 80 and 90
+
+C: 90 and 95
+
+D: 90 and 90<|im_end|>
+<|im_start|>assistant
+]]]
+
+ --- Output --- 
+
+[[[```lean
+import Mathlib
+import Aesop
+
+set_option maxHeartbeats 0
+
+open BigOperators Real Nat Topology Rat
+
+/-- Given a list of scores with specific frequencies, proves that the median is 90 and the mode is 95 -/
+theorem quiz_scores_median_mode 
+  (scores : List ℕ) 
+  (h_scores : scores = [60, 60, 80, 80, 90, 90, 90, 95, 95, 95, 95]) : 
+  (List.get! scores 5 = 90) ∧ -- median (6th element, index 5)
+  (∀ x ∈ scores, (scores.count 95) ≥ (scores.count x)) -- mode is 95
+  := by sorry
+```<|im_end|><|endoftext|>]]]
+
+ ========== Example 1 ==========
+
+ --- Input --- 
+
+[[[<|im_start|>system
+Formulate a detailed proof in Lean for the following mathematical claim.<|im_end|>
+<|im_start|>user
+The condition "$x > 1$" is a __________ for "$2^{x} > 1$".
+A: Sufficient but not necessary condition
+B: Necessary but not sufficient condition
+C: Sufficient and necessary condition
+D: Neither sufficient nor necessary condition<|im_end|>
+<|im_start|>assistant
+]]]
+
+ --- Output --- 
+
+[[[```lean
+import Mathlib
+import Aesop
+
+set_option maxHeartbeats 0
+
+open BigOperators Real Nat Topology Rat
+
+/-- Proves that x > 1 is sufficient but not necessary for 2^x > 1 -/
+theorem exp_two_sufficient_not_necessary :
+  -- Sufficient: x > 1 implies 2^x > 1
+  (∀ x : ℝ, x > 1 → (2 : ℝ)^x > 1) ∧
+  -- Not necessary: There exists x > 0 that is not > 1 but 2^x > 1
+  (∃ x : ℝ, x > 0 ∧ ¬(x > 1) ∧ (2 : ℝ)^x > 1) := by sorry
+```<|im_end|><|endoftext|>]]]
+
+ ========== Example 2 ==========
+
+ --- Input --- 
+
+[[[<|im_start|>system
+Using Lean, provide a formal proof for the stated mathematical proposition.<|im_end|>
+<|im_start|>user
+In an exam, 49% of candidates failed in English and 36% failed in Hindi, and a certain percentage failed in both subjects. The total number of candidates who passed in English alone is 630. The total number of candidates appeared in the exam is 3000. What is the percentage of candidates who failed in both subjects?<|im_end|>
+<|im_start|>assistant
+]]]
+
+ --- Output --- 
+
+[[[```lean
+import Mathlib
+import Aesop
+
+set_option maxHeartbeats 0
+
+open BigOperators Real Nat Topology Rat
+
+theorem lean_workbook_10912  (x : ℝ)
+  (h₀ : 0 < x)
+  (h₁ : x = 100 - (49 + 36 - (630 / 3000 * 100))) :
+  x = 15  := by sorry
+```<|im_end|><|endoftext|>]]]
+
+ ========== Example 3 ==========
+
+ --- Input --- 
+
+[[[<|im_start|>system
+Develop a rigorous proof in Lean for the stated mathematical proposition.<|im_end|>
+<|im_start|>user
+if the volume of two cubes are in the ratio 64 : 1 , the ratio of their edges is :<|im_end|>
+<|im_start|>assistant
+]]]
+
+ --- Output --- 
+
+[[[```lean
+import Mathlib
+import Aesop
+
+set_option maxHeartbeats 0
+
+open BigOperators Real Nat Topology Rat
+
+
+ /-if the volume of two cubes are in the ratio 64 : 1 , the ratio of their edges is :-/ 
+theorem lean_workbook_plus_66959  (a b : ℝ)
+  (h₀ : 0 < a ∧ 0 < b)
+  (h₁ : a^3 / b^3 = 64 / 1) :
+  a / b = 4   := by sorry
+```<|im_end|><|endoftext|>]]]
+
+ ========== Example 4 ==========
+
+ --- Input --- 
+
+[[[<|im_start|>system
+Develop a rigorous proof in Lean for the stated mathematical proposition.<|im_end|>
+<|im_start|>user
+if a tire rotates at 400 revolutions per minute when the car is traveling 120 km / h , what is the circumference of the tire ?<|im_end|>
+<|im_start|>assistant
+]]]
+
+ --- Output --- 
+
+[[[```lean
+import Mathlib
+import Aesop
+
+set_option maxHeartbeats 0
+
+open BigOperators Real Nat Topology Rat
+
+theorem lean_workbook_plus_73480  (a b c : ℝ)
+  (h₀ : 0 < a ∧ 0 < b ∧ 0 < c)
+  (h₁ : a * b * c = 1)
+  (h₂ : a * b + b * c + c * a = 4) :
+  a^2 + b^2 + c^2 + a * b * c ≥ 4   := by sorry
+```<|im_end|><|endoftext|>]]]
+
+ ========== Example 5 ==========
+
+ --- Input --- 
+
+[[[<|im_start|>system
+Develop a rigorous proof in Lean for the stated mathematical proposition.<|im_end|>
+<|im_start|>user
+Eden, Mary, and Iris gather sand to fill their sandbox. Eden carried some buckets of sand. Mary carried 3 more buckets of sand than Eden. Iris carried 1 less bucket of sand than Mary. They collected a total of 34 pounds of sand. How many buckets of sand did Eden carry?<|im_end|>
+<|im_start|>assistant
+]]]
+
+ --- Output --- 
+
+[[[```lean
+import Mathlib
+import Aesop
+
+set_option maxHeartbeats 0
+
+open BigOperators Real Nat Topology Rat
+
+theorem lean_workbook_plus_49557  (e m i : ℕ)
+  (h₀ : 0 < e ∧ 0 < m ∧ 0 < i)
+  (h₁ : m = e + 3)
+  (h₂ : i = m - 1)
+  (h₃ : e + m + i = 34) :
+  e = 9   := by sorry
+```<|im_end|><|endoftext|>]]]
+
+ ========== Example 6 ==========
+
+ --- Input --- 
+
+[[[<|im_start|>system
+Formulate a detailed proof in Lean for the following mathematical claim.<|im_end|>
+<|im_start|>user
+Harly's animal shelter has some dogs. She adopts out 40% of them but then has to take back 5 because of personality conflicts with other dogs in their adopted homes. She now has 53 dogs. How many dogs did she have initially?<|im_end|>
+<|im_start|>assistant
+]]]
+
+ --- Output --- 
+
+[[[```lean
+import Mathlib
+import Aesop
+
+set_option maxHeartbeats 0
+
+open BigOperators Real Nat Topology Rat
+
+theorem lean_workbook_plus_16521  (x : ℝ)
+  (h₀ : 0 < x)
+  (h₁ : x * 0.6 + 5 = 53) :
+  x = 80   := by sorry
+```<|im_end|><|endoftext|>]]]
+
+ ========== Example 7 ==========
+
+ --- Input --- 
+
+[[[<|im_start|>system
+Demonstrate the proof of the given mathematical assertion using Lean.<|im_end|>
+<|im_start|>user
+Given circle $C_{1}: (x+2)^{2}+(y-3)^{2}=1$, and circle $C_{2}: (x-3)^{2}+(y-4)^{2}=9$, where $A$ and $B$ are moving points on circles $C_{1}$ and $C_{2}$ respectively, and point $P$ is a moving point on the $y$-axis, then the maximum value of $|PB|-|PA|$ is __( ).
+
+A: $\sqrt {2}+4$
+
+B: $5 \sqrt {2}-4$
+
+C: $\sqrt {2}$
+
+D: $\sqrt {26}$<|im_end|>
+<|im_start|>assistant
+]]]
+
+ --- Output --- 
+
+[[[```lean
+import Mathlib
+import Aesop
+
+set_option maxHeartbeats 0
+
+open BigOperators Real Nat Topology Rat
+
+
+ /-Given circle $C_{1}: (x+2)^{2}+(y-3)^{2}=1$, and circle $C_{2}: (x-3)^{2}+(y-4)^{2}=9$, where $A$ and $B$ are moving points on circles $C_{1}$ and $C_{2}$ respectively, and point $P$ is a moving point on the $y$-axis, then the maximum value of $|PB|-|PA|$ is __( ).
+
+A: $\sqrt {2}+4$
+
+B: $5 \sqrt {2}-4$
+
+C: $\sqrt {2}$
+
+D: $\sqrt {26}$-/ 
+theorem lean_workbook_plus_33277  (a b c : ℝ)
+  (h₀ : 0 < a ∧ 0 < b ∧ 0 < c)
+  (h₁ : a + b + c = 1)
+  (h₂ : a * b + b * c + c * a = 1 / 3) :
+  1 / a + 1 / b + 1 / c ≤ 9 / (a + b + c)   := by sorry
+```<|im_end|><|endoftext|>]]]
+
+ ========== Example 8 ==========
+
+ --- Input --- 
+
+[[[<|im_start|>system
+Using Lean, provide a formal proof for the stated mathematical proposition.<|im_end|>
+<|im_start|>user
+a can do a piece of work in 8 days . he works at it for 4 days and then b finishes it in 6 days . in how many days can a and b together finish the work ?<|im_end|>
+<|im_start|>assistant
+]]]
+
+ --- Output --- 
+
+[[[```lean
+import Mathlib
+import Aesop
+
+set_option maxHeartbeats 0
+
+open BigOperators Real Nat Topology Rat
+
+theorem lean_workbook_49007  (a b : ℝ)
+  (h₀ : 0 < a ∧ 0 < b)
+  (h₁ : a + b = 1)
+  (h₂ : 1 / a = 4)
+  (h₃ : 1 / b = 6) :
+  1 / (a + b) = 24 / 5  := by sorry
+```<|im_end|><|endoftext|>]]]
+
+ ========== Example 9 ==========
+
+ --- Input --- 
+
+[[[<|im_start|>system
+Demonstrate the proof of the given mathematical assertion using Lean.<|im_end|>
+<|im_start|>user
+Suppose there is a bag containing 4 red balls and 2 white balls, all of the same size and texture. If balls are drawn one after another with replacement from the bag, and the number of times a red ball is drawn in 6 draws is denoted by $\xi$, then the expected value $E(\xi) =$ ______.<|im_end|>
+<|im_start|>assistant
+]]]
+
+ --- Output --- 
+
+[[[```lean
+import Mathlib
+import Aesop
+
+set_option maxHeartbeats 0
+
+open BigOperators Real Nat Topology Rat
+
+theorem lean_workbook_plus_29736 :
+  6 * (2 / 3) = 4   := by sorry
+```<|im_end|><|endoftext|>]]]

@@ -1,0 +1,314 @@
+
+ ===== Example 0 ===== 
+
+ - Input - 
+
+[[[<s> Instructions:
+Provide your final answer to the question, followed by an explanation of your reasoning.
+Question:
+If the length of a rectangle is four times its width and the area is 100 m2, what is the length of the rectangle?
+Answer:
+]]]
+
+ - Output - 
+
+[[[20 
+Explanation:
+Let's assume the width of the rectangle is x.
+According to the given information, the length of the rectangle is 4 times its width, so the length is 4x.
+The area of a rectangle is calculated by multiplying its length and width, so we have the equation:
+Length * Width = Area
+4x * x = 100
+4x^2 = 100
+Dividing both sides by 4, we get:
+x^2 = 25
+Taking the square root of both sides, we get:
+x = 5
+So the width of the rectangle is 5.
+And since the length is 4 times the width, the length is 4 * 5 = 20.
+Therefore, the length of the rectangle is 20.
+#### 20
+The answer is: 20</s>]]]
+
+ ===== Example 1 ===== 
+
+ - Input - 
+
+[[[<s> Instructions:
+Provide your final answer to the question, and then explain your reasoning.
+Question:
+In the given figure, a circle with center $O$ is inscribed in an isosceles triangle $ABC$, with $AB = AC$. The tangent points on sides $AB$ and $AC$ are $E$ and $F$, respectively. If the radius of the circle is $3$ and the perimeter of $\triangle ABC$ is $45$, find the length of side $BC$.
+
+[asy]
+
+size(7cm);
+defaultpen(fontsize(11));
+
+pair a = (0, 0);
+pair b = 10 * dir(-30);
+pair c = 10 * dir(30);
+pair o = 3 * dir(-90);
+pair e = (a + b) / 2;
+pair f = (a + c) / 2;
+
+draw(Circle(o, 3));
+draw(a--b--c--cycle);
+draw(o--e);
+draw(o--f);
+
+label("$O$", o, 2 * S);
+label("$E$", e, 2 * SE);
+label("$F$", f, 2 * SW);
+label("$A$", a, W);
+label("$B$", b, E);
+label("$C$", c, W);
+
+[/asy]
+Answer:
+]]]
+
+ - Output - 
+
+[[[15 
+Explanation:
+Since the triangle is isosceles, $AE = AF$. The perimeter of the triangle is given as 45, so we can express it as:
+\[ AB + BC + AC = 45 \]
+
+Since $AB = AC$, we can simplify this to:
+\[ 2AB + BC = 45 \]
+
+The radius of the inscribed circle is given as 3. In an isosceles triangle, the radius of the inscribed circle is one-third the height of the triangle. Let $h$ be the height of the triangle. Then:
+\[ 3 = \frac{1}{3}h \Rightarrow h = 9 \]
+
+The area of the triangle can be expressed as:
+\[ \text{Area} = \frac{1}{2} \times \text{base} \times \text{height} \]
+
+Using $BC$ as the base, we have:
+\[ \text{Area} = \frac{1}{2} \times BC \times 9 \]
+
+The area of the triangle can also be expressed as:
+\[ \text{Area} = rs \]
+
+where $r$ is the inradius and $s$ is the semiperimeter. The semiperimeter is:
+\[ s = \frac{AB + BC + AC}{2} = \frac{45}{2} \]
+
+So, the area is:
+\[ \text{Area} = 3 \times \frac{45}{2} = \frac{135}{2} \]
+
+Equating the two expressions for the area, we get:
+\[ \frac{1}{2} \times BC \times 9 = \frac{135}{2} \]
+
+Solving for $BC$, we get:
+\[ BC = \frac{135}{9} = \boxed{15} \]</s>]]]
+
+ ===== Example 2 ===== 
+
+ - Input - 
+
+[[[<s> Question:
+Consider a stochastic process $X(t)$ and the inequality $\mathbb{E}|X(t+δ)-X(t)|²≤(aδ+bδ²)K$, where $a$, $b$, and $K$ are constants. Evaluate the limit $\lim_{δ→0}\mathbb{E}|X(t+δ)-X(t)|²$ and justify your answer using the Squeeze/Sandwich Theorem.
+Answer:
+]]]
+
+ - Output - 
+
+[[[## Step 1: Understand the given inequality and its components
+The given inequality is $\mathbb{E}|X(t+δ)-X(t)|²≤(aδ+bδ²)K$, where $a$, $b$, and $K$ are constants. This inequality provides a bound on the expected value of the squared difference between $X(t+δ)$ and $X(t)$.
+
+## Step 2: Apply the Squeeze/Sandwich Theorem
+To evaluate the limit $\lim_{δ→0}\mathbb{E}|X(t+δ)-X(t)|²$, we need to consider how the expression $(aδ+bδ²)K$ behaves as $δ$ approaches 0. Since both $aδ$ and $bδ²$ approach 0 as $δ$ approaches 0, the entire expression $(aδ+bδ²)K$ approaches 0.
+
+## Step 3: Consider the lower bound
+Since $\mathbb{E}|X(t+δ)-X(t)|²$ is always non-negative (because it's an expected value of a squared quantity), the lower bound is 0.
+
+## Step 4: Apply the limit
+Given that the upper bound $(aδ+bδ²)K$ approaches 0 as $δ$ approaches 0, and the lower bound is 0, by the Squeeze/Sandwich Theorem, $\lim_{δ→0}\mathbb{E}|X(t+δ)-X(t)|² = 0$.
+
+The final answer is: $\boxed{0}$</s>]]]
+
+ ===== Example 3 ===== 
+
+ - Input - 
+
+[[[<s> Instructions:
+First work through the question step-by-step, then provide your final answer.
+Question:
+How do I show that $\frac{n}{\varphi(n)}=\sum\limits_{d \mid n} \frac{\mu^2(d)}{\varphi(d)}$? As the title says. How do I get from  $\frac{n}{\varphi(n)}$ to $\sum\limits_{d \mid n} \frac{\mu^2(d)}{\varphi(d)}$?
+I know that
+$$\frac{n}{\varphi(n)}=\frac{\sum\limits_{d \mid n} \varphi(d)}{\sum\limits_{d \mid n} \mu(d)\frac{n}{d}},$$
+and I suspect it is down this road I should go. But I get totally confused by the sums and I have no clue on how to divide them and "combine" them into one again. Any hints or advice would be much appreciated.
+Answer:
+]]]
+
+ - Output - 
+
+[[[Alternatively, you can use the fact that 
+$$\frac{n}{\phi(n)} = \prod_{p \mid n} \left(\frac{p}{p-1}\right)$$
+and expand the product by writing it as
+$$\prod_{p \mid n} \left(1+\frac{1}{p-1}\right).$$</s>]]]
+
+ ===== Example 4 ===== 
+
+ - Input - 
+
+[[[<s> Instructions:
+Provide your final answer to the question, and then explain your reasoning.
+Question:
+The Kwik-e-Tax Center charges $50 for a federal return, $30 for a state return, and $80 for quarterly business taxes. If they sell 60 federal returns, 20 state returns, and 10 quarterly returns in one day, what was their total revenue for the day?
+Answer:
+]]]
+
+ - Output - 
+
+[[[440 
+Explanation:
+The revenue from federal returns is 60 x $50 = $3000.
+The revenue from state returns is 20 x $30 = $600.
+The revenue from quarterly returns is 10 x $80 = $800.
+The total revenue for the day is $3000 + $600 + $800 = $4400.
+#### 4400
+The answer is 4400</s>]]]
+
+ ===== Example 5 ===== 
+
+ - Input - 
+
+[[[<s> Instructions:
+For the question below, provide your answer followed by an explanation of your reasoning.
+Question:
+Let $x_1,$ $x_2,$ $x_3$ be positive real numbers such that $x_1 + 2x_2 + 3x_3 = 60.$  Find the largest possible value of
+\[\frac{x_1}{1+x_1^2} + \frac{x_2}{1+x_2^2} + \frac{x_3}{1+x_3^2}.\]
+Answer:
+]]]
+
+ - Output - 
+
+[[[\frac{30}{101} 
+Explanation:
+Observe that the function $f(x) = \frac{x}{1+x^2}$ has a derivative
+\[ f'(x) = \frac{1 - x^2}{(1 + x^2)^2} \]
+
+which is positive for $0 < x < 1$ and negative for $x > 1$. This means that $f(x)$ is increasing on the interval $(0,1)$ and decreasing on the interval $(1,\infty)$. Therefore, the maximum value of $f(x)$ for $x > 0$ is $f(1) = \frac{1}{2}$.
+
+To maximize the expression
+\[ \frac{x_1}{1+x_1^2} + \frac{x_2}{1+x_2^2} + \frac{x_3}{1+x_3^2} \]
+
+we would like each term to be as large as possible. However, since $x_1 + 2x_2 + 3x_3 = 60$, we cannot make each $x_i$ equal to 1.
+
+We can write
+\[ x_1 + 2x_2 + 3x_3 = 60 \]
+
+as
+\[ x_1 + x_2 + x_2 + x_3 + x_3 + x_3 = 60 \]
+
+We can see that there are six terms on the left-hand side, and we would like to make each term as close to 1 as possible. This occurs when $x_1 = x_2 = x_3 = 10$, since this makes each term on the left-hand side equal to 10, which is as close to 1 as possible given the constraint.
+
+Therefore, the maximum value of the expression is
+\[ \frac{10}{1+10^2} + \frac{10}{1+10^2} + \frac{10}{1+10^2} = \frac{30}{101} \]
+
+The answer is:
+\[ \boxed{\frac{30}{101}} \]</s>]]]
+
+ ===== Example 6 ===== 
+
+ - Input - 
+
+[[[<s> Instructions:
+For the following question, provide a step-by-step explanation of your reasoning, with your final answer at the end.
+Question:
+Zeros of a function Show that all zeros of 
+$$f(z)=\sin z +z\cos z$$
+ are real. 
+I tried to use zeros of $\sin z$ and $\cos z$ are real even though I couldn't get any ideal.
+Answer:
+]]]
+
+ - Output - 
+
+[[[The equation $f(z) = 0$ is equivalent to $z = -\tan z$. Writing this out in real and imaginary parts, where $z = x+iy$, and $-\tan z = u + iv$ you get
+$$
+u = -\frac{\sin x \cos x}{\cos^2 x + \sinh^2 y} \quad \text{ and } \quad
+v = -\frac{\sinh y \cosh y}{\cos^2 x + \sinh^2 y}
+$$
+and you are looking for the solutions of $u=x$, $v=y$. Now if $y \ne 0$, then
+$$
+\left| \frac{yu}{xv} \right| = 
+\left| \frac{y \sin x \cos x} { x \sinh y \cosh y} \right|
+< \left| \frac{\cos x}{\cosh y } \right| < 1
+$$
+since $\left|\frac{y}{\sinh y}\right| < 1$, $\left|\frac{\sin x}{x}\right| \le 1$, and $|\cos x| \le 1 < |\cosh y|$. This shows that $x \ne u$ or $y \ne v$.
+The only case for which this argument does not work is $x=0$, since then we would be dividing by zero. However, in that case the equation $v = y$ becomes
+$y = - \tanh y$ which only has the trivial solution $y=0$.</s>]]]
+
+ ===== Example 7 ===== 
+
+ - Input - 
+
+[[[<s> Question:
+Let $A_1$, $A_2$, $A_3$, $\ldots$, $A_{20}$ be the vertices of a regular $20$-gon. Point $P$ is inside the polygon such that $A_1A_3A_5A_7A_9A_{11}A_{13}A_{15}A_{17}A_{19}P$ is a regular $11$-gon. Determine the sum of the angle measurements of all the triangles $A_{2k}A_{2k-1}P$ for $k=1,2,3,4,5,6,7,8,9,10$, in degrees.
+Answer:
+]]]
+
+ - Output - 
+
+[[[1620 
+Explanation:
+To find the sum of the angle measurements of all the triangles $A_{2k}A_{2k-1}P$ for $k=1,2,3,4,5,6,7,8,9,10$, we can use the property that the sum of the interior angles of a polygon with $n$ sides is $(n-2) \cdot 180$ degrees.
+
+The given $20$-gon has $20$ sides, so the sum of its interior angles is
+\[ (20-2) \cdot 180 = 18 \cdot 180 = 3240 \text{ degrees} \]
+
+The sum of the interior angles of the regular $11$-gon $A_1A_3A_5A_7A_9A_{11}A_{13}A_{15}A_{17}A_{19}P$ is
+\[ (11-2) \cdot 180 = 9 \cdot 180 = 1620 \text{ degrees} \]
+
+Now, let's calculate the sum of the interior angles of the triangles $A_{2k}A_{2k-1}P$.
+
+Each triangle contributes $180$ degrees to the sum of the interior angles of the $20$-gon. However, the sum of the interior angles of the $11$-gon is already accounted for in the sum of the interior angles of the $20$-gon.
+
+Thus, the sum of the interior angles of the triangles $A_{2k}A_{2k-1}P$ is
+\[ 3240 - 1620 = 1620 \text{ degrees} \]
+
+So, the answer is:
+\[ \boxed{1620} \]</s>]]]
+
+ ===== Example 8 ===== 
+
+ - Input - 
+
+[[[<s> Instructions:
+Explain your reasoning step-by-step for the question below, then provide your final answer.
+Question:
+Finding integers $a,b$ and $c$ such that $a^3+b^3 = c^3$ We are learning about the the Pythagorean Theorem in class. It says that $a^2+b^2 = c^2$. My homework problem says the following: 
+
+Find integers $a,b$ and $c$  such that $a^3+b^3 = c^3$. 
+
+How do I solve this equation? 
+I've been starting with $(3,4,5), (4,4,5)$ etc. Basically I am starting Pythogrean triples.
+Answer:
+]]]
+
+ - Output - 
+
+[[[HINT: It is known that the equation $a^3+b^3=c^3$ has no solutions in which $a,b$, and $c$ are all positive integers. It does have infinitely many solutions in integers, but all of them have one of two or three basic forms (depending on how you count) and are rather trivial.</s>]]]
+
+ ===== Example 9 ===== 
+
+ - Input - 
+
+[[[<s> Instructions:
+For the question below, thoroughly explain your reasoning before giving you answer.
+Question:
+Number Line [GRE] Between a number $5$ and $10$ on a number line,exclusive , a dark gray tick mark is placed at every multiple of $\frac{1}{3}$ and a light gray tick mark is placed at every multiple of $\frac{1}{9}$. At how many places will a dark gray tick mark and light gray tick mark overlap?
+I can't see the systematic way of solving this. Can anyone provide a systematic way of approaching such a problem? The book I have its solution is not handy.
+Answer:
+]]]
+
+ - Output - 
+
+[[[Concept : Overlap at LCM($\displaystyle\frac{1}{3}$,$\displaystyle\frac{1}{9}$) = $\displaystyle\frac{1}{3}$
+Just take one interval 5 to 6 
+$5$ + $\displaystyle\frac{1}{3}$  , $5$ + $\displaystyle\frac{2}{3}$ , $5$ + $\displaystyle\frac{3}{3}=6$
+so from $5$ to $6$ there are $3$ points ,
+similary 3 points between $6$ to $7$ , $7$ to $8$ ,$8$ to $9$ , $9$ to $10$  (but 10 not included )
+so $(5 \times 3 ) - 1$ = 
+$14$</s>]]]

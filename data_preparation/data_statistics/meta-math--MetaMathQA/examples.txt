@@ -1,0 +1,220 @@
+
+
+ ========== Example 0 ==========
+
+ --- Input --- 
+
+[[[<|im_start|>system
+Place the final answer to the following question inside of a \boxed{} command. This must appear at the start of your response before any other text.<|im_end|>
+<|im_start|>user
+Gracie and Joe are choosing numbers on the complex plane. Joe chooses the point $1+2i$. Gracie chooses $-1+i$. How far apart are Gracie and Joe's points?<|im_end|>
+<|im_start|>assistant
+]]]
+
+ --- Output --- 
+
+[[[\boxed{\sqrt{5}}
+The distance between two points $(x_1,y_1)$ and $(x_2,y_2)$ in the complex plane is given by the formula $\sqrt{(x_2-x_1)^2+(y_2-y_1)^2}$.
+In this case, Joe's point is $(1,2)$ and Gracie's point is $(-1,1)$.
+So the distance between their points is $\sqrt{((-1)-(1))^2+((1)-(2))^2}=\sqrt{(-2)^2+(-1)^2}=\sqrt{4+1}=\sqrt{5}$.
+Therefore, Gracie and Joe's points are $\boxed{\sqrt{5}}$ units apart.
+The answer is: \sqrt{5}<|im_end|><|endoftext|>]]]
+
+ ========== Example 1 ==========
+
+ --- Input --- 
+
+[[[<|im_start|>system
+Place the final answer to the following question inside of a \boxed{} command. This must come at the end of your response, and no other text should come after it.<|im_end|>
+<|im_start|>user
+What is the total cost of purchasing equipment for all sixteen players on the football team, considering that each player requires a $25 jersey, a $15.20 pair of shorts, and a pair of socks priced at $6.80?<|im_end|>
+<|im_start|>assistant
+]]]
+
+ --- Output --- 
+
+[[[Each player requires a $25 jersey, a $15.20 pair of shorts, and a pair of socks priced at $6.80.
+So the total cost for each player is $25 + $15.20 + $6.80 = $47.
+Since there are sixteen players on the football team, the total cost for all of them is 16 * $47 = $752.
+#### 752
+The answer is: 752
+Final answer: \boxed{752}<|im_end|><|endoftext|>]]]
+
+ ========== Example 2 ==========
+
+ --- Input --- 
+
+[[[<|im_start|>user
+Diego baked 12 cakes for his sister's birthday. Donald also baked 4 cakes, but ate x while waiting for the party to start. There are 15 cakes left. What is the value of unknown variable x?<|im_end|>
+<|im_start|>assistant
+]]]
+
+ --- Output --- 
+
+[[[To solve this problem, we need to determine the value of x, which represents the number of cakes Donald ate while waiting for the party to start.
+Let's break down the information given:
+Number of cakes baked by Diego: 12
+Number of cakes baked by Donald: 4
+Number of cakes left: 15
+We can set up the equation as follows:
+Number of cakes baked by Diego + Number of cakes baked by Donald - Number of cakes eaten by Donald = Number of cakes left
+12 + 4 - x = 15
+Let's simplify and solve for x:
+16 - x = 15
+To isolate x, we subtract 16 from both sides of the equation:
+16 - x - 16 = 15 - 16
+-x = -1
+Finally, we multiply both sides of the equation by -1 to solve for x:
+x = 1
+The value of x is 1.
+#### 1
+The answer is: 1<|im_end|><|endoftext|>]]]
+
+ ========== Example 3 ==========
+
+ --- Input --- 
+
+[[[<|im_start|>system
+Place the final answer to the following question inside of a \boxed{} command. This must come at the end of your response, and no other text should come after it.<|im_end|>
+<|im_start|>user
+Convert $10101_3$ to a base 10 integer.<|im_end|>
+<|im_start|>assistant
+]]]
+
+ --- Output --- 
+
+[[[$10101_3 = 1 \cdot 3^4 + 0 \cdot 3^3 + 1 \cdot 3^2 + 0 \cdot 3^1 + 1 \cdot 3^0 = 81 + 9 + 1 = \boxed{91}$.
+The answer is: 91
+Final answer: \boxed{91}<|im_end|><|endoftext|>]]]
+
+ ========== Example 4 ==========
+
+ --- Input --- 
+
+[[[<|im_start|>system
+Place the final answer to the following question inside of a \boxed{} command. This must come at the end of your response, and no other text should come after it.<|im_end|>
+<|im_start|>user
+Sue works in a factory and every 30 minutes, a machine she oversees produces 30 cans of soda. How many cans of soda can x machine produce in 8 hours?
+If we know the answer to the above question is 480, what is the value of unknown variable x?<|im_end|>
+<|im_start|>assistant
+]]]
+
+ --- Output --- 
+
+[[[We know that every 30 minutes, a machine produces 30 cans of soda.
+Since there are 60 minutes in an hour, and 8 hours in total, the total number of minutes is 60 * 8 = 480 minutes.
+If a machine produces 30 cans of soda every 30 minutes, then in 480 minutes, it will produce (480/30) * 30 = 480 cans of soda.
+We are given that the total number of cans of soda produced is 480, so we can write: 480 = 480 * x.
+Dividing both sides by 480, we get: x = 1.
+The value of x is 1.
+#### 1
+The answer is: 1
+Final answer: \boxed{1}<|im_end|><|endoftext|>]]]
+
+ ========== Example 5 ==========
+
+ --- Input --- 
+
+[[[<|im_start|>system
+Place the final answer to the following question inside of a \boxed{} command. This must come at the end of your response, and no other text should come after it.<|im_end|>
+<|im_start|>user
+Mark is buying asphalt to pave a new section of road. The road will be 2000 feet long and 20 feet wide. Each truckload of asphalt will cover 800 square feet of road. If each truckload costs x, and there's a 20% sales tax, how much will Mark need to pay for asphalt?
+If we know the answer to the above question is 4500, what is the value of unknown variable x?<|im_end|>
+<|im_start|>assistant
+]]]
+
+ --- Output --- 
+
+[[[The area of the road is the length multiplied by the width: 2000 * 20 = 40,000 square feet.
+Each truckload of asphalt will cover 800 square feet of road, so Mark will need 40,000 / 800 = 50 truckloads of asphalt.
+The cost of each truckload is x dollars.
+The total cost of the asphalt without sales tax is 50 * x dollars.
+The sales tax is 20% of the total cost, so the sales tax amount is 0.2 * (50 * x) = 10 * x dollars.
+The total cost including sales tax is the sum of the cost without sales tax and the sales tax amount: 50 * x + 10 * x = 60 * x dollars.
+We are given that the total cost is $4500, so we can write: 60 * x = $4500.
+Dividing both sides by 60, we get: x = $75.
+The value of x is $75.
+#### 75
+The answer is: 75
+Final answer: \boxed{75}<|im_end|><|endoftext|>]]]
+
+ ========== Example 6 ==========
+
+ --- Input --- 
+
+[[[<|im_start|>system
+Place the final answer to the following question inside of a \boxed{} command. This must appear at the start of your response before any other text.<|im_end|>
+<|im_start|>user
+Evan’s dog weighs 63 pounds; it weighs x times as much as Ivan’s dog.  Together, what is the weight of the dogs?
+If we know the answer to the above question is 72, what is the value of unknown variable x?<|im_end|>
+<|im_start|>assistant
+]]]
+
+ --- Output --- 
+
+[[[\boxed{7}
+We know that Evan's dog weighs 63 pounds.
+We also know that Evan's dog weighs x times as much as Ivan's dog, which means Ivan's dog weighs 63/x pounds.
+The total weight of the dogs is the sum of the weight of Evan's dog and the weight of Ivan's dog: 63 + 63/x.
+We are given that the total weight of the dogs is 72 pounds, so we can write: 63 + 63/x = 72.
+Solving for x, we get: x = 7.
+The value of x is 7.
+#### 7
+The answer is: 7<|im_end|><|endoftext|>]]]
+
+ ========== Example 7 ==========
+
+ --- Input --- 
+
+[[[<|im_start|>user
+The town of Belize has 400 homes. One fourth of the town's homes are white. One fifth of the non-white homes have a fireplace. How many of the non-white homes do not have a fireplace?<|im_end|>
+<|im_start|>assistant
+]]]
+
+ --- Output --- 
+
+[[[One fourth of the town's homes are white, so there are 400/4 = 100 white homes.
+The remaining non-white homes are 400 - 100 = 300 homes.
+One fifth of the non-white homes have a fireplace, so there are 300/5 = 60 non-white homes with a fireplace.
+Therefore, the number of non-white homes without a fireplace is 300 - 60 = 240.
+#### 240
+The answer is: 240<|im_end|><|endoftext|>]]]
+
+ ========== Example 8 ==========
+
+ --- Input --- 
+
+[[[<|im_start|>user
+Quantities $r$ and $s$ vary inversely. When $r$ is $1200,$ $s$ is $0.35.$ What is the value of $s$ when $r$ is $2400$? Express your answer as a decimal to the nearest thousandths.<|im_end|>
+<|im_start|>assistant
+]]]
+
+ --- Output --- 
+
+[[[If $r$ and $s$ vary inversely, then we know that $r \cdot s = k$ for some constant $k$.
+We are given that when $r$ is $1200$, $s$ is $0.35$. So we can set up the equation:
+$1200 \cdot 0.35 = k$
+Simplifying, we find that $k = 420$.
+Now we can use this value of $k$ to solve for $s$ when $r$ is $2400$:
+$2400 \cdot s = 420$
+Dividing both sides by $2400$, we find that $s = \boxed{0.175}$ to the nearest thousandths.
+The answer is: 0.175<|im_end|><|endoftext|>]]]
+
+ ========== Example 9 ==========
+
+ --- Input --- 
+
+[[[<|im_start|>system
+Place the final answer to the following question inside of a \boxed{} command. This must come at the end of your response, and no other text should come after it.<|im_end|>
+<|im_start|>user
+Dave bought 8 books about animals, 6 books about outer space, and 3 books about trains to keep him busy over the holidays. Each book cost $6. How much did Dave spend on the books?<|im_end|>
+<|im_start|>assistant
+]]]
+
+ --- Output --- 
+
+[[[Dave bought a total of 8 + 6 + 3 = 17 books.
+Each book cost $6, so Dave spent a total of 17 x $6 = $102 on the books.
+#### 102
+The answer is: 102
+Final answer: \boxed{102}<|im_end|><|endoftext|>]]]

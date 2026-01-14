@@ -1,0 +1,180 @@
+
+ ===== Example 0 ===== 
+
+ - Input - 
+
+[[[<s> Are you in need of an SR22?
+Have a DUI on driving record?
+Are you a high risk driver that traditional insurance companies will not insure?
+If you answered yes to any of those questions, at Rutherford Insurance Agency we can help! We have several companies that specialize in helping individuals that have high points, need an SR22, have a DUI conviction, or reckless operation on their driving record.
+Call Rutherford Insurance Agency today so we can discuss your situation and provide you with options and a quote.
+What is an SR22?
+An SR22 certification is a form that is filed with the state BMV, and is not a type of insurance.
+An SR22 certificate of financial responsibility verifies that the named individual is carrying at least the state-mandated amount of auto insurance. The insurance company is guaranteeing to the state that you're maintaining coverage and are financially responsible for any accidents, and it will let the state know if you lapse your auto insurance coverage.
+Who may need an SR22?
+Regulations vary from state to state, but an SR22 is usually required for a driver to regain his or her license after driving-related violations, such as:
+Multiple traffic offenses
+A DUI, or other serious moving violations
+License suspension or revocation
+Violations for failure to maintain the mandatory insurance coverage required in your state.
+Accident caused by an uninsured driver
+Can I get auto insurance after a DUI?
+Having a DUI on your driving record will cause your auto insurance rates to increase because
+auto insurance companies will classify you a
+higher-risk driver. This is likely to be the case
+with any auto insurance company. In fact, most traditional auto insurance companies simply don't offer DUI insurance due]]]
+
+ - Output - 
+
+[[[to the high risk.
+How long will I have to pay higher rates?
+As with most minor or major convictions, a DUI will raise your car insurance rates for at least
+three years, and with some insurance companies five years. If your state keeps the offense on your record longer than three years, and many do, it's common for this offense to affect your car insurance rates for five to seven years or more</s>]]]
+
+ ===== Example 1 ===== 
+
+ - Input - 
+
+[[[<s> Jim Cramer is one of the top watched TV personalities on CNBC. He is the host of Mad Money and also the co-founder and chairman of TheStreet.com. Nearly two hundred fifty thousand people watch his show daily on TV and most of these are ordinary investors trying to understand what’s going on in the market. Jim Cramer’s bullish and bearish stock picks on his show is the starting point for many investments made by these folks. Insider Monkey, your source for free insider trading data, will try to help these people by analyzing hedge fund holdings in these stocks.
+On April 29th Jim Cramer was bullish about the following stocks:
+Baidu (BIDU) and Sina Corp (SINA): Cramer has been very bullish about these two Chinese internet companies for a while now. He said Beijing-based Renren Network, which is similar to Facebook, is going to go public next week and it will ignite an increase in Chinese internet companies. To investors considering selling these two stocks, Cramer recommended not to sell BIDU and SINA until Renren goes public. Baidu is very popular among prominent investors. Fisher Asset Management, Coatue, Discovery Capital, and JAT Capital had $100+ Million in BIDU at the end of December. Sina wasn’t nearly as popular but hedge funds bullish about China also had SINA in their portfolios. Shumway Capital, Coatue and JAT are the largest holders.
+Avnet (AVT) and Apple (AAPL): Cramer interviewed Avnet’s CEO on Friday. The stock reported its first quarter earnings on Thursday and beat expectations by 11 cents. Cramer uses this stock to gauge the direction of tech stocks. He said Avnet is the reason why he is bullish about mobile internet stocks, i.e Apple (AAPL), and semiconductors. He is still bullish about Avnet, which returned 35% since Cramer last interviewed its CEO in January 2010. Avnet isn’t very popular among hedge funds. Cliff As]]]
+
+ - Output - 
+
+[[[ness’ AQR had $18 Million in AVT at the end of December. Apple is the most popular stock among hedge funds. Hedge fund stars like David Einhorn, John Griffin, Stephen Mandel, Chase Coleman and John Burbank all own AAPL in their portfolio.
+Ferro (FOE): Cramer thinks it is a good idea to buy this stock in dips and sell it in rips. Since the stock is in a dip right now, he recommended buying it. Ferro isn’t in a lot of hedge funds’ radar. Chuck Royce and Jim Simons have small positions in this stock.
+Chipotle Mexican Grill (CMG): Chipotle declined close to 10% during the past couple of weeks. Jim Cramer is calling bottom here. Jim Simons had the largest position in CMG. Mark Broach’s Manatuck Hill Partners also had more than $122 Million in CMG at the end of December.
+Goodrich (GR): Cramer recommended GR in his Lightning Round. He said GR will benefit from the new product cycle in aerospace industry. Goodrich is also one of Larry Robbins’ favorite stock picks. Stephen Mandel’s Lone Pine and Lee Ainslie’s Maverick also have large positions in GR. We also like this stock.
+Columbia Sportswear (COLM): Cramer likes this stock even though it went up 32% since he first recommended it in October 2010. He doesn’t agree with naysayers who are worried about increasing input prices. Chuck Royce had the only significant position in COLM at the end of December.
+VF Corp (VFC): The stock beat the earnings estimates and raised its guidance for the rest of 2011. Despite this, the stock went down after the announcement. Cramer still likes this name though. This stock isn’t in hedge funds’ radar.
+General Motors (GM) and Herbalife (HLF): These two are the other stocks Cramer expressed bullish views in his discussions. GM has been a real disappointment for several hedge funds. It was one of the most popular stocks among hedge funds</s>]]]
+
+ ===== Example 2 ===== 
+
+ - Input - 
+
+[[[<s> Currently serving as Chair of the Ethics Committee of the International Right of Way... more
+Currently serving as Chair of the Ethics Committee of the International Right of Way Association. Current board member of United Way of Greater Hazleton, Volunteer Center of Greater Hazleton, Helping Hands Society,and Hazleton Chapter of the Penn State Alumni Association. Past board member of Greater Hazleton Association of Realtors, Hazleton Area Landlords Organization and MMI Prepa... view profile
+A written will lets you decide what happens to your money and property after you die, while a living will lets you decide whether or not you wish to be placed on a medical life support system if you become disabled or incapacitated. Wills attorneys and living wills attorneys know all of the language that must be included in your will documents so that things happen the way you want. Because it's impossible for anyone]]]
+
+ - Output - 
+
+[[[to explain a will after his or her death, it is very important that the will meets all legal requirements. A wills attorney will ensure it does.</s>]]]
+
+ ===== Example 3 ===== 
+
+ - Input - 
+
+[[[<s> The county tax assessor appraises and determines property taxes for all real property in a county. The assessors' databases are available online, free of charge to anyone wanting to research property tax records. Available records include the taxpayer's name and address, the property's value and taxes paid and due. The information required to research a parcel can be found on the property tax bill. Call the assessor's office to request]]]
+
+ - Output - 
+
+[[[it if you do not have a property tax bill.
+Log on to the tax assessor's website for the county in which the property is located.
+Locate the "Property Search" button. Click it to move to the search screen.
+Enter the required search information to access the property tax records. Some assessors require a Parcel Identification Number, while others use an Assessor's Identification Number. Most allow searches by address.
+- computer image by blaine stiger from Fotolia.com</s>]]]
+
+ ===== Example 4 ===== 
+
+ - Input - 
+
+[[[<s> WWE John Cena Figure, 12-inch
+WWE 12-inch Action Figure Collection: Go big with a series of large-scale WWE figures! Towering over rivals at approximately 12-inches tall, they're made with authentic details like armbands, masks and attire and more than 15 points of articulation! Bigger is better and with these figures, you can launch impressive moves and do serious battle damage. Each sold separately, subject to availability. A]]]
+
+ - Output - 
+
+[[[ges 6 and older.
+This product has not yet been reviewed. Be the first to write a review.</s>]]]
+
+ ===== Example 5 ===== 
+
+ - Input - 
+
+[[[<s> May 20th, 2017
+Bethesda Country Club
+Imagine being able to be married in your parent’s beautiful back yard amongst the people that mean the most to you. Welcome to this incredibly personal and gorgeous celebration in Bethesda Maryland!
+Julie and Steven were married in the groom’s parent’s home followed by a reception at the Bethesda Country Club. “Our wedding ceremony” when asked what her favorite wedding day memory was, the bride says, “it was so heartfelt and personal. And we loved having all of our friends together to celebrate in the backyard! We felt it was incredibly personal to have the ceremony at Steve’s family home.”
+Why did you want to have your wedding gown preserved we asked. “I did a lot of dancing!” Julie recalls, “The dress is in dire need of cleaning!”
+“I knew the dress was the one as soon as I tried it on! It felt like a glove]]]
+
+ - Output - 
+
+[[[and was so elegant – I want to make sure that I keep it that way!”
+We are all for preserving your gown and the memories that come along with it! Congratulations Julie and Steve!</s>]]]
+
+ ===== Example 6 ===== 
+
+ - Input - 
+
+[[[<s> I used to have roommates who were vegetarians and, since I did much of the cooking in the household, I had to learn to adapt my recipes]]]
+
+ - Output - 
+
+[[[to their dietary requirements. After many tries, I finally came up with a vegetable soup recipe that satisfied their needs but didn't leave me feeling cheated (and hungry !) This recipe uses some fresh ingredients, some canned and some frozen. (BTW, for a non-vegetarian version, you can add salt pork, bacon, hambone or whatever you prefer...but try it veggie ! Trust me, an omnivore...it's great!)
+BTW, you CAN throw the macaroni in raw and let it cook in the soup rather than throwing cooked macaroni in at the end, but the starch off of the macaroni cooks into the broth and makes it very thick and cloudy, which I don't care for. Another matter of personal preference !</s>]]]
+
+ ===== Example 7 ===== 
+
+ - Input - 
+
+[[[<s> The country is well and truly in limbo.
+Not held hostage and not in crisis, just in limbo.
+There is no need to fear the country being governed by a caretaker National government. After all they sort of know how to do it after nine years.
+And anyway, if there was a natural disaster or a country declared war on us, I reckon all parties would do the right thing and work together to solve the crisis.
+So, let's all take a deep breath and let the negotiations take their course.
+I think New Zealand First leader Winston Peters is right in wanting to wait until all the special votes are counted by October 7 before he makes his decision.
+Why wouldn't he? Fifteen per cent of the vote is a large number and those seats could make for that much more of a stable coalition government either way.
+Winston Peters is no fool. He may be cantankerous and irritable, but he is an astute politician.
+He may look after Winston Peters first, but that does not mean it is to the detriment of the country. He wants what he thinks is best for New Zealand.
+He is also a pragmatist. He may play hardball in negotiations and say that he has bottom lines, but when push comes to shove, he will make some compromises.
+Mr]]]
+
+ - Output - 
+
+[[[Peters reckons he has nine permutations in his quest to reach a deal with Labour and National, ranging from full coalition with either party to sitting on the cross-benches and voting issue by issue other than confidence and supply.
+Sure, there will be many on either side who don't support his final decision, but this is not First Past the Post, this is MMP.
+There is no moral majority, it is all about who can form a government that lasts the full term.
+After all, it was you who voted for this.</s>]]]
+
+ ===== Example 8 ===== 
+
+ - Input - 
+
+[[[<s> Horses For Sale
+Take a look at who’s available for sale. Here at the Diamond R Ranch we pride ourselves on producing high quality racing and performance bred and]]]
+
+ - Output - 
+
+[[[trained horses.
+Our horses will sell with a full history of their health including any injuries or illness if they had any. Horses must go to a good home or they will not be delivered.
+If you have any questions contact us or call 1.866.734.7944</s>]]]
+
+ ===== Example 9 ===== 
+
+ - Input - 
+
+[[[<s> How to choose a career path in 3 easy steps
+Still not sure what you want to do with your life? These resources can help you figure it out.
+Knowing how to choose a career path after graduation is one lesson they don't teach in school. If you’ve earned your degree, you might be already entrenched in a career. Then again, you might not be.
+A 2018 report by the Strada Institute for the Future of Work and Burning Glass Technologies found that more than 40% of college graduates take positions out of school that don’t require a degree, and more than one in five college grads still aren’t working a degree-demanding job a decade after leaving school.
+So, if you’ve graduated and are still wondering how to determine a career path, you are far from alone.
+Well, that may be somewhat comforting. But it’d probably be even more comforting to feel like you’re on a path that you’re passionate about—especially since passion ranks highly in surveys about what millennials want out of work. So, uh, how exactly do you go from being undecided about your career to being on a track toward something real? Start with these resources.
+Use proven career assessments
+Google search “career assessment” and you’ll return about 434,000,000 results. Do they actually work? Should you shell out money to take online quizzes? Clearly, there’s a big market for career aptitude tests, many of which are unproven and costly. That’s why you should stick to ones that are inexpensive or free and have helped millions find careers.
+Atlanta-based career coach Kathy Brunner recommends clients take John Holland's SDS (Self Directed Search)—an assessment, that helps determine potential occupations and corresponding work environments based on your personality type.
+The test is based on the scientific findings of award-winning psychologist, John Holland, who invented the “Holland Codes,” a system that places individuals into one of six categories: Doers, Thinkers, Creators, Helpers, Persuaders and Organizers. Each category corresponds to a variety of different career paths. The test will cost you $9.9]]]
+
+ - Output - 
+
+[[[5 to take, but if it helps you find your true calling, it’ll have been the best $9.95 you ever spent.
+Don’t want to spend the money? Monster reviewed some of the free tools out there and picked these 10.
+Seek out career coaches
+In Brunner’s experience, people who hire career coaches are typically frustrated by a prolonged period of job seeking without results. Why wait for it to get to this point? Brunner says get a career coach early. “Those who seek out these services prior to gainful employment generally have a better chance at working in a field that resonates with them,” she says.
+How exactly will a career coach help? Well, it’s this person’s job to help connect people with careers they’ll love.
+“Career coaches are generally masters at networking, and can often access resources you may not find without their help,” says Debra Yergen, executive director of Yakima (Washington) Schools Foundation and author of Creating Job Security.
+We know, you’re thinking you don’t have the $150 an hour or so that that might cost you. But you do have a very free resource at your disposal: Your college’s career center. Counselors in the center are trained and experienced in helping people find the right career fit.
+Start interviewing...other people
+Career advancement coach Lauren Milligan (and CEO of ResuMAYDAY based in Warrenville, Illinois), advises millennials to seek out informational interview opportunities. “Better than any assessment or app, sitting down with someone, looking them in the eye, asking them questions and getting honest feedback is the best way to not only get your career questions answered, but is also a great way to build a team of career advocates,” she says. “When someone gives you their time, they become invested in your success.”
+But with whom should you meet? Milligan suggests starting with the people who already know you—a supervisor, professor, or someone you already know working in a field you’re interested in. You also shouldn’t be afraid to reach out to people you don’t know, too. “Be friendly and willing to learn,” Milligan says. “That's the type of person the 'older' gener</s>]]]

@@ -1,0 +1,261 @@
+
+
+ ========== Example 0 ==========
+
+ --- Input --- 
+
+[[[<|im_start|>user
+Every day, a tree drops 7 leaves. How many leaves would it drop in a month of February in a non-leap year? Include your logic.<|im_end|>
+<|im_start|>assistant
+]]]
+
+ --- Output --- 
+
+[[[Here's the logic behind this:
+
+1. We know that February has 28 days in a non-leap year.
+2. If the tree drops 7 leaves every day, then over the course of February, it would drop:
+   Leaves dropped in February = Leaves per day * Days in February
+   = 7 leaves * 28 days
+   = 196 leaves
+
+So, the tree would drop 196 leaves in February in a non-leap year.<|im_end|><|endoftext|>]]]
+
+ ========== Example 1 ==========
+
+ --- Input --- 
+
+[[[<|im_start|>user
+In analytical chemistry, what is the principle behind the use of an internal standard in quantitative analysis?
+A. It compensates for variations in sample preparation and instrumental response.
+B. It enhances the sensitivity of the analytical method.
+C. It reduces the detection limit of the analytical method.
+D. It increases the resolution between analyte peaks in chromatography.
+E. None of the above.<|im_end|>
+<|im_start|>assistant
+]]]
+
+ --- Output --- 
+
+[[[A. It compensates for variations in sample preparation and instrumental response.<|im_end|><|endoftext|>]]]
+
+ ========== Example 2 ==========
+
+ --- Input --- 
+
+[[[<|im_start|>user
+A rectangular garden has a length of 25 feet and a width of 15 feet. If you want to build a fence around the entire garden, how many feet of fencing will you need?<|im_end|>
+<|im_start|>assistant
+]]]
+
+ --- Output --- 
+
+[[[To determine the amount of fencing needed, we first need to calculate the perimeter of the rectangle. The formula for the perimeter of a rectangle is P = 2(L+W), where L is the length and W is the width.
+
+Perimeter = 2(L+W)
+                 = 2(25 feet + 15 feet)
+                 = 2(40 feet)
+                 = 80 feet
+
+So, you will need 80 feet of fencing to enclose the entire garden.<|im_end|><|endoftext|>]]]
+
+ ========== Example 3 ==========
+
+ --- Input --- 
+
+[[[<|im_start|>user
+What was the purpose of the Colosseum in Rome?<|im_end|>
+<|im_start|>assistant
+]]]
+
+ --- Output --- 
+
+[[[The Colosseum in Rome was used for various public spectacles and events. These included gladiatorial contests, mock sea battles, animal hunts, executions, re-enactments of famous battles, and dramas based on Classical mythology. It was a symbol of the grandeur and power of the Roman Empire and was a place for the emperor to connect with the people by providing them with entertainment and free food.<|im_end|><|endoftext|>]]]
+
+ ========== Example 4 ==========
+
+ --- Input --- 
+
+[[[<|im_start|>user
+A man claims he can predict the outcome of a dice roll with 90% accuracy. If he predicts correctly on his first attempt, what is the probability that he actually has the ability to predict dice rolls with 90% accuracy? Assume there's a 1% chance that someone can have this ability.<|im_end|>
+<|im_start|>assistant
+]]]
+
+ --- Output --- 
+
+[[[Let's use Bayes' theorem again to solve this problem:
+
+Let A represent the event that the man actually has the ability to predict dice rolls with 90% accuracy, and C represent the event of predicting correctly on the first attempt.
+
+We want to find P(A|C), the probability that the man actually has the ability given that he predicted correctly on his first attempt.
+
+Bayes' theorem states that P(A|C) = P(C|A) * P(A) / P(C)
+
+First, let's find P(C|A): the probability of predicting correctly on the first attempt if the man actually has the ability. Since he claims 90% accuracy, this probability is 0.9.
+
+Next, let's find P(A): the probability that someone actually has the ability to predict dice rolls with 90% accuracy. We are told this is 1%, so P(A) = 0.01.
+
+Now we need to find P(C): the overall probability of predicting correctly on the first attempt. This can be calculated as the sum of probabilities for each case: P(C) = P(C|A) * P(A) + P(C|¬A) * P(¬A), where ¬A represents not having the ability and P(¬A) = 1 - P(A) = 0.99.
+
+To find P(C|¬A), the probability of predicting correctly on the first attempt without the ability, we use the fact that there's a 1/6 chance of guessing correctly by random chance: P(C|¬A) = 1/6.
+
+So, P(C) = (0.9)*(0.01) + (1/6)*(0.99) = 0.009 + 0.165 = 0.174.
+
+Finally, we can calculate P(A|C) using Bayes' theorem:
+
+P(A|C) = P(C|A) * P(A) / P(C) = (0.9)*(0.01) / (0.174) ≈ 0.0517.
+
+Therefore, the probability that the man actually has the ability to predict dice rolls with 90% accuracy is approximately 5.17%.<|im_end|><|endoftext|>]]]
+
+ ========== Example 5 ==========
+
+ --- Input --- 
+
+[[[<|im_start|>user
+Imagine you are a detective in a noir novel. Write a monologue detailing your thoughts as you walk through a crime scene for the first time.<|im_end|>
+<|im_start|>assistant
+]]]
+
+ --- Output --- 
+
+[[[The rain is drumming a relentless tattoo on the city, like it's trying to wash away all its sins. But this place, this dark corner of existence, has more sins than even the heavens can cleanse. The crime scene tape flutters in the wind, a yellow gash against the grey backdrop. I step under it, my trench coat heavy with the weight of the night.
+
+It's a typical rundown apartment - peeling wallpaper, stained carpet, and the stench of decayed dreams hanging in the air. A single lamp casts long shadows that seem to hold secrets they're not ready to spill. My eyes trace the room, looking for clues hidden within the chaos. 
+
+There she lies, sprawled out on the floor like a discarded marionette. Red hair fanned around her head, pale skin glowing in the dim light. Her once vibrant green eyes now vacant, staring at some unseen horror only she could see. Death had stolen her youth, but couldn't erase her beauty. 
+
+A shattered glass, a toppled chair... signs of struggle or just another night in this godforsaken town? Every object here tells a story, whispers fragments of truth into my ear. But the whole truth, well, that's as elusive as a shadow in the moonlight.
+
+I crouch down next to her, gloved fingers tracing the cold outline of her lifeless form. There's no warmth left, no lingering spark of humanity. Just an empty shell, echoing with silent screams. She was someone's daughter, maybe someone's lover. Now, she's just another case file gathering dust on my desk.
+
+Every crime scene is a puzzle, each piece tainted with blood and betrayal. It's up to me to put them together, to find meaning in the madness. Some call it a job. Me? I call it penance. This city, these people, they're under my protection. And every time one of them ends up like this, it feels like I've failed.
+
+But failure isn't an option, not in this line of work. So, I push aside the guilt, the anger, the despair. I focus on the facts, the evidence, the cold hard truth. Because in this world of shadows and deceit, truth is the only weapon I have.
+
+As I walk away from the crime scene, I feel the weight of the night pressing down on me. But there's a fire burning inside me, fueled by justice and retribution. I won't rest until I find who did this. Until I make them pay.
+
+This is my city. These are my streets. And tonight, they've claimed another victim. But tomorrow, they'll bear witness to their own reckoning.<|im_end|><|endoftext|>]]]
+
+ ========== Example 6 ==========
+
+ --- Input --- 
+
+[[[<|im_start|>user
+Write a poem about the beauty of mathematics in the style of Emily Dickinson.<|im_end|>
+<|im_start|>assistant
+]]]
+
+ --- Output --- 
+
+[[[In the heart of Numbers, so precise,
+A Beauty dwells - both cool and nice.
+An elegance that sings in sums,
+And dances to algebraic drums.
+
+Addition's grace, subtraction's might,
+Multiplication's sheer delight,
+Division's firm yet gentle hand,
+All part of this enchanted land.
+
+Infinity, a lover bold,
+To whom the stars their secrets told,
+While Zero, cloaked in mystery,
+Unlocks each mathematical decree.
+
+Fractals bloom like flowers wild,
+Geometry, Nature's favored child,
+Calculus, with steady gaze,
+Maps out life's intricate maze.
+
+Pi, an endless serenade,
+In circles' arms forever laid,
+And prime numbers, standing lone,
+Make the universe their own.
+
+Each equation, theorem scribed,
+In parchment old or computer imbibed,
+Is but a whisper from the skies,
+A cosmic truth in disguise.
+
+For Math is more than rote and rule,
+More than a pedagogical tool,
+It's the language of the Divine,
+In every star, in every line.
+
+Oh, sweet Mathematics, pure and bright,
+You turn darkness into light,
+With you, we touch God's very face,
+Lost in your infinite embrace.<|im_end|><|endoftext|>]]]
+
+ ========== Example 7 ==========
+
+ --- Input --- 
+
+[[[<|im_start|>user
+A jar contains 4 red marbles, 3 blue marbles, and 2 green marbles. What is the probability of not drawing a red marble when picking one out randomly?<|im_end|>
+<|im_start|>assistant
+]]]
+
+ --- Output --- 
+
+[[[The probability of NOT drawing a red marble is found by subtracting the probability of drawing a red marble from 1.
+
+1. First, let's find the total number of marbles. We do this by adding up all the marbles: 4 red + 3 blue + 2 green = 9 marbles.
+2. The probability of drawing a red marble is the number of red marbles divided by the total number of marbles, which is 4/9.
+3. The probability of NOT drawing a red marble is therefore:
+
+Probability = 1 - Probability of Drawing a Red Marble
+= 1 - 4/9
+= 5/9
+
+So, the probability of not drawing a red marble is 5/9.<|im_end|><|endoftext|>]]]
+
+ ========== Example 8 ==========
+
+ --- Input --- 
+
+[[[<|im_start|>user
+Create a dialogue between two characters from Game of Thrones discussing their favorite books.<|im_end|>
+<|im_start|>assistant
+]]]
+
+ --- Output --- 
+
+[[[Character 1: Tyrion Lannister
+Character 2: Samwell Tarly
+
+Tyrion: Ah, Samwell! I see you've been busy with your books. What's the latest one that has caught your attention?
+
+Samwell: Good day, Lord Tyrion. Yes, indeed. Currently, I am engrossed in "The Conquest of Aegon". It provides a fascinating insight into how the Seven Kingdoms were united.
+
+Tyrion: Ah, a historical tome. Quite an interesting choice. For me, it's always been "An Unnatural History of Dragons." The myths and legends surrounding these creatures have always intrigued me.
+
+Samwell: Indeed, dragons are fascinating creatures. But I find real history more captivating than myths. That's why I prefer reading accounts like "The Lives of Four Kings" - it gives such detailed insights into the reigns of four Targaryen kings.
+
+Tyrion: Well, we all have our preferences. Myths and tales provide an escape from reality, something I think we both could use at times. 
+
+Samwell: True, Lord Tyrion. But understanding our past can help us shape our future better. And as a maester-in-training, it is my duty to seek knowledge from every source possible.
+
+Tyrion: Absolutely, Samwell. Knowledge is power, after all. Though I must say, I do enjoy a good fictional tale from time to time. There's this Essosi book called "The Jade Compendium," filled with exotic tales from across the Narrow Sea.
+
+Samwell: Sounds intriguing, Lord Tyrion. Perhaps once I'm done with my current read, I'll give it a try.
+
+Tyrion: Excellent! Now let's get back to our respective worlds, shall we? Enjoy your conquests, Samwell, while I lose myself in dragon lore.<|im_end|><|endoftext|>]]]
+
+ ========== Example 9 ==========
+
+ --- Input --- 
+
+[[[<|im_start|>user
+Classical mechanics is a branch of physics that deals with the motion of bodies under the influence of forces. This branch of physics is often contrasted with quantum mechanics, which deals with phenomena on a very small scale, such as atoms and subatomic particles. Electromagnetism, on the other hand, is the study of the electromagnetic force, one of the four fundamental forces of nature. This force is responsible for phenomena such as light and magnetism. Based on the paragraph, which branch of physics is responsible for the study of light?
+A. Classical mechanics
+B. Quantum mechanics
+C. Thermodynamics
+D. Electromagnetism
+E. None of the above<|im_end|>
+<|im_start|>assistant
+]]]
+
+ --- Output --- 
+
+[[[D. Electromagnetism<|im_end|><|endoftext|>]]]

@@ -1,0 +1,352 @@
+
+
+ ========== Example 0 ==========
+
+ --- Input --- 
+
+[[[<|im_start|>system
+Demonstrate the proof of the given mathematical assertion using Lean.<|im_end|>
+<|im_start|>user
+Prove that there exists a polynomial $ P \in \mathbb{Z}[X] $ such that the number 
+$$
+\sqrt[2003]{5 - 2\sqrt{6}} + \sqrt[2003]{5 + 2\sqrt{6}}
+$$
+is a root of $ P $.<|im_end|>
+<|im_start|>assistant
+]]]
+
+ --- Output --- 
+
+[[[```lean
+import Mathlib
+import Aesop
+import Mathlib
+set_option maxHeartbeats 0
+open BigOperators Real Nat Topology Rat
+open Polynomial
+
+theorem problem_568570 :
+    ∃ P : Polynomial ℤ,
+      IsRoot (P.map (Int.castRingHom ℝ))
+        ((5 - 2 * Real.sqrt (6 : ℝ)) ^ (1 / (2003 : ℝ)) +
+          (5 + 2 * Real.sqrt (6 : ℝ)) ^ (1 / (2003 : ℝ))) := by sorry
+```<|im_end|><|endoftext|>]]]
+
+ ========== Example 1 ==========
+
+ --- Input --- 
+
+[[[<|im_start|>system
+Use Lean to formally prove the following statement.<|im_end|>
+<|im_start|>user
+Prove that the matrix \( \mathbf{V} = (\mathbf{I} - 2t\mathbf{A\Sigma})^{-1}\mathbf{\Sigma} \) is symmetric.<|im_end|>
+<|im_start|>assistant
+]]]
+
+ --- Output --- 
+
+[[[```lean
+import Mathlib
+import Aesop
+import Mathlib.Data.Matrix.Basic
+import Mathlib.LinearAlgebra.Matrix.NonsingularInverse
+set_option maxHeartbeats 0
+open BigOperators Real Nat Topology Rat
+open Matrix
+
+theorem problem_67761 {n : Type*} [Fintype n] [DecidableEq n]
+    (t : ℝ) (A Sigma : Matrix n n ℝ)
+    (hA_symm : Aᵀ = A) (hSigma_symm : Sigmaᵀ = Sigma)
+    (h_comm : A * Sigma = Sigma * A) :
+    ((1 - (2 * t) • (A * Sigma))⁻¹ * Sigma)ᵀ =
+    ((1 - (2 * t) • (A * Sigma))⁻¹ * Sigma) := by sorry
+```<|im_end|><|endoftext|>]]]
+
+ ========== Example 2 ==========
+
+ --- Input --- 
+
+[[[<|im_start|>system
+Use Lean to formally prove the following statement.<|im_end|>
+<|im_start|>user
+Let $ A $ be a matrix with integer entries. An operation is defined as adding the same integer to all entries in a single row or a single column. It is given that for infinitely many positive integers $ n $, it is possible to obtain, through a finite number of operations, a matrix in which all entries are divisible by $ n $. Prove that, through a finite number of operations, one can obtain the null matrix.<|im_end|>
+<|im_start|>assistant
+]]]
+
+ --- Output --- 
+
+[[[```lean
+import Mathlib
+import Aesop
+import Mathlib.Data.Matrix.Basic
+import Mathlib.Data.Fintype.Basic
+import Mathlib.Data.Set.Finite
+import Mathlib.Tactic
+set_option maxHeartbeats 0
+open BigOperators Real Nat Topology Rat
+open Matrix
+
+inductive MatrixOp (ι κ : Type*) where
+  | rowAdd (i : ι) (c : ℤ) : MatrixOp ι κ
+  | colAdd (j : κ) (c : ℤ) : MatrixOp ι κ
+namespace MatrixOp
+variable {ι κ : Type*} [DecidableEq ι] [DecidableEq κ]
+def apply_op (M : Matrix ι κ ℤ) : MatrixOp ι κ → Matrix ι κ ℤ
+  | rowAdd i c => fun i' j' => if h : i' = i then M i' j' + c else M i' j'
+  | colAdd j c => fun i' j' => if h : j' = j then M i' j' + c else M i' j'
+def apply_ops (M : Matrix ι κ ℤ) : List (MatrixOp ι κ) → Matrix ι κ ℤ
+  | []        => M
+  | op :: ops => apply_ops (apply_op M op) ops
+end MatrixOp
+open MatrixOp
+theorem problem_289801
+  {ι κ : Type*} [Fintype ι] [Fintype κ] [DecidableEq ι] [DecidableEq κ]
+  (A : Matrix ι κ ℤ)
+  (h : Set.Infinite
+        { n : ℕ |
+            0 < n ∧
+            ∃ ops : List (MatrixOp ι κ),
+              ∀ i j, ∃ k : ℤ, (apply_ops A ops) i j = (n : ℤ) * k }) :
+  ∃ ops : List (MatrixOp ι κ), apply_ops A ops = (0 : Matrix ι κ ℤ) := by sorry
+```<|im_end|><|endoftext|>]]]
+
+ ========== Example 3 ==========
+
+ --- Input --- 
+
+[[[<|im_start|>user
+Let \( V \) and \( W \) be finite-dimensional vector spaces, and let \( P: V \rightarrow V \) and \( Q: W \rightarrow W \) be isomorphisms. Prove that \( \dim(\operatorname{Im}(T)) = \dim(\operatorname{Im}(QTP)) \).<|im_end|>
+<|im_start|>assistant
+]]]
+
+ --- Output --- 
+
+[[[```lean
+import Mathlib
+import Aesop
+set_option maxHeartbeats 0
+open BigOperators Real Nat Topology Rat
+
+universe u v w
+namespace Problem546038
+class MyDivisionRing (K : Type u) : Prop where
+  dummy : True
+class MyAddCommGroup (V : Type v) : Prop where
+  dummy : True
+class MyModule (K : Type u) (V : Type v) [MyDivisionRing K] [MyAddCommGroup V] : Prop where
+  dummy : True
+class MyFiniteDimensional (K : Type u) (V : Type v)
+    [MyDivisionRing K] [MyAddCommGroup V] [MyModule K V] : Prop where
+  dummy : True
+structure MyLinearMap (K : Type u) (V : Type v) (W : Type w)
+    [MyDivisionRing K] [MyAddCommGroup V] [MyModule K V]
+    [MyAddCommGroup W] [MyModule K W] where
+  toFun : V → W
+instance {K V W : Type*}
+    [MyDivisionRing K] [MyAddCommGroup V] [MyModule K V]
+    [MyAddCommGroup W] [MyModule K W] :
+    CoeFun (MyLinearMap K V W) (fun _ => V → W) where
+  coe f := f.toFun
+def MyLinearMap.comp {K V W U : Type*}
+    [MyDivisionRing K] [MyAddCommGroup V] [MyModule K V]
+    [MyAddCommGroup W] [MyModule K W]
+    [MyAddCommGroup U] [MyModule K U]
+    (f : MyLinearMap K W U) (g : MyLinearMap K V W) : MyLinearMap K V U :=
+{ toFun := fun v => f (g v) }
+structure MyLinearEquiv (K : Type u) (V : Type v) (W : Type w)
+    [MyDivisionRing K] [MyAddCommGroup V] [MyModule K V]
+    [MyAddCommGroup W] [MyModule K W] where
+  toLinearMap : MyLinearMap K V W
+  invFun      : W → V
+def MyLinearMap.range {K V W : Type*}
+    [MyDivisionRing K] [MyAddCommGroup V] [MyModule K V]
+    [MyAddCommGroup W] [MyModule K W]
+    (f : MyLinearMap K V W) : Set W :=
+  { y | ∃ x, f x = y }
+def finrank (K : Type u) {α : Type v} (S : Set α) : Nat := 0
+theorem problem_546038
+  {K : Type u} [MyDivisionRing K]
+  {V W : Type v}
+  [MyAddCommGroup V] [MyModule K V] [MyFiniteDimensional K V]
+  [MyAddCommGroup W] [MyModule K W] [MyFiniteDimensional K W]
+  (P : MyLinearEquiv K V V) (Q : MyLinearEquiv K W W) (T : MyLinearMap K V W) :
+  finrank K (MyLinearMap.range T) =
+    finrank K (MyLinearMap.range (Q.toLinearMap.comp (T.comp P.toLinearMap))) := by sorry
+```<|im_end|><|endoftext|>]]]
+
+ ========== Example 4 ==========
+
+ --- Input --- 
+
+[[[<|im_start|>system
+Construct a formal proof in Lean for the following mathematical claim.<|im_end|>
+<|im_start|>user
+Verify that $11^{λ(m)+1} ≡ 11 \pmod m$ for $m = 41 \cdot 11$. Given that $λ(m) = 40$, show that $11^{41} ≡ 11 \pmod{451}$. Specifically, demonstrate that $11^{41} ≡ 11 \pmod{41}$ and $11^{41} ≡ 11 \pmod{11}$.<|im_end|>
+<|im_start|>assistant
+]]]
+
+ --- Output --- 
+
+[[[```lean
+import Mathlib
+import Aesop
+import Mathlib.Data.Nat.ModEq
+set_option maxHeartbeats 0
+open BigOperators Real Nat Topology Rat
+
+theorem problem_158563 :
+  (11 ^ 41 ≡ 11 [MOD 451]) ∧
+  (11 ^ 41 ≡ 11 [MOD 41]) ∧
+  (11 ^ 41 ≡ 11 [MOD 11]) := by sorry
+```<|im_end|><|endoftext|>]]]
+
+ ========== Example 5 ==========
+
+ --- Input --- 
+
+[[[<|im_start|>system
+Use Lean to formally prove the following statement.<|im_end|>
+<|im_start|>user
+Given \( r > 0 \) and a function \( f \) satisfying \( g(x) \leq F(x) \) for all \( x \in [a,b] \) and \( g(x) = F(x) \) for some \( x \), show that the open ball \( B(f, r) \) contains a point in \( S \), i.e., there exists a continuous function \( g \) such that \( g(x) < F(x) \) for all \( x \in [a,b] \) and \( d(f, g) < r \).<|im_end|>
+<|im_start|>assistant
+]]]
+
+ --- Output --- 
+
+[[[```lean
+import Mathlib
+import Aesop
+set_option maxHeartbeats 0
+open BigOperators Real Nat Topology Rat
+
+def ClosedInterval (a b : ℝ) : Type := {x : ℝ // a ≤ x ∧ x ≤ b}
+theorem problem_539785 {a b : ℝ} (hab : a ≤ b)
+    (F f : ClosedInterval a b → ℝ) (r : ℝ) (hr : 0 < r)
+    (h_le : ∀ x, f x ≤ F x) (h_eq : ∃ x, f x = F x) :
+    ∃ g : ClosedInterval a b → ℝ,
+      (∀ x, g x < F x) ∧ (∀ x, |g x - f x| < r) := by sorry
+```<|im_end|><|endoftext|>]]]
+
+ ========== Example 6 ==========
+
+ --- Input --- 
+
+[[[<|im_start|>system
+Use Lean to formally prove the following statement.<|im_end|>
+<|im_start|>user
+Is a single point topologically connected?<|im_end|>
+<|im_start|>assistant
+]]]
+
+ --- Output --- 
+
+[[[```lean
+import Mathlib
+import Aesop
+import Mathlib.Topology.Basic
+set_option maxHeartbeats 0
+open BigOperators Real Nat Topology Rat
+open Set
+
+def MyIsPreconnected {α : Type*} [TopologicalSpace α] (s : Set α) : Prop :=
+  ∀ (U V : Set α),
+    IsOpen U → IsOpen V → s ⊆ U ∪ V →
+    (U ∩ s).Nonempty → (V ∩ s).Nonempty →
+    (U ∩ V ∩ s).Nonempty
+def MyIsConnected {α : Type*} [TopologicalSpace α] (s : Set α) : Prop :=
+  s.Nonempty ∧ MyIsPreconnected s
+theorem problem_542224 {α : Type*} [TopologicalSpace α] (x : α) :
+    MyIsConnected ({x} : Set α) := by sorry
+```<|im_end|><|endoftext|>]]]
+
+ ========== Example 7 ==========
+
+ --- Input --- 
+
+[[[<|im_start|>system
+Write the proof of the following mathematical statement in Lean.<|im_end|>
+<|im_start|>user
+Is a single point topologically connected?<|im_end|>
+<|im_start|>assistant
+]]]
+
+ --- Output --- 
+
+[[[```lean
+import Mathlib
+import Aesop
+import Mathlib.Topology.Basic
+set_option maxHeartbeats 0
+open BigOperators Real Nat Topology Rat
+open Set
+
+def MyIsPreconnected {α : Type*} [TopologicalSpace α] (s : Set α) : Prop :=
+  ∀ (U V : Set α),
+    IsOpen U → IsOpen V → s ⊆ U ∪ V →
+    (U ∩ s).Nonempty → (V ∩ s).Nonempty →
+    (U ∩ V ∩ s).Nonempty
+def MyIsConnected {α : Type*} [TopologicalSpace α] (s : Set α) : Prop :=
+  s.Nonempty ∧ MyIsPreconnected s
+theorem problem_542224 {α : Type*} [TopologicalSpace α] (x : α) :
+    MyIsConnected ({x} : Set α) := by sorry
+```<|im_end|><|endoftext|>]]]
+
+ ========== Example 8 ==========
+
+ --- Input --- 
+
+[[[<|im_start|>user
+Is a single point topologically connected?<|im_end|>
+<|im_start|>assistant
+]]]
+
+ --- Output --- 
+
+[[[```lean
+import Mathlib
+import Aesop
+import Mathlib.Topology.Basic
+set_option maxHeartbeats 0
+open BigOperators Real Nat Topology Rat
+open Set
+
+def MyIsPreconnected {α : Type*} [TopologicalSpace α] (s : Set α) : Prop :=
+  ∀ (U V : Set α),
+    IsOpen U → IsOpen V → s ⊆ U ∪ V →
+    (U ∩ s).Nonempty → (V ∩ s).Nonempty →
+    (U ∩ V ∩ s).Nonempty
+def MyIsConnected {α : Type*} [TopologicalSpace α] (s : Set α) : Prop :=
+  s.Nonempty ∧ MyIsPreconnected s
+theorem problem_542224 {α : Type*} [TopologicalSpace α] (x : α) :
+    MyIsConnected ({x} : Set α) := by sorry
+```<|im_end|><|endoftext|>]]]
+
+ ========== Example 9 ==========
+
+ --- Input --- 
+
+[[[<|im_start|>user
+Is a single point topologically connected?<|im_end|>
+<|im_start|>assistant
+]]]
+
+ --- Output --- 
+
+[[[```lean
+import Mathlib
+import Aesop
+import Mathlib.Topology.Basic
+set_option maxHeartbeats 0
+open BigOperators Real Nat Topology Rat
+open Set
+
+def MyIsPreconnected {α : Type*} [TopologicalSpace α] (s : Set α) : Prop :=
+  ∀ (U V : Set α),
+    IsOpen U → IsOpen V → s ⊆ U ∪ V →
+    (U ∩ s).Nonempty → (V ∩ s).Nonempty →
+    (U ∩ V ∩ s).Nonempty
+def MyIsConnected {α : Type*} [TopologicalSpace α] (s : Set α) : Prop :=
+  s.Nonempty ∧ MyIsPreconnected s
+theorem problem_542224 {α : Type*} [TopologicalSpace α] (x : α) :
+    MyIsConnected ({x} : Set α) := by sorry
+```<|im_end|><|endoftext|>]]]
