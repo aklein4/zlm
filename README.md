@@ -13,4 +13,4 @@ A work in progress.
 
 ## Running in the background
 
-`nohup python ~/zlm/src/train_xla.py > train.log 2>&1 &`
+`nohup python ~/zlm/src/train.py > train.log 2>&1 &`
