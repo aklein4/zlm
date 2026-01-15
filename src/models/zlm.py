@@ -246,6 +246,7 @@ class DiffusionHead(nn.Module):
 class ZLMModel(nn.Module):
     
     def __init__(self, config: DictConfig):
+        super().__init__()
         self.config = config
 
         # save config
