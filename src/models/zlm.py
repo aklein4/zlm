@@ -359,6 +359,10 @@ class ZLMModel(nn.Module):
             torch.randn(self.z_length, self.hidden_size)
         )
 
+        print("", flush=True)
+        print(self.diffusion_head.state_dict().keys(), flush=True)
+        print("", flush=True)
+
         if config.pretrained_llama is None:
             self.apply(gaussian_init)
 
