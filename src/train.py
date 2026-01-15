@@ -84,7 +84,7 @@ def main(config: omegaconf.DictConfig):
             remove_folder=True
         )
 
-    print(model.lm_head.device)
+    print(model.lm_head.weight.data.device)
     model = model.to(torch_xla.device())
 
     xm.rendezvous("Model Initialization")
