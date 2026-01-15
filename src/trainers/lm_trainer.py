@@ -25,7 +25,7 @@ class LMTrainer(BaseTrainer):
         )
 
         lm_loss = F.cross_entropy(
-            logits.view(-1),
+            logits.view(-1, logits.shape[-1]),
             all_ids[:, 1:].reshape(-1),
             ignore_index=pad_token_id,
         )
