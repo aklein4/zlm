@@ -16,6 +16,7 @@ def load_checkpoint(
     step: int,
     attention_kernel: str = "other", # uses non-kernel attention by default
     remove_folder: bool = False,
+    strict: bool = True,
 ):
     
     subfolder = f"{step:012d}"
@@ -26,20 +27,20 @@ def load_checkpoint(
         allow_patterns=[subfolder + "/*"],
         local_dir=constants.CHECKPOINTS_PATH,
     )
-    save_path = os.path.join(save_path, subfolder)
+    subfolder_path = os.path.join(save_path, subfolder)
 
     # load the model
-    config_path = os.path.join(save_path, "config.json")
+    config_path = os.path.join(subfolder_path, "config.json")
     config = omegaconf.OmegaConf.load(config_path)
     config.attention_kernel = attention_kernel
 
     model = import_model(config.type)(config)
 
     # load the weights
-    state_path = os.path.join(save_path, "model.pt")
+    state_path = os.path.join(subfolder_path, "model.pt")
     state_dict = torch.load(state_path, map_location="cpu")
 
-    model.load_state_dict(state_dict, strict=True)
+    model.load_state_dict(state_dict, strict=strict)
 
     if remove_folder:
         shutil.rmtree(save_path, ignore_errors=True)
@@ -52,6 +53,7 @@ def load_checkpoint_state(
     url: str,
     step: int,
     remove_folder: bool = False,
+    strict: bool = True,
 ):
     
     subfolder = f"{step:012d}"
@@ -62,13 +64,13 @@ def load_checkpoint_state(
         allow_patterns=[subfolder + "/*"],
         local_dir=constants.CHECKPOINTS_PATH,
     )
-    save_path = os.path.join(save_path, subfolder)
+    subfolder_path = os.path.join(save_path, subfolder)
 
     # load the weights
-    state_path = os.path.join(save_path, "model.pt")
+    state_path = os.path.join(subfolder_path, "model.pt")
     state_dict = torch.load(state_path, map_location="cpu")
 
-    model.load_state_dict(state_dict, strict=True)
+    model.load_state_dict(state_dict, strict=strict)
 
     if remove_folder:
         shutil.rmtree(save_path, ignore_errors=True)

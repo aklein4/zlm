@@ -47,7 +47,7 @@ class LMTrainer(BaseTrainer):
             shift_logits=False,
             shift_labels=True,
         )
-        lm_acc = lm_acc(
+        lm_acc = lm_acc_fn(
             logits,
             labels,
             ignore_index=IGNORE_INDEX,
