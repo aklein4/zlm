@@ -1,7 +1,7 @@
 import torch
 import torch.nn.functional as F
 
-from torch_xla.experimental import scan
+from torch_xla.experimental.scan import scan
 
 import numpy as np
 
