@@ -451,7 +451,7 @@ class LlamaModel(nn.Module):
         if attention_mask is not None:
             causal_mask = causal_mask * attention_mask[:, None, None, :]
 
-        elementwise_pad_mask = self.get_elementwise_pad_mask(seq_length, elementwise_pad_mask)
+        elementwise_pad_mask = self.get_elementwise_pad_mask(elementwise_pad_mask)
 
         hidden_states = inputs_embeds
 
