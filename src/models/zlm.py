@@ -188,17 +188,15 @@ class DiffusionHead(nn.Module):
         super().__init__()
 
         # modules
-        self.t_mlp = nn.Sequential(
-            ContinuousEmbedding(
-                num_frequencies=config.num_t_embed_frequencies,
-                embedding_dim=config.t_mlp_size,
-                input_min=config.minimum_diffusion_timestep,
-                input_max=1.0,
-                bias=True,
-            ),
-            ACT2FN[config.hidden_act],
-            nn.Linear(config.t_mlp_size, config.hidden_size, bias=False),
+        self.t_embed = ContinuousEmbedding(
+            num_frequencies=config.num_t_embed_frequencies,
+            embedding_dim=config.t_mlp_size,
+            input_min=config.minimum_diffusion_timestep,
+            input_max=1.0,
+            bias=True,
         )
+        self.t_act = ACT2FN[config.hidden_act],
+        self.t_proj = nn.Linear(config.t_mlp_size, config.hidden_size, bias=False),
 
         self.x_in_proj = nn.Linear(config.latent_size, config.hidden_size, bias=False)
 
@@ -230,7 +228,7 @@ class DiffusionHead(nn.Module):
 
         # process the hidden inputs
         hidden_states = (
-            self.t_mlp(t) +
+            self.t_proj(self.t_act(self.t_embed(t))) +
             self.hidden_states_in_proj(self.hidden_states_norm(hidden_states)) +
             self.x_in_proj(x_t)
         )
