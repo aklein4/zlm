@@ -17,8 +17,8 @@ from utils.torch_utils import (
     gaussian_init,
 )
 
-from models.llama import LlamaMLP, LlamaRMSNorm
-from models.reference_llama.modeling_llama import LlamaForCausalLM
+from models.llama import LlamaMLP, LlamaRMSNorm, LlamaForCausalLM
+from models import load_checkpoint_state
 from utils.torch_modules import ContinuousEmbedding
 import utils.constants as constants
 
@@ -269,13 +269,16 @@ class ZLMModel(nn.Module):
         # Load the pretrained Llama model
         if config.pretrained_llama is not None:
             
-            llama = LlamaForCausalLM.from_pretrained(
+            llama = LlamaForCausalLM(config)
+            load_checkpoint_state(
+                llama,
                 config.pretrained_llama,
-                dtype=self.lm_head.weight.dtype,
+                step=0,
+                strict=False,
             )
 
-            safe_copy_state(llama.model, self.encoder_model, strict=False)
-            safe_copy_state(llama.model, self.decoder_model, strict=False)
+            safe_copy_state(llama.model, self.encoder_model, strict=True)
+            safe_copy_state(llama.model, self.decoder_model, strict=True)
 
             safe_copy_state(llama.lm_head, self.lm_head)
         

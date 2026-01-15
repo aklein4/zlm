@@ -51,7 +51,7 @@ pad_attention_bias_value: -100.0
 attention_kernel: null
 
 # pretrained model to use as base
-pretrained_llama: HuggingFaceTB/SmolLM2-360M
+pretrained_llama: aklein4/SmolLM2-360M-TPU
 
 # lengths
 input_length: 256
