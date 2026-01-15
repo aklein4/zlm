@@ -85,7 +85,7 @@ def main(config: omegaconf.DictConfig):
         )
 
     xm.rendezvous("Model Initialization")
-    logger.info(f"Model initialized: {config.model.model_class}")
+    logger.info(f"Model initialized: {config.model.type}")
     model_utils.log_parameter_breakdown(model, logger)
 
     # Create the dataset
