@@ -124,31 +124,92 @@ class ZLMTrainer(BaseTrainer):
         full_grad_scale = linear_warmup(self.hook_step.float() - self.config.trainer.hook_wait_steps, self.config.trainer.hook_warmup_steps)
         kl_grad_weights = torch.zeros(1, self.model.z_length, 1, device=input_ids.device, dtype=torch.float32)
 
-        def scan_fn(carry, t_curr):
-            t_curr = t_curr.long()
+        # def scan_fn(carry, t_curr):
+        #     t_curr = t_curr.long()
 
+        #     noise = torch.randn_like(z)
+
+        #     z_t = self.model.scheduler.add_noise(
+        #         mu, t_curr, noise
+        #     )
+
+        #     pred_z_0 = self.model.diffusion_head(
+        #         scale_gradient(z_t, kl_grad_weights),
+        #         t_curr,
+        #         scale_gradient(z_states, full_grad_scale),
+        #         self.model.scheduler,
+        #     )
+        #     kl = self.model.scheduler.kl(
+        #         scale_gradient(mu, kl_grad_weights),
+        #         t_curr,
+        #         pred_z_0,
+        #         dim=-1
+        #     )
+
+        #     uncond_pred_z_0 = self.model.uncond_diffusion_head(
+        #         z_t.detach(),
+        #         t_curr,
+        #         self.model.uncond_tokens[None, :, :],
+        #         self.model.scheduler,
+        #     )
+        #     uncond_kl = self.model.scheduler.kl(
+        #         mu.detach(),
+        #         t,
+        #         uncond_pred_z_0,
+        #         dim=-1
+        #     )
+
+        #     return carry, torch.stack([kl, uncond_kl], dim=-1)
+
+        # t = torch.randint(
+        #     low=1,
+        #     high=self.model.config.num_diffusion_timesteps,
+        #     size=(self.config.trainer.num_diffusion_samples, *z.shape[:-1]),
+        #     device=input_ids.device,
+        #     dtype=torch.long,
+        # )
+
+        # _, kl_uncond_kl = scan(
+        #     scan_fn,
+        #     t.clone().float(),
+        #     t.float(),
+        # )
+
+                # get the kls by diffusion sampling
+        kls = 0.0
+        uncond_kls = 0.0
+        for i in range(self.config.trainer.num_diffusion_samples):
+
+            t = torch.randint(
+                low=1,
+                high=self.model.config.num_diffusion_timesteps,
+                size=z.shape[:-1],
+                device=input_ids.device,
+                dtype=torch.long,
+            )
             noise = torch.randn_like(z)
 
+            # TODO: does having gradient going into alpha from here cause the rising alpha issue?
             z_t = self.model.scheduler.add_noise(
-                mu, t_curr, noise
+                mu, t, noise
             )
 
             pred_z_0 = self.model.diffusion_head(
                 scale_gradient(z_t, kl_grad_weights),
-                t_curr,
+                t,
                 scale_gradient(z_states, full_grad_scale),
                 self.model.scheduler,
             )
             kl = self.model.scheduler.kl(
                 scale_gradient(mu, kl_grad_weights),
-                t_curr,
+                t,
                 pred_z_0,
                 dim=-1
             )
 
             uncond_pred_z_0 = self.model.uncond_diffusion_head(
                 z_t.detach(),
-                t_curr,
+                t,
                 self.model.uncond_tokens[None, :, :],
                 self.model.scheduler,
             )
@@ -159,25 +220,12 @@ class ZLMTrainer(BaseTrainer):
                 dim=-1
             )
 
-            return carry, torch.stack([kl, uncond_kl], dim=-1)
-
-        t = torch.randint(
-            low=1,
-            high=self.model.config.num_diffusion_timesteps,
-            size=(self.config.trainer.num_diffusion_samples, *z.shape[:-1]),
-            device=input_ids.device,
-            dtype=torch.long,
-        )
-
-        _, kl_uncond_kl = scan(
-            scan_fn,
-            t.clone().float(),
-            t.float(),
-        )
+            kls = kls + kl
+            uncond_kls = uncond_kls + uncond_kl
 
         # mean over samples and sum over batch to get [Z,]
-        kl = kl_uncond_kl[..., 0].mean(0).sum(0) * (self.model.config.num_diffusion_timesteps - 1)
-        uncond_kl = kl_uncond_kl[..., 1].mean(0).sum(0) * (self.model.config.num_diffusion_timesteps - 1)
+        kl = kls.sum(0) * (self.model.config.num_diffusion_timesteps - 1) / self.config.trainer.num_diffusion_samples
+        uncond_kl = uncond_kls.sum(0) * (self.model.config.num_diffusion_timesteps - 1) / self.config.trainer.num_diffusion_samples
 
         denom = (output_ids != pad_token_id).float().sum() + self.model.config.rms_norm_eps
 
