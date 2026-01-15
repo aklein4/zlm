@@ -125,6 +125,7 @@ class ZLMTrainer(BaseTrainer):
         kl_grad_weights = torch.zeros(1, self.model.z_length, 1, device=input_ids.device, dtype=torch.float32)
 
         def scan_fn(carry, t_curr):
+            t_curr = t_curr.long()
 
             noise = torch.randn_like(z)
 
@@ -170,8 +171,8 @@ class ZLMTrainer(BaseTrainer):
 
         _, kl_uncond_kl = scan(
             scan_fn,
-            t.clone(),
-            t,
+            t.clone().float(),
+            t.float(),
         )
 
         # mean over samples and sum over batch to get [Z,]
