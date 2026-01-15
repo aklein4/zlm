@@ -36,4 +36,4 @@ rms_norm_eps: 1.0e-05
 pad_attention_bias_value: -10
 
 # choose attention_kernel from: [flash_attention, splash_attention, null]
-attention_kernel: flash_attention
+attention_kernel: null # flash_attention
