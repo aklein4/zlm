@@ -316,11 +316,12 @@ class BaseTrainer:
                     for key, value in batch.items()
                 }
 
-            
+            # perform the training step
             trace_start_time = timer()
-            loss, aux, grad_norm = self.train_step(batch)
+            loss, aux, grad_norm, lr = self.train_step(batch)
             trace_end_time = timer()
 
+            # post-step closure for logging
             def step_closure(
                 epoch, step, loss, grad_norm, aux, trace_start_time, trace_end_time, lr
             ):
@@ -358,7 +359,8 @@ class BaseTrainer:
 
                 if not self.config.debug and constants.PROCESS_IS_MAIN():
                     wandb.log(to_wandb)
-                
+            
+            # execute
             xm.add_step_closure(
                 step_closure,
                 args=(
@@ -369,12 +371,13 @@ class BaseTrainer:
                     {k: (v.detach().clone() if isinstance(v, torch.Tensor) else v) for k, v in aux.items()},
                     trace_start_time,
                     trace_end_time,
-                    self.lr_scheduler.get_last_lr()[0],
+                    lr,
                 ),
                 run_async=True,
             )
-        
             xm.mark_step()
+
+            # save checkpoint
             if (step+1) % self.config.trainer.checkpoint_interval == 0:    
                 self.save_checkpoint(step+1)
 
@@ -391,10 +394,11 @@ class BaseTrainer:
         
         grad_norm = self.clip_gradients()
         self.optimizer.step()
+        lr = self.lr_scheduler.get_last_lr()[0]
         self.lr_scheduler.step()
         self.model.zero_grad()
 
-        return loss, aux, grad_norm
+        return loss, aux, grad_norm, lr
 
 
     def forward(self, **batch) -> tuple[torch.Tensor, dict]:
