@@ -365,12 +365,12 @@ class LlamaModel(nn.Module):
         first_ind = (head_dim // 2) - 1
         sec_ind = -1
 
-        query_scales = torch.ones(2, config.head_dim)
+        query_scales = torch.ones(2, head_dim)
         query_scales[:, first_ind] = 0.0
         query_scales[:, sec_ind] = 0.0
         self.register_buffer("query_scales", query_scales, persistent=True)
 
-        query_offsets = torch.zeros(2, config.head_dim)
+        query_offsets = torch.zeros(2, head_dim)
         query_offsets[:, first_ind] = 0.5
         query_offsets[:, sec_ind] = 0.5
         self.register_buffer("query_offsets", query_offsets, persistent=True)
@@ -378,7 +378,7 @@ class LlamaModel(nn.Module):
         key_scales = query_scales.clone()
         self.register_buffer("key_scales", key_scales, persistent=True)
 
-        key_offsets = torch.zeros(2, config.head_dim)
+        key_offsets = torch.zeros(2, head_dim)
         key_offsets[0, first_ind] = config.pad_attention_bias_value
         key_offsets[0, sec_ind] = config.pad_attention_bias_value
         self.register_buffer("key_offsets", key_offsets, persistent=True)
