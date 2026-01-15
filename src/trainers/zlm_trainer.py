@@ -85,7 +85,7 @@ class ZLMTrainer(BaseTrainer):
             input_mask=input_mask, output_mask=output_mask
         )
 
-        logit_grad_scale = torch.zeros(1, device=input_ids.device, dtype=torch.float32)
+        logit_grad_scale = {}
         logits, z_states = self.model.decode(
             input_for_model, output_for_model, z,
             logit_grad_scale=logit_grad_scale,
@@ -114,7 +114,7 @@ class ZLMTrainer(BaseTrainer):
             (lm_loss - self.config.trainer.lower_loss_threshold) / (self.config.trainer.loss_threshold - self.config.trainer.lower_loss_threshold),
             0.0, 1.0
         ).reshape(1)
-        logit_grad_scale.copy_(lm_loss_scale)
+        logit_grad_scale["value"] = lm_loss_scale
 
         # update hooking status
         self.hooked = self.hooked | (lm_loss < self.config.trainer.loss_threshold).reshape(1)
@@ -122,7 +122,7 @@ class ZLMTrainer(BaseTrainer):
 
         kl_grad_scale = linear_warmup(self.hook_step.float(), self.config.trainer.hook_warmup_steps)
         full_grad_scale = linear_warmup(self.hook_step.float() - self.config.trainer.hook_wait_steps, self.config.trainer.hook_warmup_steps)
-        kl_grad_weights = torch.zeros(1, self.model.z_length, 1, device=input_ids.device, dtype=torch.float32)
+        kl_grad_weights = {}
 
         # def scan_fn(carry, t_curr):
         #     t_curr = t_curr.long()
@@ -230,7 +230,7 @@ class ZLMTrainer(BaseTrainer):
         denom = (output_ids != pad_token_id).float().sum() + self.model.config.rms_norm_eps
 
         kl_weights = self.get_kl_weights(kl)
-        kl_grad_weights.copy_(kl_grad_scale * kl_weights[None, :, None])
+        kl_grad_weights["value"] = kl_grad_scale * kl_weights[None, :, None]
         weighted_kl_per_token = (kl * kl_weights).sum() / denom
 
         # calculate kls per token
