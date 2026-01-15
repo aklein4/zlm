@@ -8,7 +8,7 @@ defaults:
 type: llama.LlamaForCausalLM 
 
 # Information about loading from a checkpoint
-pretrained_model: null
+pretrained_url: null
 pretrained_step: null
 
 # torch information
