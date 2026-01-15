@@ -17,7 +17,8 @@ from utils.torch_utils import (
     gaussian_init,
 )
 
-from models.llama import LlamaModel, LlamaMLP, LlamaRMSNorm
+from models.llama import LlamaMLP, LlamaRMSNorm
+from models.reference_llama.modeling_llama import LlamaForCausalLM
 from utils.torch_modules import ContinuousEmbedding
 import utils.constants as constants
 
