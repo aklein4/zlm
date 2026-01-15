@@ -12,6 +12,9 @@ Example:
     . setup_vm.sh <HF_TOKEN> <WANDB_TOKEN>
 '
 
+# update path(?)
+export PATH="/home/$USER/.local/bin:$PATH"
+
 # # upgrade and update pip
 pip install --upgrade pip
 pip install --upgrade setuptools
@@ -21,10 +24,7 @@ pip install torch==2.9.0 --index-url https://download.pytorch.org/whl/cpu
 
 # install torch_xla for TPU VM
 # Edit `cp310-cp310` to fit your desired Python version as needed
-pip install 'torch_xla[tpu] @ https://storage.googleapis.com/pytorch-xla-releases/wheels/tpuvm/torch_xla-2.8.0.dev20250709-cp310-cp310-linux_x86_64.whl' -f https://storage.googleapis.com/libtpu-wheels/index.html
-
-# update path(?)
-export PATH="/home/$USER/.local/bin:$PATH"
+pip install 'torch_xla @ https://storage.googleapis.com/pytorch-xla-releases/wheels/tpuvm/torch_xla-2.9.0.dev-cp310-cp310-linux_x86_64.whl' -f https://storage.googleapis.com/libtpu-wheels/index.html
 
 # install extras
 pip install setuptools==67.7.2
