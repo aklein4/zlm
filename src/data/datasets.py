@@ -32,7 +32,7 @@ def get_dataset(name: str, **kwargs) -> datasets.Dataset:
     if name == "fake":
         return FakeIterableDataset()
 
-    ds = datasets.load_dataset(name, **kwargs, token=constants.HF_TOKEN)
+    ds = datasets.load_dataset(name, **kwargs)
 
     if "streaming" in kwargs.keys() and kwargs["streaming"]:
         ds = ds.shard(num_shards=constants.PROCESS_COUNT(), index=constants.PROCESS_INDEX())

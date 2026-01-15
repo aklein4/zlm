@@ -132,7 +132,7 @@ class BaseTrainer:
             self.repo_name = f"{constants.HF_ID}/{self.config.project}_{self.config.name}"
 
             hf.create_repo(
-                self.repo_name, private=True, exist_ok=True, token=constants.HF_TOKEN
+                self.repo_name, private=True, exist_ok=True
             )
 
             # create the wandb project
@@ -259,7 +259,6 @@ class BaseTrainer:
                 folder_path=save_path,
                 path_in_repo=out_path,
                 repo_type="model",
-                token=constants.HF_TOKEN,
             )
             logger.info(f"Uploaded checkpoint to {self.repo_name}/{out_path}")
 
