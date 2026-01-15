@@ -17,7 +17,7 @@ pip install --upgrade pip
 pip install --upgrade setuptools
 
 # install torch
-pip install torch==2.9.0.dev20250709+cpu --index-url https://download.pytorch.org/whl/nightly/cpu
+pip install torch==2.9.0 --index-url https://download.pytorch.org/whl/cpu
 
 # install torch_xla for TPU VM
 # Edit `cp310-cp310` to fit your desired Python version as needed
