@@ -439,7 +439,7 @@ class ZLMModel(nn.Module):
         hidden_states = self.encoder_model(
             inputs_embeds=tokens,
             elementwise_pad_mask=mask,
-        ).last_hidden_state
+        )
 
         mu = self.encoder_mu_proj_out(
             hidden_states[..., -self.z_length:, :]
@@ -504,7 +504,7 @@ class ZLMModel(nn.Module):
         hidden_states = self.decoder_model(
             inputs_embeds=tokens,
             elementwise_pad_mask=mask,
-        ).last_hidden_state
+        )
 
         logit_states = hidden_states[:, -(self.output_length+1):-1, :]
         if logit_grad_scale is not None:
@@ -561,7 +561,7 @@ class ZLMModel(nn.Module):
                 inputs_embeds=z_token[:, None, :],
                 use_cache=True,
                 past_key_values=cache,
-            ).last_hidden_state[:, -1, :] # [B, hidden_size]
+            )[:, -1, :] # [B, hidden_size]
 
             # diffusion loop to sample the next z
             z_t = noise[:, i, :] # [B, latent_size]
@@ -600,7 +600,7 @@ class ZLMModel(nn.Module):
                 inputs_embeds=prev_logit_token[:, None, :],
                 use_cache=True,
                 past_key_values=cache,
-            ).last_hidden_state[:, -1, :] # [B, hidden_size]
+            )[:, -1, :] # [B, hidden_size]
 
             logits = self.lm_head(self.decoder_model.norm(logit_states))
             next_token = torch.argmax(logits, dim=-1) # [B]
