@@ -481,10 +481,9 @@ class ZLMModel(nn.Module):
             )
         )
         start_output_token = expand_to_batch(
-            self.decoder_start_output_token, output_ids
+            self.decoder_start_output_token, output_tokens
         )
 
-        print(input_tokens.shape, z_tokens.shape, start_output_token.shape, output_tokens.shape, flush=True)
         tokens = torch.cat(
             [input_tokens, z_tokens, start_output_token, output_tokens], dim=-2
         )
