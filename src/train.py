@@ -72,7 +72,7 @@ def main(config: omegaconf.DictConfig):
     # set the default device to the XLA device.
     # This will capture the model constructor into a graph so that we can add
     # sharding annotations to the weights later, and run the constructor on the XLA device.
-    with model_utils.set_default_dtype(getattr(torch, config.model.torch_dtype)), torch_xla.device():
+    with model_utils.set_default_dtype(getattr(torch, config.model.torch_dtype)):
         model = import_model(config.model.type)(config.model)
 
     # load the pretrained model if specified
@@ -83,6 +83,8 @@ def main(config: omegaconf.DictConfig):
             config.model.pretrained_step,
             remove_folder=True
         )
+
+    model = model.to(torch_xla.device())
 
     xm.rendezvous("Model Initialization")
     logger.info(f"Model initialized: {config.model.type}")
