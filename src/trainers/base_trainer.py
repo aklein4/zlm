@@ -271,7 +271,6 @@ class BaseTrainer:
 
         # prepare data loader
         max_step = self.config.trainer.max_steps
-        steps_per_epoch = max_step
         train_loader = self._get_train_dataloader()
         train_iterator = iter(train_loader)
 
@@ -332,8 +331,8 @@ class BaseTrainer:
                 grad_norm = grad_norm.detach().item()
 
                 logger.info(
-                    "Epoch: %.4f, step: %d, loss: %.4f, grad_norm: %.4f, lr: %.2e, trace time: %.2f ms",
-                    step / steps_per_epoch,
+                    "Epoch: %d, step: %d, loss: %.3f, grad_norm: %.3f, lr: %.2e, trace time: %.0f ms",
+                    epoch,
                     step,
                     loss,
                     grad_norm,
