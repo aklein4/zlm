@@ -429,7 +429,7 @@ class ZLMModel(nn.Module):
             mask = torch.cat(
                 [
                     input_mask,
-                    torch.ones_like(input_tokens[:, :1], dtype=torch.bool),
+                    torch.ones_like(input_ids[:, :1], dtype=torch.bool),
                     output_mask,
                     torch.ones(input_ids.shape[0], self.z_length, dtype=torch.bool, device=input_ids.device),
                 ],
