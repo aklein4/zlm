@@ -1,10 +1,18 @@
 import torch
 import torch.nn.functional as F
 
+from models.llama import LlamaForCausalLM
 from trainers.base_trainer import BaseTrainer
+from utils.loss_utils import lm_loss_fn, lm_acc_fn
+
+
+IGNORE_INDEX = -100
 
 
 class LMTrainer(BaseTrainer):
+
+    model: LlamaForCausalLM
+
 
     def forward(self, input_ids, output_ids):
         pad_token_id = self.model.config.pad_token_id
@@ -24,13 +32,33 @@ class LMTrainer(BaseTrainer):
             elementwise_pad_mask=elementwise_pad_mask
         )
 
-        lm_loss = F.cross_entropy(
-            logits.view(-1, logits.shape[-1]),
-            all_ids[:, 1:].reshape(-1),
-            ignore_index=pad_token_id,
+        labels = torch.cat(
+            [
+                torch.full_like(input_ids, IGNORE_INDEX),
+                torch.where(output_ids != pad_token_id, output_ids, torch.full_like(output_ids, IGNORE_INDEX)),
+            ],
+            dim=1
         )
 
-        return lm_loss, {
+        lm_loss = lm_loss_fn(
+            logits,
+            labels,
+            ignore_index=IGNORE_INDEX,
+            shift_logits=False,
+            shift_labels=True,
+        )
+        lm_acc = lm_acc(
+            logits,
+            labels,
+            ignore_index=IGNORE_INDEX,
+            shift_logits=False,
+            shift_labels=True,
+        )
+
+        loss = lm_loss
+
+        return loss, {
             "lm_loss": lm_loss,
+            "lm_acc": lm_acc,
         }
     

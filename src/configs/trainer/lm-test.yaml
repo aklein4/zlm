@@ -1,16 +1,21 @@
 
-trainer_type: lm_trainer.LMTrainer  # Used to import the trainer from this class
+# vvvvvvvvvv Don't forget to change this for new experiments vvvvvvvvvv
+type: lm_trainer.LMTrainer  # Used to import the trainer from this class
 
-# This is for basic training loop, i.e., forward/backward pass without any special task logic.
-global_batch_size: 64
-max_steps: 160000
 
-# checkpointing configuration
-checkpoint_interval: 5000  # Save a checkpoint every N steps
-# convert_to_safetensors: true  # Convert the model to safetensors format when saving
+# total batch size across all devices
+global_batch_size: 64 
 
-# Optimizer configuration.
+# run for N steps
+max_steps: 160000 
+
+# Save a checkpoint every N steps
+checkpoint_interval: 5000  
+
+
+# optimizer configuration
 optimizer:
+
   type: adamw.AdamW
 
   kwargs:
@@ -26,8 +31,9 @@ optimizer:
     update_clip: null
 
 
-# Learning rate scheduler configuration.
+# Learning rate scheduler configuration
 lr_scheduler:
+
   type: linear
 
   warmup_steps: 100

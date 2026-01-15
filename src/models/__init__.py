@@ -7,7 +7,7 @@ import os
 import huggingface_hub as hf
 import shutil
 
-from utils.import_utils import import_class
+from utils.import_utils import import_model
 from utils import constants
 
 
@@ -33,8 +33,7 @@ def load_checkpoint(
     config = omegaconf.OmegaConf.load(config_path)
     config.attention_kernel = attention_kernel
 
-    model_cls = import_class(config.model_class, constants.MODEL_MODULE)
-    model = model_cls(config)
+    model = import_model(config.type)(config)
 
     # load the weights
     state_path = os.path.join(save_path, "model.pt")

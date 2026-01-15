@@ -8,7 +8,7 @@ from torch.nn import CrossEntropyLoss
 from utils.torch_utils import scale_gradient
 
 
-def lm_loss(
+def lm_loss_fn(
     logits: torch.FloatTensor,
     labels: torch.LongTensor,
     ignore_index: int = -100,
@@ -40,7 +40,7 @@ def lm_loss(
     )
 
 
-def lm_acc(
+def lm_acc_fn(
     logits: torch.FloatTensor,
     labels: torch.LongTensor,
     ignore_index: int = -100,
@@ -69,4 +69,4 @@ def lm_acc(
 
     correct = (logits.argmax(dim=-1) == labels) & mask
 
-    return correct.float().sum() / (1e-5 + mask.float().sum())
+    return correct.float().sum() / (1e-6 + mask.float().sum())

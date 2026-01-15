@@ -51,7 +51,7 @@ import wandb
 import huggingface_hub as hf
 
 from models.xla import BaseXLAModel
-from utils.import_utils import import_class
+from utils.import_utils import import_optimizer, import_collator
 from utils import constants
 
 
@@ -77,14 +77,46 @@ class BaseTrainer:
         self,
         model: BaseXLAModel,
         config: DictConfig,
-        train_dataset: Dataset | IterableDataset | None,
+        train_dataset: Dataset | IterableDataset,
     ):
         self.config = config
         self.device = xm.xla_device()
+        
         self.global_batch_size = self.config.trainer.global_batch_size
         self.train_dataset = train_dataset
 
-        # -- Model transformations --
+        self.model = self.prepare_model(model, config)
+
+        self.optimizer, self.lr_scheduler = self.prepare_optimization(self.model, config)
+
+        # set up saving
+        if not self.config.debug and constants.PROCESS_IS_MAIN():
+            os.makedirs(constants.LOCAL_DATA_PATH, exist_ok=True)
+
+            # create the huggingface save repo
+            self.repo_name = f"{constants.HF_ID}/{self.config.project}_{self.config.name}"
+
+            hf.create_repo(
+                self.repo_name, private=True, exist_ok=True
+            )
+
+            # create the wandb project
+            wandb.init(
+                project=self.config.project,
+                name=self.config.name,
+                notes=self.config.notes,
+                config=OmegaConf.to_container(self.config, resolve=True),
+            )
+
+        # Execute all initialization work queued so far before starting training.
+        torch_xla.sync()
+
+
+    def prepare_model(
+        self, model, config: DictConfig
+    ):
+        """ Prepares the model for training by setting up sharding and rematerialization. """
+        
         # Recursively replace `nn.Linear` layers with einsum operations in the model.
         # Without this patch, an `nn.Linear` module will flatten non-contracting dimensions
         # (e.g. batch and sequence), thus destroying the sharding constraints on those dimensions.
@@ -113,76 +145,37 @@ class BaseTrainer:
             model = add_activation_checkpointing_and_scan(model, config.model.remat)
         
         model = add_optimization_barriers(model, config)
-        self.model = model
 
-        # create optimizer and learning rate scheduler
-        self.optimizer = type(self)._create_optimizer(config, model.parameters())
-        self.lr_scheduler = get_scheduler(
-            name=self.config.trainer.lr_scheduler.type,
-            optimizer=self.optimizer,
-            num_warmup_steps=self.config.trainer.lr_scheduler.warmup_steps,
-            num_training_steps=self.config.trainer.lr_scheduler.training_steps,
-        )
-
-        # create the local data path
-        if not self.config.debug and constants.PROCESS_IS_MAIN():
-            os.makedirs(constants.LOCAL_DATA_PATH, exist_ok=True)
-
-            # create the huggingface save repo
-            self.repo_name = f"{constants.HF_ID}/{self.config.project}_{self.config.name}"
-
-            hf.create_repo(
-                self.repo_name, private=True, exist_ok=True
-            )
-
-            # create the wandb project
-            wandb.init(
-                project=self.config.project,
-                name=self.config.name,
-                notes=self.config.notes,
-                config=OmegaConf.to_container(self.config, resolve=True),
-            )
-
-        # Execute all initialization work queued so far before starting training.
-        torch_xla.sync()
+        return model
 
 
-    @staticmethod
-    def _create_optimizer(config, model_parameters) -> torch.optim.Optimizer:
-        """Helper for optimizer initialization."""
+    def prepare_optimization(
+        self,
+        model: torch.nn.Module,
+        config: DictConfig
+    ) -> tuple[torch.optim.Optimizer, torch.optim.lr_scheduler._LRScheduler]:
+        """ Sets up the optimizer and learning rate scheduler. """
 
-        return import_class(config.trainer.optimizer.type, constants.OPTIMIZER_MODULE)(
-            params=model_parameters,
+        optimizer = import_optimizer(config.trainer.optimizer.type)(
+            params=model.parameters(),
             **config.trainer.optimizer.kwargs,
         )
 
+        lr_scheduler = get_scheduler(
+            name=config.trainer.lr_scheduler.type,
+            optimizer=optimizer,
+            num_warmup_steps=config.trainer.lr_scheduler.warmup_steps,
+            num_training_steps=config.trainer.lr_scheduler.training_steps,
+        )
+
+        return optimizer, lr_scheduler
+    
 
     def _get_train_dataloader(self) -> pl.MpDeviceLoader:
-        if self.train_dataset is None:
-            raise ValueError("Trainer: training requires a train_dataset.")
 
         num_replicas = xr.process_count()
         logger.info("Num replicas: %d", num_replicas)
 
-        # if self.minibatch:
-        #     sampler = torch.utils.data.DistributedSampler(
-        #         self.train_dataset,
-        #         num_replicas=num_replicas,
-        #         rank=xr.process_index(),
-        #         shuffle=False,
-        #         drop_last=True,
-        #     )
-        # else:
-        #     # Without minibatch, every process loads the global batch the same way.
-        #     sampler = torch.utils.data.DistributedSampler(
-        #         self.train_dataset,
-        #         num_replicas=1,
-        #         rank=0,
-        #         shuffle=False,
-        #         drop_last=True,
-        #     )
-
-        assert self.global_batch_size is not None
         if self.minibatch:
             # Each process loads the per-host batch size.
             batch_size = self.global_batch_size // num_replicas
@@ -191,20 +184,20 @@ class BaseTrainer:
             batch_size = self.global_batch_size
 
         # handle the collator
-        collator_cls = import_class(self.config.data.collator.type, constants.COLLATOR_MODULE)
-        collator = collator_cls(**self.config.data.collator.kwargs)
-
+        collator = import_collator(self.config.data.collator.type)(
+            **self.config.data.collator.kwargs
+        )
         dataloader = DataLoader(
             self.train_dataset,
             collate_fn=collator,
             batch_size=batch_size,
-            # sampler=sampler,
             shuffle=False,
             drop_last=True,
         )
         loader = pl.MpDeviceLoader(
             dataloader, self.device, input_sharding=self.input_sharding_spec
         )
+        
         return loader
     
 
@@ -270,23 +263,28 @@ class BaseTrainer:
 
     def train_loop(self) -> None:
 
+        # prepare model for training
         for p in self.model.parameters():
             p.requires_grad_(True)
         self.model.train()
         self.model.zero_grad()
 
-        # For now we assume that we will never train for more than one epoch
+        # prepare data loader
         max_step = self.config.trainer.max_steps
         train_loader = self._get_train_dataloader()
-        steps_per_epoch = max_step
         train_iterator = iter(train_loader)
 
+        # print training information
         logger.info("Starting training")
         logger.info("    Max step: %d", max_step)
         logger.info("    Global batch size: %d", self.global_batch_size)
+        logger.info(f"    Model parameters: {sum(p.numel() for p in self.model.parameters()):,}")
 
+        # initialize counters
         epoch = 0
-        self.atoms_seen = 0
+        self.atoms_seen = 0 # must be self. for step_closure
+
+        # run the training loop
         for step in range(max_step):
             try:
                 batch = next(train_iterator)
@@ -295,9 +293,12 @@ class BaseTrainer:
                 epoch += 1
                 train_iterator = iter(train_loader)
                 batch = next(train_iterator)
+            
+            # can be reached by forward
             self.step = step
 
-            if self.config.model.pretrained_step is not None and step < (self.config.model.pretrained_step + 3):
+            # skip steps for pretrained model
+            if self.config.model.pretrained_step is not None and step < self.config.model.pretrained_step:
                 if step % 10 == 0:
                     logger.info(f"Skipping step {step} as it is before the pretrained step {self.config.model.pretrained_step}")
                 continue
@@ -315,64 +316,54 @@ class BaseTrainer:
                     for key, value in batch.items()
                 }
 
+            # perform the training step
             trace_start_time = timer()
-            loss, aux, grad_norm = self.train_step(batch)
+            aux = self.train_step(batch)
             trace_end_time = timer()
 
-            def step_closure(
-                epoch, step, loss, grad_norm, aux, trace_start_time, trace_end_time, lr
-            ):
-                if "atom_count" in aux.keys():
-                    self.atoms_seen += aux["atom_count"].detach().item()
+            # add extra aux information
+            aux["epoch"] = epoch
+            aux["step"] = step
+            aux["examples_seen"] = (step + 1) * self.global_batch_size
+            aux["trace_time_ms"] = (trace_end_time - trace_start_time) * 1000
 
-                loss = loss.detach().item()
-                grad_norm = grad_norm.detach().item()
-
-                logger.info(
-                    "Epoch: %.4f, step: %d, loss: %.4f, grad_norm: %.4f, lr: %.2e, trace time: %.2f ms",
-                    step / steps_per_epoch,
-                    step,
-                    loss,
-                    grad_norm,
-                    lr,
-                    (trace_end_time - trace_start_time) * 1000,
-                )
-
-                to_wandb = {}
+            # post-step closure for logging
+            def step_closure(aux):
+                
                 for k, v in aux.items():
                     if isinstance(v, torch.Tensor):
-                        to_wandb[k] = v.detach().item()
-                    else:
-                        to_wandb[k] = v
-                to_wandb["loss"] = loss
-                to_wandb["grad_norm"] = grad_norm
-                to_wandb["trace_time_ms"] = (trace_end_time - trace_start_time) * 1000
-                to_wandb["lr"] = lr
-                to_wandb["epoch"] = epoch
-                to_wandb["examples_seen"] = (step + 1) * self.global_batch_size
+                        aux[k] = v.detach().item()
+                    
                 if "atom_count" in aux.keys():
-                    to_wandb["atoms_seen"] = self.atoms_seen
-                to_wandb["nan"] = int(math.isnan(loss))
+                    self.atoms_seen += aux["atom_count"]
+                    aux["atoms_seen"] = self.atoms_seen
+
+                aux["nan"] = math.isnan(aux["loss"])
+
+                logger.info(
+                    "Epoch: %d, step: %d, loss: %.3f, grad_norm: %.3f, lr: %.2e, trace time: %.0f ms",
+                    aux["epoch"],
+                    aux["step"],
+                    aux["loss"],
+                    aux["grad_norm"],
+                    aux["lr"],
+                    aux["trace_time_ms"],
+                )
 
                 if not self.config.debug and constants.PROCESS_IS_MAIN():
-                    wandb.log(to_wandb)
+                    wandb.log(aux)
                 
+            # execute
             xm.add_step_closure(
                 step_closure,
                 args=(
-                    epoch,
-                    step,
-                    loss.detach().clone(),
-                    grad_norm.detach().clone(),
                     {k: (v.detach().clone() if isinstance(v, torch.Tensor) else v) for k, v in aux.items()},
-                    trace_start_time,
-                    trace_end_time,
-                    self.lr_scheduler.get_last_lr()[0],
                 ),
                 run_async=True,
             )
-        
             xm.mark_step()
+
+            # save checkpoint
             if (step+1) % self.config.trainer.checkpoint_interval == 0:    
                 self.save_checkpoint(step+1)
 
@@ -381,18 +372,21 @@ class BaseTrainer:
 
 
     @torch_xla.compile(full_graph=True)
-    def train_step(self, batch: dict) -> tuple[torch.Tensor, dict, torch.Tensor]:
+    def train_step(self, batch: dict) -> dict:
         
         loss, aux = self.forward(**batch)
+        aux["loss"] = loss
 
         loss.backward()
-        
-        grad_norm = self.clip_gradients()
+        aux["grad_norm"] = self.clip_gradients()
+
+        aux["lr"] = self.lr_scheduler.get_last_lr()[0]
+
         self.optimizer.step()
         self.lr_scheduler.step()
         self.model.zero_grad()
 
-        return loss, aux, grad_norm
+        return aux
 
 
     def forward(self, **batch) -> tuple[torch.Tensor, dict]:
@@ -401,7 +395,7 @@ class BaseTrainer:
         )
 
 
-    def clip_gradients(self):
+    def clip_gradients(self) -> torch.Tensor:
         """Clip gradients by the specified max norm and/or max absolute value."""
         max_grad_norm = self.config.trainer.max_grad_norm
         if max_grad_norm is None or max_grad_norm <= 0:
