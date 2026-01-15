@@ -22,9 +22,8 @@ pip install --upgrade setuptools
 # install torch
 pip install torch==2.9.0 --index-url https://download.pytorch.org/whl/cpu
 
-# install torch_xla for TPU VM
-# Edit `cp310-cp310` to fit your desired Python version as needed
-pip install 'torch_xla @ https://storage.googleapis.com/pytorch-xla-releases/wheels/tpuvm/torch_xla-2.9.0.dev-cp310-cp310-linux_x86_64.whl' -f https://storage.googleapis.com/libtpu-wheels/index.html
+# install torch_xla
+pip install torch_xla==2.9.0
 
 # install extras
 pip install setuptools==67.7.2
