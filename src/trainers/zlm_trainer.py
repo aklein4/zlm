@@ -158,7 +158,7 @@ class ZLMTrainer(BaseTrainer):
                 dim=-1
             )
 
-            return None, torch.stack([kl, uncond_kl], dim=-1)
+            return carry, torch.stack([kl, uncond_kl], dim=-1)
 
         t = torch.randint(
             low=1,
@@ -170,7 +170,7 @@ class ZLMTrainer(BaseTrainer):
 
         _, kl_uncond_kl = scan(
             scan_fn,
-            None,
+            t.clone(),
             t,
         )
 
