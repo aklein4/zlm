@@ -15,19 +15,26 @@ def load_checkpoint(
     url: str,
     step: int,
     attention_kernel: str = "other", # uses non-kernel attention by default
-    remove_folder: bool = False,
     strict: bool = True,
+    ignore_cache: bool = False,
+    remove_folder: bool = False,
 ):
     
+    name = url.replace("/", "--")
+    local_path = os.path.join(constants.CHECKPOINTS_PATH, name)
+    
     subfolder = f"{step:012d}"
+    subfolder_path = os.path.join(local_path, subfolder)
 
-    # download the folder
-    save_path = hf.snapshot_download(
-        repo_id=url,
-        allow_patterns=[subfolder + "/*"],
-        local_dir=constants.CHECKPOINTS_PATH,
-    )
-    subfolder_path = os.path.join(save_path, subfolder)
+    if ignore_cache:
+        shutil.rmtree(subfolder_path, ignore_errors=True)
+        
+    if not os.path.exists(subfolder_path):
+        hf.snapshot_download(
+            repo_id=url,
+            allow_patterns=[subfolder + "/*"],
+            local_dir=local_path,
+        )
 
     # load the model
     config_path = os.path.join(subfolder_path, "config.json")
@@ -43,7 +50,7 @@ def load_checkpoint(
     model.load_state_dict(state_dict, strict=strict)
 
     if remove_folder:
-        shutil.rmtree(save_path, ignore_errors=True)
+        shutil.rmtree(subfolder_path, ignore_errors=True)
 
     return model
 
@@ -52,19 +59,26 @@ def load_checkpoint_state(
     model: torch.nn.Module,
     url: str,
     step: int,
-    remove_folder: bool = False,
     strict: bool = True,
+    ignore_cache: bool = False,
+    remove_folder: bool = False,
 ):
     
+    name = url.replace("/", "--")
+    local_path = os.path.join(constants.CHECKPOINTS_PATH, name)
+    
     subfolder = f"{step:012d}"
+    subfolder_path = os.path.join(local_path, subfolder)
 
-    # download the folder
-    save_path = hf.snapshot_download(
-        repo_id=url,
-        allow_patterns=[subfolder + "/*"],
-        local_dir=constants.CHECKPOINTS_PATH,
-    )
-    subfolder_path = os.path.join(save_path, subfolder)
+    if ignore_cache:
+        shutil.rmtree(subfolder_path, ignore_errors=True)
+        
+    if not os.path.exists(subfolder_path):
+        hf.snapshot_download(
+            repo_id=url,
+            allow_patterns=[subfolder + "/*"],
+            local_dir=local_path,
+        )
 
     # load the weights
     state_path = os.path.join(subfolder_path, "model.pt")
@@ -73,6 +87,6 @@ def load_checkpoint_state(
     model.load_state_dict(state_dict, strict=strict)
 
     if remove_folder:
-        shutil.rmtree(save_path, ignore_errors=True)
+        shutil.rmtree(subfolder_path, ignore_errors=True)
 
     return model
