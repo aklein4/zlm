@@ -65,7 +65,7 @@ class AttentionModule(nn.Module):
     # Non FA path doesn't deal with 2D sharding.
     self.partition_spec = None
     segment_ids_partition_spec = None
-    if xs.get_global_mesh() is not None:
+    if constants.XLA_AVAILABLE and xs.get_global_mesh() is not None:
       self.partition_spec = (("data", "fsdp"), "tensor", None, None)
       segment_ids_partition_spec = (("data", "fsdp"), None)
 

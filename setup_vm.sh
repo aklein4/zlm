@@ -20,10 +20,11 @@ pip install --upgrade pip
 pip install --upgrade setuptools
 
 # install torch
-pip install torch==2.9.0 --index-url https://download.pytorch.org/whl/cpu
+pip install torch==2.8.0 --index-url https://download.pytorch.org/whl/cpu
 
 # install torch_xla
-pip install torch_xla==2.9.0
+pip install torch_xla[tpu]==2.8.0
+# pip install --pre torch_xla[pallas] --index-url https://us-python.pkg.dev/ml-oss-artifacts-published/jax/simple/ --find-links https://storage.googleapis.com/jax-releases/libtpu_releases.html
 
 # install extras
 pip install setuptools==67.7.2

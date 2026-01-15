@@ -407,7 +407,7 @@ class LlamaModel(nn.Module):
         device: torch.device,
         elementwise_pad_mask: torch.Tensor | None = None
     ) -> torch.LongTensor:
-        if elementwise_pad_mask is not None:
+        if elementwise_pad_mask is None:
             return torch.arange(seq_length, device=device).unsqueeze(0)
         
         mask = elementwise_pad_mask.long()
