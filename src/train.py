@@ -84,6 +84,7 @@ def main(config: omegaconf.DictConfig):
             strict=config.model.pretrained_strict,
         )
 
+    # TODO: initialize the model weights directly on the XLA device
     model = model.to(torch_xla.device())
 
     xm.rendezvous("Model Initialization")

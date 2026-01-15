@@ -279,6 +279,7 @@ class BaseTrainer:
         logger.info("    Max step: %d", max_step)
         logger.info("    Global batch size: %d", self.global_batch_size)
         logger.info(f"    Model parameters: {sum(p.numel() for p in self.model.parameters()):,}")
+        logger.info(f"    Model dtype: {list(self.model.parameters())[0].dtype}")
 
         # initialize counters
         epoch = 0
