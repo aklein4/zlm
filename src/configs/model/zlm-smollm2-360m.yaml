@@ -1,0 +1,72 @@
+defaults:
+  - _self_  # refers to this config file
+  - sharding: zlm-fsdp  # refers to sharding/llama-fsdp.yaml
+  - remat: zlm-scan-offload  # refers to remat/llama-scan.yaml
+
+
+# Used to import the model from this class
+type: zlm.ZLMModel
+
+# Information about loading from a checkpoint
+pretrained_url: null
+pretrained_step: null
+pretrained_strict: null
+
+# torch information
+torch_dtype: float32
+
+# vocab information
+vocab_size: 49152
+bos_token_id: 0
+eos_token_id: 0
+pad_token_id: 49152
+
+# architecture size
+hidden_size: 960
+num_hidden_layers: 32
+
+# attention configuration
+num_attention_heads: 15
+num_key_value_heads: 5
+
+# MLP configuration
+intermediate_size: 2560
+hidden_act: silu
+
+# rope configuration
+max_position_embeddings: 8192
+rope_theta: 100000
+
+# misc
+attention_dropout: false
+attention_bias: false
+initializer_range: 0.02
+rms_norm_eps: 1.0e-05
+
+# value added to pad token attention scores
+# only used when elementwise_pad_mask is passed
+pad_attention_bias_value: -100.0
+
+# choose attention_kernel from: [flash_attention, splash_attention, null]
+attention_kernel: null
+
+# pretrained model to use as base
+pretrained_llama: HuggingFaceTB/SmolLM2-360M
+
+# lengths
+input_length: 256
+output_length: 512
+z_length: 384
+
+# latent configuration
+latent_size: 64
+
+# diffusion configuration
+minimum_diffusion_timestep: 0.5
+num_diffusion_timesteps: 32
+
+# diffusion head configuration
+num_t_embed_frequencies: 64
+t_mlp_size: 256
+num_diffusion_head_layers: 1 # 2
+diffusion_in_proj: false

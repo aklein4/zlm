@@ -108,8 +108,14 @@ class BaseTrainer:
                 config=OmegaConf.to_container(self.config, resolve=True),
             )
 
+        self.post_init()
+
         # Execute all initialization work queued so far before starting training.
         torch_xla.sync()
+
+
+    def post_init(self):
+        return
 
 
     def prepare_model(

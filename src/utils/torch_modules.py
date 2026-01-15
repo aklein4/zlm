@@ -12,7 +12,8 @@ class ContinuousEmbedding(nn.Module):
         num_frequencies: int,
         embedding_dim: int,
         input_min: float=0.0,
-        input_max: float=1.0
+        input_max: float=1.0,
+        bias: bool=False,
     ):
         super().__init__()
         
@@ -31,7 +32,7 @@ class ContinuousEmbedding(nn.Module):
         self.proj = nn.Linear(
             2 * num_frequencies,
             embedding_dim,
-            bias=False
+            bias=bias,
         )
 
 

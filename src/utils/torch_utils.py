@@ -143,3 +143,15 @@ def shift(
         raise ValueError(f"Invalid direction: {direction}")
     
     return torch.cat(l, dim=dim)
+
+
+def gaussian_init(module: nn.Module):
+
+    if isinstance(module, nn.Linear):
+        module.weight.data.normal_(mean=0.0, std=1/module.in_features**0.5)
+        if module.bias is not None:
+            module.bias.data.zero_()
+
+    elif isinstance(module, nn.Embedding):
+        module.weight.data.normal_(mean=0.0, std=1)
+        

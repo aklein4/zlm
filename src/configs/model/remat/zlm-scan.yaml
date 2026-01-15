@@ -1,14 +1,10 @@
 defaults:
- - llama
+ - zlm
  - _self_
 
 # Compile the sequence of decoder layers at `model.layers` using scan.
 scan_layers: layers
 
-offload_tensors:
- - decoder_input
-
 apply_to_modules:
- - encoder
- - generator
- - decoder
+ - encoder_model
+ - decoder_model

@@ -4,14 +4,14 @@ import torch.nn.functional as F
 
 import numpy as np
 
-from torch.nn import CrossEntropyLoss
-from utils.torch_utils import scale_gradient
+
+IGNORE_INDEX = -100
 
 
 def lm_loss_fn(
     logits: torch.FloatTensor,
     labels: torch.LongTensor,
-    ignore_index: int = -100,
+    ignore_index: int = IGNORE_INDEX,
     shift_logits: bool = True,
     shift_labels: bool = True,
 ) -> torch.FloatTensor:
@@ -43,7 +43,7 @@ def lm_loss_fn(
 def lm_acc_fn(
     logits: torch.FloatTensor,
     labels: torch.LongTensor,
-    ignore_index: int = -100,
+    ignore_index: int = IGNORE_INDEX,
     shift_logits: bool = True,
     shift_labels: bool = True,
 ) -> torch.FloatTensor:
