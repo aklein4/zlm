@@ -494,7 +494,7 @@ class LlamaForCausalLM(nn.Module):
                 module.bias.data.zero_()
 
         elif isinstance(module, nn.Embedding):
-            module.weight.data.normal_(mean=0.0, std=1/self.lr_scaler)
+            module.weight.data.normal_(mean=0.0, std=1)
 
 
     # @xp.trace_me("LlamaForCausalLM")
