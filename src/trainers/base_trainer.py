@@ -271,7 +271,6 @@ class BaseTrainer:
 
         # prepare data loader
         max_step = self.config.trainer.max_steps
-        steps_per_epoch = max_step
         train_loader = self._get_train_dataloader()
         train_iterator = iter(train_loader)
 
@@ -317,65 +316,55 @@ class BaseTrainer:
                     for key, value in batch.items()
                 }
 
-            
+            # perform the training step
             trace_start_time = timer()
-            loss, aux, grad_norm = self.train_step(batch)
+            aux = self.train_step(batch)
             trace_end_time = timer()
 
-            def step_closure(
-                epoch, step, loss, grad_norm, aux, trace_start_time, trace_end_time, lr
-            ):
-                if "atom_count" in aux.keys():
-                    self.atoms_seen += aux["atom_count"].detach().item()
+            # add extra aux information
+            aux["epoch"] = epoch
+            aux["step"] = step
+            aux["examples_seen"] = (step + 1) * self.global_batch_size
+            aux["trace_time_ms"] = (trace_end_time - trace_start_time) * 1000
 
-                loss = loss.detach().item()
-                grad_norm = grad_norm.detach().item()
-
-                logger.info(
-                    "Epoch: %.4f, step: %d, loss: %.4f, grad_norm: %.4f, lr: %.2e, trace time: %.2f ms",
-                    step / steps_per_epoch,
-                    step,
-                    loss,
-                    grad_norm,
-                    lr,
-                    (trace_end_time - trace_start_time) * 1000,
-                )
-
-                to_wandb = {}
+            # post-step closure for logging
+            def step_closure(aux):
+                
                 for k, v in aux.items():
                     if isinstance(v, torch.Tensor):
-                        to_wandb[k] = v.detach().item()
-                    else:
-                        to_wandb[k] = v
-                to_wandb["loss"] = loss
-                to_wandb["grad_norm"] = grad_norm
-                to_wandb["trace_time_ms"] = (trace_end_time - trace_start_time) * 1000
-                to_wandb["lr"] = lr
-                to_wandb["epoch"] = epoch
-                to_wandb["examples_seen"] = (step + 1) * self.global_batch_size
+                        aux[k] = v.detach().item()
+                    
                 if "atom_count" in aux.keys():
-                    to_wandb["atoms_seen"] = self.atoms_seen
-                to_wandb["nan"] = int(math.isnan(loss))
+                    self.atoms_seen += aux["atom_count"]
+                    aux["atoms_seen"] = self.atoms_seen
+
+                aux["nan"] = math.isnan(aux["loss"])
+
+                logger.info(
+                    "Epoch: %d, step: %d, loss: %.3f, grad_norm: %.3f, lr: %.2e, trace time: %.0f ms",
+                    aux["epoch"],
+                    aux["step"],
+                    aux["loss"],
+                    aux["grad_norm"],
+                    aux["lr"],
+                    aux["trace_time_ms"],
+                )
 
                 if not self.config.debug and constants.PROCESS_IS_MAIN():
-                    wandb.log(to_wandb)
+                    aux.pop("step") # interferees with wandb built-in step
+                    wandb.log(aux)
                 
+            # execute
             xm.add_step_closure(
                 step_closure,
                 args=(
-                    epoch,
-                    step,
-                    loss.detach().clone(),
-                    grad_norm.detach().clone(),
                     {k: (v.detach().clone() if isinstance(v, torch.Tensor) else v) for k, v in aux.items()},
-                    trace_start_time,
-                    trace_end_time,
-                    self.lr_scheduler.get_last_lr()[0],
                 ),
                 run_async=True,
             )
-        
             xm.mark_step()
+
+            # save checkpoint
             if (step+1) % self.config.trainer.checkpoint_interval == 0:    
                 self.save_checkpoint(step+1)
 
@@ -384,18 +373,21 @@ class BaseTrainer:
 
 
     @torch_xla.compile(full_graph=True)
-    def train_step(self, batch: dict) -> tuple[torch.Tensor, dict, torch.Tensor]:
+    def train_step(self, batch: dict) -> dict:
         
         loss, aux = self.forward(**batch)
+        aux["loss"] = loss
 
         loss.backward()
-        
-        grad_norm = self.clip_gradients()
+        aux["grad_norm"] = self.clip_gradients()
+
+        aux["lr"] = self.lr_scheduler.get_last_lr()[0]
+
         self.optimizer.step()
         self.lr_scheduler.step()
         self.model.zero_grad()
 
-        return loss, aux, grad_norm
+        return aux
 
 
     def forward(self, **batch) -> tuple[torch.Tensor, dict]:
@@ -404,7 +396,7 @@ class BaseTrainer:
         )
 
 
-    def clip_gradients(self):
+    def clip_gradients(self) -> torch.Tensor:
         """Clip gradients by the specified max norm and/or max absolute value."""
         max_grad_norm = self.config.trainer.max_grad_norm
         if max_grad_norm is None or max_grad_norm <= 0:
