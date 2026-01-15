@@ -62,7 +62,7 @@ class ZLMTrainer(BaseTrainer):
 
 
 
-    def train_forward(self, input_ids, output_ids):
+    def forward(self, input_ids, output_ids):
         pad_token_id = self.model.config.pad_token_id
 
         input_mask = (input_ids != pad_token_id)
