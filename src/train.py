@@ -88,7 +88,7 @@ def main(config: omegaconf.DictConfig):
 
     # Create the dataset
     data = get_dataset(config.data.dataset.url, config.data.dataset.kwargs)
-    logger.info(f"Dataset loaded: {config.data.dataset.name}")
+    logger.info(f"Dataset loaded: {config.data.dataset.url}")
 
     # initialize the trainer
     trainer_cls = import_class(config.trainer.trainer_type, constants.TRAINER_MODULE)
