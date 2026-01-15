@@ -480,7 +480,7 @@ class ZLMModel(nn.Module):
                 n=1, dim=-2, direction="right", narrow=False
             )
         )
-        start_output_token = unsqueeze_to_batch(
+        start_output_token = expand_to_batch(
             self.decoder_start_output_token, output_ids
         )
 
