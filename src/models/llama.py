@@ -356,7 +356,7 @@ class LlamaModel(nn.Module):
             head_dim=head_dim, rope_theta=config.rope_theta, scaling=rope_scaling
         )
 
-        self.init_elementwise_pad_mask(config)
+        # self.init_elementwise_pad_mask(config)
 
     
     def init_elementwise_pad_mask(self, config):
