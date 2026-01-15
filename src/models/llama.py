@@ -360,7 +360,9 @@ class LlamaModel(nn.Module):
 
     
     def init_elementwise_pad_mask(self, config):
-        first_ind = (config.head_dim //2 ) - 1
+        head_dim = config.hidden_size // config.num_attention_heads
+
+        first_ind = (head_dim // 2) - 1
         sec_ind = -1
 
         query_scales = torch.ones(2, config.head_dim)
