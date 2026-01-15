@@ -87,7 +87,7 @@ def main(config: omegaconf.DictConfig):
     logger.info(f"Model initialized: {config.model.model_class}")
 
     # Create the dataset
-    data = get_dataset(config.data.dataset.name, **config.data.dataset.kwargs)
+    data = get_dataset(config.data.dataset.url, config.data.dataset.kwargs)
     logger.info(f"Dataset loaded: {config.data.dataset.name}")
 
     # initialize the trainer

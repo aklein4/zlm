@@ -1,7 +1,7 @@
 
 dataset:
 
-    name: aklein4/seq2seq-mixed-pretraining-SmolLM2
+    url: aklein4/seq2seq-mixed-pretraining-SmolLM2
     
     kwargs:
 

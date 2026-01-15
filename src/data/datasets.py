@@ -19,20 +19,20 @@ class FakeIterableDataset(datasets.IterableDataset):
         yield {"text": "This is a fake dataset for testing purposes."}
 
 
-def get_dataset(name: str, **kwargs) -> datasets.Dataset:
+def get_dataset(url: str, kwargs) -> datasets.Dataset:
     """
     Get a dataset by name.
     
     Args:
-        name (str): The name of the dataset to retrieve.
+        url (str): The name of the dataset to retrieve.
     
     Returns:
         datasets.Dataset: The requested dataset.
     """
-    if name == "fake":
+    if url == "fake":
         return FakeIterableDataset()
 
-    ds = datasets.load_dataset(name, **kwargs)
+    ds = datasets.load_dataset(url, **kwargs)
 
     if "streaming" in kwargs.keys() and kwargs["streaming"]:
         ds = ds.shard(num_shards=constants.PROCESS_COUNT(), index=constants.PROCESS_INDEX())
