@@ -28,9 +28,6 @@ from transformers.generation import GenerationMixin
 from transformers.integrations import use_kernel_forward_from_hub
 # from transformers.masking_utils import create_causal_mask # TODO: where to import this from?
 from transformers.modeling_layers import (
-    GenericForQuestionAnswering,
-    GenericForSequenceClassification,
-    GenericForTokenClassification,
     GradientCheckpointingLayer,
 )
 from transformers.modeling_outputs import (
@@ -485,21 +482,8 @@ class LlamaForCausalLM(LlamaPreTrainedModel, GenerationMixin):
         )
 
 
-class LlamaForSequenceClassification(GenericForSequenceClassification, LlamaPreTrainedModel): ...
-
-
-class LlamaForQuestionAnswering(GenericForQuestionAnswering, LlamaPreTrainedModel):
-    base_model_prefix = "transformer"  # For BC, where `transformer` was used instead of `model`
-
-
-class LlamaForTokenClassification(GenericForTokenClassification, LlamaPreTrainedModel): ...
-
-
 __all__ = [
     "LlamaForCausalLM",
     "LlamaModel",
     "LlamaPreTrainedModel",
-    "LlamaForSequenceClassification",
-    "LlamaForQuestionAnswering",
-    "LlamaForTokenClassification",
 ]
