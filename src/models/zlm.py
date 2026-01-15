@@ -195,8 +195,8 @@ class DiffusionHead(nn.Module):
             input_max=1.0,
             bias=True,
         )
-        self.t_act = ACT2FN[config.hidden_act],
-        self.t_mlp_proj = nn.Linear(config.t_mlp_size, config.hidden_size, bias=False),
+        self.t_act = ACT2FN[config.hidden_act]
+        self.t_mlp_proj = nn.Linear(config.t_mlp_size, config.hidden_size, bias=False)
 
         self.x_in_proj = nn.Linear(config.latent_size, config.hidden_size, bias=False)
 
