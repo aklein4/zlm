@@ -43,10 +43,10 @@ scheduler.b: [null]
 
 
 # diffusion head
-diffusion_head.t_mlp[0].frequencies: [fsdp]
-diffusion_head.t_mlp[0].proj.weight: [fsdp, null]
-diffusion_head.t_mlp[2].proj.bias: [fsdp]
-diffusion_head.t_mlp[2].weight: [fsdp, null]
+diffusion_head.t_mlp0.frequencies: [fsdp]
+diffusion_head.t_mlp0.proj.weight: [fsdp, null]
+diffusion_head.t_mlp2.proj.bias: [fsdp]
+diffusion_head.t_mlp2.weight: [fsdp, null]
 
 diffusion_head.x_in_proj.weight: [fsdp, null]
 
@@ -64,10 +64,10 @@ diffusion_head.out_proj.weight: [null, fsdp]
 
 
 # uncond diffusion head
-uncond_diffusion_head.t_mlp[0].frequencies: [fsdp]
-uncond_diffusion_head.t_mlp[0].proj.weight: [fsdp, null]
-uncond_diffusion_head.t_mlp[2].proj.bias: [fsdp]
-uncond_diffusion_head.t_mlp[2].weight: [fsdp, null]
+uncond_diffusion_head.t_mlp0.frequencies: [fsdp]
+uncond_diffusion_head.t_mlp0.proj.weight: [fsdp, null]
+uncond_diffusion_head.t_mlp2.proj.bias: [fsdp]
+uncond_diffusion_head.t_mlp2.weight: [fsdp, null]
 
 uncond_diffusion_head.x_in_proj.weight: [fsdp, null]
 
