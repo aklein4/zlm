@@ -81,7 +81,7 @@ def main(config: omegaconf.DictConfig):
             model,
             config.model.pretrained_url,
             config.model.pretrained_step,
-            remove_folder=True
+            strict=config.model.pretrained_strict,
         )
 
     model = model.to(torch_xla.device())
