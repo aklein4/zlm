@@ -13,10 +13,12 @@ def import_class(
 
     Args:
         path (str): The full path to the class, e.g. 'module.submodule.ClassName'.
-        *args: Additional module path components to prepend, e.g. [models, my_model, modules, ...].
+        *args: Additional module path components to prepend, e.g. [supersupermodule, supermodule, ...].
     """
 
     # split into module and class name
+    if '.' not in path:
+        raise ImportError(f'Invalid path: {path}. Must be in the format ...module.submodule.ClassName')
     dot = path.rfind('.')
     module_name = path[:dot]
     class_name = path[dot + 1:]

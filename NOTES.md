@@ -30,6 +30,7 @@ torchprime/torch_xla_models/attention.py
  - only import xla modules if on TPU
  - add is_causal option to attention module
  - must be on XLA for splash_attention and flash_attention
+ - check XLA available before mesh stuff
  - modify block sizes in flash_attention
  - pad to block sizes
 

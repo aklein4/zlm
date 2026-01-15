@@ -21,6 +21,7 @@ PROCESS_INDEX = lambda: xr.process_index()
 # whether this is the main process on its device
 PROCESS_IS_MAIN = lambda: xr.process_index() == 0
 
+# total number of processes/devices
 PROCESS_COUNT = lambda: xr.process_count()
 
 # these might be the correct ones?
@@ -34,9 +35,6 @@ LOCAL_DATA_PATH = os.path.join(BASE_PATH, "local_data")
 
 # paths to checkpoints
 CHECKPOINTS_PATH = os.path.join(LOCAL_DATA_PATH, "checkpoints")
-
-# paths to config files
-CONFIG_PATH = os.path.join(BASE_PATH, "configs")
 
 # modules for classes
 MODEL_MODULE = "models"

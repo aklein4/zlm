@@ -9,6 +9,15 @@ class SeqToSeqCollator:
         output_length: int,
         pad_token_id: int,
     ):
+        """
+        Collator for sequence-to-sequence tasks.
+
+        Args:
+            input_length (int): The maximum length of the input sequences.
+            output_length (int): The maximum length of the output sequences.
+            pad_token_id (int): The token ID used for padding.
+        """
+
         self.input_length = input_length
         self.output_length = output_length
 

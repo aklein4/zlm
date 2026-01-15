@@ -24,6 +24,8 @@ class AdamW(Optimizer):
             Decoupled weight decay to apply.
         correct_bias (:obj:`bool`, `optional`, defaults to `True`):
             Whether ot not to correct bias in Adam (for instance, in Bert TF repository they use :obj:`False`).
+        update_clip (:obj:`float`, `optional`, defaults to `None`):
+            If a float value is provided, the update is clipped to the range :obj:`[-update_clip, update_clip]`.
     """
 
     def __init__(
@@ -73,7 +75,7 @@ class AdamW(Optimizer):
                 # handle types
                 if grad.is_sparse:
                     raise RuntimeError("AdamW does not support sparse gradients.")
-                grad = grad.to(torch.bfloat16)
+                grad = grad.to(torch.bfloat16) # for memory savings
 
                 # handle nan gradients
                 grad = torch.nan_to_num(grad, nan=0.0, posinf=0.0, neginf=0.0)

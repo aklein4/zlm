@@ -1,36 +1,20 @@
 
 import datasets
-import os
 
 from utils import constants
 
 
-class FakeIterableDataset(datasets.IterableDataset):
-
-    def __init__(self):
-        pass
-
-
-    def __len__(self):
-        return 1_000_000_000
-    
-
-    def __iter__(self):
-        yield {"text": "This is a fake dataset for testing purposes."}
-
-
-def get_dataset(url: str, kwargs) -> datasets.Dataset:
+def get_dataset(url: str, kwargs: dict) -> datasets.Dataset:
     """
     Get a dataset by name.
     
     Args:
         url (str): The name of the dataset to retrieve.
+        kwargs (dict): Additional arguments to pass to the dataset loader.
     
     Returns:
         datasets.Dataset: The requested dataset.
     """
-    if url == "fake":
-        return FakeIterableDataset()
 
     ds = datasets.load_dataset(url, **kwargs)
 
