@@ -11,7 +11,7 @@ checkpoint_interval: 5000  # Save a checkpoint every N steps
 
 # Optimizer configuration.
 optimizer:
-  type: adamw
+  type: adamw.AdamW
 
   kwargs:
 
