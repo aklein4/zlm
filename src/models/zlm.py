@@ -196,7 +196,7 @@ class DiffusionHead(nn.Module):
             bias=True,
         )
         self.t_act = ACT2FN[config.hidden_act],
-        self.t_proj = nn.Linear(config.t_mlp_size, config.hidden_size, bias=False),
+        self.t_mlp_proj = nn.Linear(config.t_mlp_size, config.hidden_size, bias=False),
 
         self.x_in_proj = nn.Linear(config.latent_size, config.hidden_size, bias=False)
 
@@ -228,7 +228,7 @@ class DiffusionHead(nn.Module):
 
         # process the hidden inputs
         hidden_states = (
-            self.t_proj(self.t_act(self.t_embed(t))) +
+            self.t_mlp_proj(self.t_act(self.t_embed(t))) +
             self.hidden_states_in_proj(self.hidden_states_norm(hidden_states)) +
             self.x_in_proj(x_t)
         )
@@ -356,10 +356,6 @@ class ZLMModel(nn.Module):
         self.uncond_tokens = nn.Parameter(
             torch.randn(self.z_length, self.hidden_size)
         )
-
-        print("", flush=True)
-        print(self.diffusion_head.state_dict().keys(), flush=True)
-        print("", flush=True)
 
         if config.pretrained_llama is None:
             self.apply(gaussian_init)
