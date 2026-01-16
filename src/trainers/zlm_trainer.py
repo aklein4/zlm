@@ -175,7 +175,7 @@ class ZLMTrainer(BaseTrainer):
         #     t.float(),
         # )
 
-                # get the kls by diffusion sampling
+        # get the kls by diffusion sampling
         kls = 0.0
         uncond_kls = 0.0
         for i in range(self.config.trainer.num_diffusion_samples):
@@ -251,8 +251,8 @@ class ZLMTrainer(BaseTrainer):
 
         loss = (
             lm_loss +
-            self.config.trainer.beta * kl_per_token +
-            uncond_kl_per_token
+            # self.config.trainer.beta * kl_per_token +
+            # uncond_kl_per_token
         )
 
         aux = {
