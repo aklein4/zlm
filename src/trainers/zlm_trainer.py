@@ -116,7 +116,7 @@ class ZLMTrainer(BaseTrainer):
         ).reshape(1)
         logit_grad_scale["value"] = lm_loss_scale
 
-        return z.mean(), {}
+        return z.mean() + lm_loss.mean(), {}
 
         # update hooking status
         self.hooked = self.hooked | (lm_loss < self.config.trainer.loss_threshold).reshape(1)
