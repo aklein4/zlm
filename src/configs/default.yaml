@@ -30,7 +30,7 @@ notes: null
 # "Inter-Chip Interconnect".
 ici_mesh:
   data: 1
-  fsdp: 16
+  fsdp: 8
   tensor: 1
   expert: 1
   context: 1
