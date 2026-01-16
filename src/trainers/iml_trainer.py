@@ -17,31 +17,7 @@ class IMLTrainer(BaseTrainer):
     @torch_xla.compile(full_graph=True)
     def train_step(self, batch: dict) -> tuple[torch.Tensor, dict, torch.Tensor]:
 
-        input_ids, output_ids = torch.chunk(
-            batch["input_ids"], 2, dim=-1,
-        )
-
-        coin = torch.rand(
-            input_ids.shape[0], 1, device=input_ids.device, dtype=torch.float32
-        ) < 0.5
-        input_ids, output_ids = (
-            torch.where(
-                coin,
-                input_ids,
-                output_ids,
-            ),
-            torch.where(
-                coin,
-                output_ids,
-                input_ids,
-            ),
-        )
-
-        other_ids = input_ids[:self.config.trainer.iml_test_bs]
-        input_ids = input_ids[self.config.trainer.iml_test_bs:]
-        output_ids = output_ids[self.config.trainer.iml_test_bs:]
-
-        loss, _ = self.forward(input_ids)
+        loss, _ = self.forward(batch["input_ids"])
 
         loss.backward()
         
@@ -52,9 +28,9 @@ class IMLTrainer(BaseTrainer):
         self.model.zero_grad()
 
         with torch.no_grad():
-            _, train_aux = self.forward(input_ids)
-            _, meta_aux = self.forward(output_ids)
-            _, other_aux = self.forward(other_ids)
+            _, train_aux = self.forward(batch["input_ids"])
+            _, meta_aux = self.forward(batch["output_ids"])
+            _, other_aux = self.forward(batch["other_ids"])
 
         aux = {}
         aux.update({f"train_{k}": v for k, v in train_aux.items()})

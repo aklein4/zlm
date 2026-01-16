@@ -46,7 +46,3 @@ max_grad_norm: 1.0
 # Defaults to not clip gradients by their absolute value.
 # Set to a number to clip gradients by the specified max absolute value.
 max_grad_value: null
-
-
-# IML specific configuration
-iml_test_bs: 256
