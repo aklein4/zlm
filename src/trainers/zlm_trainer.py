@@ -250,7 +250,7 @@ class ZLMTrainer(BaseTrainer):
         mean_effective_parties = self.get_effective_parties(mean_kl.sum(-1).sum(0))
 
         loss = (
-            lm_loss +
+            lm_loss # +
             # self.config.trainer.beta * kl_per_token +
             # uncond_kl_per_token
         )
