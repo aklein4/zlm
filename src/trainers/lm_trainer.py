@@ -57,5 +57,6 @@ class LMTrainer(BaseTrainer):
         return loss, {
             "lm_loss": lm_loss,
             "lm_acc": lm_acc,
+            "atom_count": (output_ids != pad_token_id).long().sum(),
         }
     
