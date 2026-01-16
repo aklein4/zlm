@@ -433,6 +433,9 @@ class LlamaModel(nn.Module):
 
         seq_length = inputs_embeds.shape[1]
 
+        if elementwise_pad_mask is None:
+            elementwise_pad_mask = torch.ones_like(input_ids, dtype=torch.bool)
+
         # TODO(https://github.com/pytorch/xla/issues/8783): Pass position_ids as `long()`
         # when `scan` can take non-differentiable inputs.
         if position_ids is None:
