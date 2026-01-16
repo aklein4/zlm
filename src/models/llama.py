@@ -244,6 +244,8 @@ class LlamaAttention(nn.Module):
             query_scale, query_offset = query_pad
             key_scale, key_offset = key_pad
 
+            print(query_scale.shape, query_offset.shape, key_scale.shape, key_offset.shape)
+
             query_states = (
                 query_states * query_scale[:, None].to(query_states.dtype)
                 + query_offset[:, None].to(query_states.dtype)
