@@ -254,7 +254,7 @@ class ZLMTrainer(BaseTrainer):
         #     self.config.trainer.beta * kl_per_token +
         #     uncond_kl_per_token
         # )
-        loss = mu.mean()
+        loss = lm_loss
 
         aux = {
             "lm_loss": lm_loss,
