@@ -88,7 +88,7 @@ class ZLMTrainer(BaseTrainer):
         logit_grad_scale = {}
         logits, z_states = self.model.decode(
             input_for_model, output_for_model, z,
-            logit_grad_scale=logit_grad_scale,
+            # logit_grad_scale=logit_grad_scale,
             input_mask=input_mask,
             output_mask=output_mask,
         )
@@ -114,7 +114,7 @@ class ZLMTrainer(BaseTrainer):
             (lm_loss - self.config.trainer.lower_loss_threshold) / (self.config.trainer.loss_threshold - self.config.trainer.lower_loss_threshold),
             0.0, 1.0
         ).reshape(1)
-        logit_grad_scale["value"] = lm_loss_scale
+        # logit_grad_scale["value"] = lm_loss_scale
 
         # update hooking status
         self.hooked = self.hooked | (lm_loss < self.config.trainer.loss_threshold).reshape(1)
