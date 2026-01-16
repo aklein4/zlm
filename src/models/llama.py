@@ -487,14 +487,24 @@ class LlamaForCausalLM(nn.Module):
 
     
     def _init_weights(self, module: nn.Module):
+        """Initialize weights for Linear and Embedding layers.
 
+        This method initializes the weights of Linear and Embedding layers
+        using a normal distribution with mean 0 and standard deviation specified
+        by `self.config.initializer_range`. Biases are initialized to zero.
+
+        Args:
+            module: The module whose weights need to be initialized.
+        """
+        std = self.config.initializer_range
+        
         if isinstance(module, nn.Linear):
-            module.weight.data.normal_(mean=0.0, std=1/module.in_features**0.5)
+            module.weight.data.normal_(mean=0.0, std=std)
             if module.bias is not None:
                 module.bias.data.zero_()
-
+                
         elif isinstance(module, nn.Embedding):
-            module.weight.data.normal_(mean=0.0, std=1)
+            module.weight.data.normal_(mean=0.0, std=std)
 
 
     # @xp.trace_me("LlamaForCausalLM")

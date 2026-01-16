@@ -7,21 +7,23 @@ import datasets
 from transformers import AutoTokenizer
 
 
-TOKENIZER_URL = "TinyLlama/TinyLlama_v1.1"
+TOKENIZER_URL = "HuggingFaceTB/SmolLM2-135M" # "TinyLlama/TinyLlama_v1.1"
 
 DATASETS = [
-    ("HuggingFaceFW/fineweb", "sample-10BT"),
-    ("HuggingFaceFW/fineweb-edu", "sample-10BT"),
+    # ("HuggingFaceFW/fineweb", "sample-10BT"),
+    # ("HuggingFaceFW/fineweb-edu", "sample-10BT"),
+    ("caskcsg/entropylong_128k",)
 ]
 
 BS = 1024
 
 LENGTHS = [
-    1024,
-    2048
+    # 1024,
+    # 2048
+    1024 * 64,
 ]
 
-SAVE_URL = "aklein4/fineweb-w-edu-tinyllama"
+SAVE_URL = "aklein4/entropylong-SmolLM2"
 
 
 def tokenize_example(
