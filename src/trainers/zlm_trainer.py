@@ -85,6 +85,8 @@ class ZLMTrainer(BaseTrainer):
             input_mask=input_mask, output_mask=output_mask
         )
 
+        return z.mean(), {}
+
         logit_grad_scale = {}
         logits, z_states = self.model.decode(
             input_for_model, output_for_model, z,
