@@ -43,12 +43,14 @@ class IMLCollator:
         )
 
         test_bs = input_ids.shape[0] // self.iml_test_fraction
+        train_ids = input_ids[test_bs:]
+        meta_train_ids = input_ids[test_bs:2*test_bs]
+        meta_test_ids = output_ids[test_bs:2*test_bs]
         other_ids = input_ids[:test_bs]
-        input_ids = input_ids[test_bs:]
-        output_ids = output_ids[test_bs:]
 
         return {
-            "input_ids": input_ids,
-            "output_ids": output_ids,
-            "other_ids": other_ids,
+            "train_ids": train_ids,
+            "meta_train_ids": meta_train_ids,
+            "meta_test_ids": meta_test_ids,
+            "meta_other_ids": other_ids,
         }

@@ -2,6 +2,7 @@ import torch
 import torch.nn.functional as F
 
 import torch_xla
+from torch_xla.amp import autocast
 
 from models.llama import LlamaForCausalLM
 from trainers.base_trainer import BaseTrainer
@@ -17,7 +18,8 @@ class IMLTrainer(BaseTrainer):
     @torch_xla.compile(full_graph=True)
     def train_step(self, batch: dict) -> tuple[torch.Tensor, dict, torch.Tensor]:
 
-        loss, _ = self.forward(batch["input_ids"])
+        with autocast(self.device):
+            loss, _ = self.forward(batch["train_ids"])
 
         loss.backward()
         
@@ -28,14 +30,15 @@ class IMLTrainer(BaseTrainer):
         self.model.zero_grad()
 
         with torch.no_grad():
-            _, train_aux = self.forward(batch["input_ids"])
-            _, meta_aux = self.forward(batch["output_ids"])
-            _, other_aux = self.forward(batch["other_ids"])
+            with autocast(self.device):
+                _, meta_train_aux = self.forward(batch["meta_train_ids"])
+                _, meta_test_aux = self.forward(batch["meta_test_ids"])
+                _, meta_other_aux = self.forward(batch["meta_other_ids"])
 
         aux = {}
-        aux.update({f"train_{k}": v for k, v in train_aux.items()})
-        aux.update({f"meta_{k}": v for k, v in meta_aux.items()})
-        aux.update({f"other_{k}": v for k, v in other_aux.items()})
+        aux.update({f"train_{k}": v for k, v in meta_train_aux.items()})
+        aux.update({f"test_{k}": v for k, v in meta_test_aux.items()})
+        aux.update({f"other_{k}": v for k, v in meta_other_aux.items()})
 
         return loss, aux, grad_norm, lr
 
