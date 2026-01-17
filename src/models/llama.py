@@ -220,7 +220,9 @@ class LlamaAttention(nn.Module):
     ) -> torch.FloatTensor:
         bsz, q_len, _ = hidden_states.shape
 
+        print("hidden_states:", hidden_states.dtype, flush=True)
         query_states = self.q_proj(hidden_states)
+        print("query_states:", query_states.dtype, flush=True)
         key_states = self.k_proj(hidden_states)
         value_states = self.v_proj(hidden_states)
 
