@@ -33,6 +33,7 @@ torchprime/torch_xla_models/attention.py
  - check XLA available before mesh stuff
  - modify block sizes in flash_attention
  - pad to block sizes
+ - cast to float32 in non-kernel attention
 
 torchprime/torch_xla_models/utils/profiling.py
  - task.max_steps -> trainer.max_steps
