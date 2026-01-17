@@ -177,13 +177,17 @@ class AttentionModule(nn.Module):
             f"Attention weights should be of size {(bsz, num_heads, q_len, kv_seq_len)}, but is"
             f" {attn_weights.size()}"
           )
+        print("attn_weights dtype before mask:", attn_weights.dtype, flush=True)
+        print("attention_mask dtype:", attention_mask.dtype if attention_mask is not None else None, flush=True)
         if attention_mask is not None:  # no matter the length, we just slice it
           causal_mask = attention_mask[:, :, :, : key_states.shape[-2]]
           attn_weights = attn_weights + causal_mask
         # upcast attention to fp32
+        print("attn_weights dtype before softmax:", attn_weights.dtype, flush=True)
         attn_weights = nn.functional.softmax(
           attn_weights, dim=-1, dtype=torch.float32
         ).to(query_states.dtype)
+        print("attn_weights dtype after softmax:", attn_weights.dtype, flush=True)
         attn_weights = nn.functional.dropout(
           attn_weights, p=self.config.attention_dropout, training=self.training
         )
