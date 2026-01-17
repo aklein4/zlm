@@ -254,7 +254,10 @@ class LlamaAttention(nn.Module):
             )
 
         attn_output = self.attention_block(
-            query_states, key_states, value_states, attention_mask
+            query_states.to(torch.float32),
+            key_states.to(torch.float32),
+            value_states.to(torch.float32),
+            attention_mask
         )
         attn_output = attn_output.transpose(1, 2).contiguous()
         attn_output = attn_output.reshape(bsz, q_len, self.hidden_size)
@@ -318,7 +321,7 @@ class LlamaDecoderLayer(nn.Module):
         hidden_states = self.mlp(hidden_states)
         hidden_states = residual + hidden_states
 
-        return hidden_states
+        return hidden_states.to(torch.float32)
 
 
 class LlamaModel(nn.Module):
@@ -472,7 +475,7 @@ class LlamaModel(nn.Module):
 
         if not self.skip_norm:
             hidden_states = self.norm(hidden_states)
-        return hidden_states
+        return hidden_states.to(torch.float32)
 
 
 class LlamaForCausalLM(nn.Module):
@@ -531,7 +534,7 @@ class LlamaForCausalLM(nn.Module):
             hidden_states = hidden_states[..., :-1, :].contiguous()
 
         logits = self.lm_head(hidden_states)
-        logits = logits.float()
+        logits = logits.to(torch.float32)
 
         # logits = torch.nn.functional.log_softmax(logits, dim=-1)
         

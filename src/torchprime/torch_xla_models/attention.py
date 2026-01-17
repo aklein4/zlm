@@ -172,6 +172,7 @@ class AttentionModule(nn.Module):
         attn_weights = torch.matmul(
           query_states, key_states.transpose(2, 3)
         ) / math.sqrt(head_dim)
+        attn_weights = attn_weights.to(torch.float32)
         if attn_weights.size() != (bsz, num_heads, q_len, kv_seq_len):
           raise ValueError(
             f"Attention weights should be of size {(bsz, num_heads, q_len, kv_seq_len)}, but is"
@@ -179,7 +180,7 @@ class AttentionModule(nn.Module):
           )
         if attention_mask is not None:  # no matter the length, we just slice it
           causal_mask = attention_mask[:, :, :, : key_states.shape[-2]]
-          attn_weights = attn_weights + causal_mask
+          attn_weights = attn_weights + causal_mask.to(attn_weights.dtype)
         # upcast attention to fp32
         attn_weights = nn.functional.softmax(
           attn_weights, dim=-1, dtype=torch.float32

@@ -2,6 +2,10 @@
 ## Bebugging
  - [ ] make sure each example is loaded once onto one device
  - [ ] investigate dtypes and nans
+   - Everything prints as float32
+   - Printed precision may not match actual precision
+     - https://docs.pytorch.org/xla/master/tutorials/precision_tutorial.html
+     - https://docs.pytorch.org/xla/release/2.1/index.html
  - [ ] investigate hang when using flash attention
 
 ### Data
