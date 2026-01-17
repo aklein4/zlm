@@ -69,6 +69,11 @@ def main(config: omegaconf.DictConfig):
     # Set the dtype
     torch.set_default_dtype(getattr(torch, config.torch_dtype))
 
+    # print dtype environment info
+    logger.info(f"Default torch dtype: {torch.get_default_dtype()}")
+    logger.info(f"XLA_USE_BF16: {os.environ.get('XLA_USE_BF16', None)}")
+    logger.info(f"XLA_DOWNCAST_BF16: {os.environ.get('XLA_DOWNCAST_BF16', None)}")
+
     # set the default device to the XLA device.
     # This will capture the model constructor into a graph so that we can add
     # sharding annotations to the weights later, and run the constructor on the XLA device.
