@@ -298,6 +298,7 @@ class LlamaDecoderLayer(nn.Module):
         if constants.XLA_AVAILABLE:
             hidden_states = offloading.offload_name(hidden_states, "decoder_input")
 
+        print("Hidden_states dtype:", hidden_states.dtype, flush=True)
         residual = hidden_states
 
         hidden_states = self.input_layernorm(hidden_states)
@@ -530,6 +531,7 @@ class LlamaForCausalLM(nn.Module):
             # Shift the hidden states to the right for causal language modeling
             hidden_states = hidden_states[..., :-1, :].contiguous()
 
+        print("Hidden_states dtype before lm_head:", hidden_states.dtype, flush=True)
         logits = self.lm_head(hidden_states)
         logits = logits.float()
 

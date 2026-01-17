@@ -4,10 +4,10 @@ type: lm_trainer.LMTrainer  # Used to import the trainer from this class
 
 
 # total batch size across all devices
-global_batch_size: 32
+global_batch_size: 64 
 
 # run for N steps
-max_steps: 1000000 
+max_steps: 160000 
 
 # Save a checkpoint every N steps
 checkpoint_interval: 5000  
