@@ -1,8 +1,6 @@
 import torch
-import torch.nn.functional as F
 
 import torch_xla
-from torch_xla.amp import autocast
 
 from models.llama import LlamaForCausalLM
 from trainers.base_trainer import BaseTrainer
@@ -18,8 +16,7 @@ class IMLTrainer(BaseTrainer):
     @torch_xla.compile(full_graph=True)
     def train_step(self, batch: dict) -> tuple[torch.Tensor, dict, torch.Tensor]:
 
-        with autocast(self.device):
-            loss, _ = self.forward(batch["train_ids"])
+        loss, _ = self.forward(batch["train_ids"])
 
         loss.backward()
         
@@ -30,10 +27,9 @@ class IMLTrainer(BaseTrainer):
         self.model.zero_grad()
 
         with torch.no_grad():
-            with autocast(self.device):
-                _, meta_train_aux = self.forward(batch["meta_train_ids"])
-                _, meta_test_aux = self.forward(batch["meta_test_ids"])
-                _, meta_other_aux = self.forward(batch["meta_other_ids"])
+            _, meta_train_aux = self.forward(batch["meta_train_ids"])
+            _, meta_test_aux = self.forward(batch["meta_test_ids"])
+            _, meta_other_aux = self.forward(batch["meta_other_ids"])
 
         aux = {}
         aux.update({f"train_{k}": v for k, v in meta_train_aux.items()})
@@ -68,5 +64,6 @@ class IMLTrainer(BaseTrainer):
         return loss, {
             "lm_loss": lm_loss,
             "lm_acc": lm_acc,
+            "logit_nan": (~torch.isfinite(logits)).any().long(),
         }
     
