@@ -21,7 +21,7 @@ class LMTrainer(BaseTrainer):
         )
 
         logits, _ = self.model(
-            input_ids=inputs_for_model
+            input_ids=inputs_for_model,
             shift_states=True,
         )
 
