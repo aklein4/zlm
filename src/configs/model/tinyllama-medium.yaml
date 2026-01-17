@@ -37,10 +37,13 @@ hidden_act: silu
 max_position_embeddings: 8192
 rope_theta: 100000
 
+# initialization
+initializer_range: null
+gaussian_init: true
+
 # misc
 attention_dropout: false
 attention_bias: false
-initializer_range: 0.02
 rms_norm_eps: 1.0e-05
 
 # value added to pad token attention scores

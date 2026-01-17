@@ -35,6 +35,7 @@ from utils import constants
 if constants.XLA_AVAILABLE:
     import torch_xla.debug.profiler as xp
     from torchprime.torch_xla_models import offloading
+from utils.torch_utils import gaussian_init
 
 
 logger = logging.get_logger(__name__)
@@ -502,6 +503,9 @@ class LlamaForCausalLM(nn.Module):
         Args:
             module: The module whose weights need to be initialized.
         """
+        if self.config.gaussian_init:
+            return gaussian_init(module)
+
         std = self.config.initializer_range
         
         if isinstance(module, nn.Linear):
