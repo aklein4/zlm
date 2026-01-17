@@ -46,5 +46,6 @@ class LMTrainer(BaseTrainer):
             "lm_loss": lm_loss,
             "lm_acc": lm_acc,
             "atom_count": (input_ids != pad_token_id).long().sum(),
+            "logit_nan": (~torch.isfinite(logits)).any().long(),
         }
     

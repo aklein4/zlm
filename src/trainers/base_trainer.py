@@ -362,7 +362,7 @@ class BaseTrainer:
                 to_wandb["examples_seen"] = (step + 1) * self.global_batch_size
                 if "atom_count" in aux.keys():
                     to_wandb["atoms_seen"] = self.atoms_seen
-                to_wandb["nan"] = int(math.isnan(loss))
+                to_wandb["nan"] = 1 - int(math.isfinite(loss))
 
                 if not self.config.debug and constants.PROCESS_IS_MAIN():
                     wandb.log(to_wandb)
