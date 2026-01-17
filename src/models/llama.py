@@ -238,7 +238,7 @@ class LlamaAttention(nn.Module):
         query_states, key_states = apply_rotary_pos_emb(query_states, key_states, cos, sin)
 
         # apply elementwise attention bias 
-        if elementwise_pad_mask is not None:
+        if elementwise_pad_mask is not None and False:
 
             query_pad, key_pad = elementwise_pad_mask
             query_scale, query_offset = query_pad

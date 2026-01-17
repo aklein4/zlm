@@ -187,10 +187,7 @@ class AttentionModule(nn.Module):
         attn_weights = nn.functional.dropout(
           attn_weights, p=self.config.attention_dropout, training=self.training
         )
-        print("Attn_weights dtype:", attn_weights.dtype, flush=True)
-        print("Value_states dtype:", value_states.dtype, flush=True)
         attn_output = torch.matmul(attn_weights, value_states)
-        print("Attn_output dtype:", attn_output.dtype, flush=True)
 
     if attn_output.size() != (bsz, num_heads, q_len, head_dim):
       raise ValueError(
