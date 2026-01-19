@@ -91,13 +91,6 @@ class ZLMTrainer(BaseTrainer):
             input_mask=input_mask, output_mask=output_mask
         )
 
-        loss = z.mean()
-
-        return loss, {
-            "z_nan": (~torch.isfinite(z)).any().long(),
-            "parameter_nan": parameter_nan,
-        }
-
         logit_grad_scale = {}
         logits, z_states = self.model.decode(
             input_for_model, output_for_model, z,
@@ -128,6 +121,12 @@ class ZLMTrainer(BaseTrainer):
             0.0, 1.0
         ).reshape(1)
         logit_grad_scale["value"] = lm_loss_scale
+
+        return lm_loss, {
+            "z_nan": (~torch.isfinite(z)).any().long(),
+            "parameter_nan": parameter_nan,
+            "logit_nan": (~torch.isfinite(logits)).any().long(),
+        }
 
         # update hooking status
         self.hooked = self.hooked | (lm_loss < self.config.trainer.loss_threshold).reshape(1)
