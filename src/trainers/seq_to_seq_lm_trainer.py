@@ -63,7 +63,7 @@ class SeqToSeqLMTrainer(BaseTrainer):
             "atom_count": (output_ids != pad_token_id).long().sum(),
             "logit_nan": (~torch.isfinite(logits)).any().long(),
             "parameter_nan": parameter_nan.long(),
-            "logit_min": torch.min(logits),
-            "logit_max": torch.max(logits),
+            # "logit_min": torch.min(logits),
+            # "logit_max": torch.max(logits),
         }
     
