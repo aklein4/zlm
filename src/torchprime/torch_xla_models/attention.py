@@ -17,6 +17,27 @@ if constants.XLA_AVAILABLE:
   import torchprime.utils.parallelism_utils as parallelism_utils
 
 
+if constants.XLA_AVAILABLE:
+  from torch_xla.experimental.custom_attention import FlashAttention
+
+  class NanSafeFlashAttention(FlashAttention):
+
+    def forward(*args, **kwargs):
+      output = FlashAttention.forward(*args, **kwargs)
+      return torch.nan_to_num(output, nan=0.0, posinf=0.0, neginf=0.0)
+
+    def backward(*args, **kwargs):
+      output = FlashAttention.backward(*args, **kwargs)
+      return (
+        torch.nan_to_num(o[0], nan=0.0, posinf=0.0, neginf=0.0),
+        for o in output
+        if o is not None
+      )
+
+  def nan_safe_flash_attention(*args, **kwargs):
+    return NanSafeFlashAttention.apply(*args, **kwargs)
+
+
 def repeat_kv(hidden_states: torch.Tensor, n_rep: int) -> torch.Tensor:
   """
   This is the equivalent of torch.repeat_interleave(x, dim=1, repeats=n_rep). The hidden states go from (batch,
@@ -125,7 +146,7 @@ class AttentionModule(nn.Module):
           attn_output = splash_attention(
             query_states, key_states, value_states, sa_config.to_json()
           )
-      case "flash_attention":
+      case "flash_attention" | "nan_safe_flash_attention":
         assert constants.XLA_AVAILABLE, "Flash Attention requires XLA"
         # Integrated with PyTorch/XLA Pallas Flash Attention:
         default_block_sizes = {
@@ -159,13 +180,22 @@ class AttentionModule(nn.Module):
         value_states = _pad(value_states, 512)
 
         query_states = query_states / math.sqrt(head_dim)
-        attn_output = flash_attention(
-          query_states,
-          key_states,
-          value_states,
-          causal=self.is_causal,
-          partition_spec=self.partition_spec,
-        )
+        if self.config.attention_kernel == "flash_attention":
+          attn_output = flash_attention(
+            query_states,
+            key_states,
+            value_states,
+            causal=self.is_causal,
+            partition_spec=self.partition_spec,
+          )
+        else:
+          attn_output = nan_safe_flash_attention(
+            query_states,
+            key_states,
+            value_states,
+            causal=self.is_causal,
+            partition_spec=self.partition_spec,
+          )
         attn_output = attn_output[:, :, :og_len, :]
 
       case _:
