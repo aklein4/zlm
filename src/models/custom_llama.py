@@ -548,7 +548,7 @@ class CustomLlamaForCausalLM(nn.Module):
         # logits = torch.nn.functional.log_softmax(logits, dim=-1)
         
         if labels is None:
-            return logits, None
+            return logits, hidden_states
         
         loss = cross_entropy_loss(logits, labels=labels, vocab_size=self.config.vocab_size, ignore_index=self.config.pad_token_id)
         

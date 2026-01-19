@@ -22,7 +22,7 @@ class SeqToSeqLMTrainer(BaseTrainer):
             torch.zeros_like(all_ids)
         )
 
-        logits, _ = self.model(
+        logits, hidden_states = self.model(
             input_ids=ids_for_model,
             shift_states=True,
             elementwise_pad_mask=elementwise_pad_mask
@@ -63,6 +63,7 @@ class SeqToSeqLMTrainer(BaseTrainer):
             "atom_count": (output_ids != pad_token_id).long().sum(),
             "logit_nan": (~torch.isfinite(logits)).any().long(),
             "parameter_nan": parameter_nan.long(),
+            "hidden_states_nan": (~torch.isfinite(hidden_states)).any().long(),
             # "logit_min": torch.min(logits),
             # "logit_max": torch.max(logits),
         }
