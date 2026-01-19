@@ -29,7 +29,7 @@ if constants.XLA_AVAILABLE:
     def backward(*args, **kwargs):
       output = FlashAttention.backward(*args, **kwargs)
       return (
-        torch.nan_to_num(o[0], nan=0.0, posinf=0.0, neginf=0.0),
+        torch.nan_to_num(o[0], nan=0.0, posinf=0.0, neginf=0.0)
         for o in output
         if o is not None
       )
