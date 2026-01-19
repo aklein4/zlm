@@ -41,3 +41,5 @@ def advanced_remat(
             mod = add_optimization_barriers(mod, remat_config)
 
             model.set_submodule(name, mod)        
+
+    return model
