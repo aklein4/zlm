@@ -113,7 +113,7 @@ class AdamW(Optimizer):
                     step_size = step_size * math.sqrt(bias_correction2) / bias_correction1
 
                 update = exp_avg / denom
-                # update = torch.nan_to_num(update, nan=0.0, posinf=0.0, neginf=0.0)
+                update = torch.nan_to_num(update, nan=0.0, posinf=0.0, neginf=0.0)
                 if group["update_clip"] is not None:
                     update = torch.clamp(update, -group["update_clip"], group["update_clip"])
 
