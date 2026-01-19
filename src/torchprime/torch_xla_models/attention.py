@@ -18,7 +18,6 @@ if constants.XLA_AVAILABLE:
 
 
 if constants.XLA_AVAILABLE:
-  from torch_xla.experimental.custom_attention import FlashAttention
 
   class NanSafeFlashAttention(FlashAttention):
 
