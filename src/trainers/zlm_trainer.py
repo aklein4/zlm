@@ -255,10 +255,10 @@ class ZLMTrainer(BaseTrainer):
             uncond_kl_per_token
         )
 
-        parameter_nan = torch.tensor([False], device=loss.device)
+        parameter_nan = torch.tensor([False], device=loss.device, dtype=torch.bool)
         for p in self.model.parameters():
             parameter_nan = parameter_nan | (~torch.isfinite(p)).any()
-
+        parameter_nan = parameter_nan.long()
 
         aux = {
             "lm_loss": lm_loss,
