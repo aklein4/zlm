@@ -64,7 +64,7 @@ class SeqToSeqLMTrainer(BaseTrainer):
             "logit_nan": (~torch.isfinite(logits)).any().long(),
             "parameter_nan": parameter_nan.long(),
             "hidden_states_nan": (~torch.isfinite(hidden_states)).any().long(),
-            "logit_min": torch.min(logits.detach()),
-            "logit_max": torch.max(logits.detach()),
+            "hidden_states_min": torch.min(hidden_states.detach()),
+            "hidden_states_max": torch.max(hidden_states.detach()),
         }
     
