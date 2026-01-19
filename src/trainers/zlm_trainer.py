@@ -98,6 +98,7 @@ class ZLMTrainer(BaseTrainer):
             input_mask=input_mask,
             output_mask=output_mask,
         )
+        logits = torch.nan_to_num(logits, nan=0.0, posinf=0.0, neginf=0.0)
 
         # get the lm loss metrics
         lm_loss = lm_loss_fn(
