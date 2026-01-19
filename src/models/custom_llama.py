@@ -24,7 +24,6 @@ from torch import nn
 import torch.nn.functional as F
 from transformers.activations import ACT2FN
 from transformers.utils import logging
-import math
 
 from torchprime.layers.sequential import HomogeneousSequential
 from torchprime.rope.rope import RopeScaling, llama3_rope_frequencies
@@ -33,7 +32,6 @@ from torchprime.torch_xla_models.loss import cross_entropy_loss
 
 from utils import constants
 if constants.XLA_AVAILABLE:
-    import torch_xla.debug.profiler as xp
     from torchprime.torch_xla_models import offloading
 from utils.torch_utils import gaussian_init
 
@@ -239,7 +237,7 @@ class LlamaAttention(nn.Module):
         query_states, key_states = apply_rotary_pos_emb(query_states, key_states, cos, sin)
 
         # apply elementwise attention bias 
-        if elementwise_pad_mask is not None and False:
+        if elementwise_pad_mask is not None:
 
             query_pad, key_pad = elementwise_pad_mask
             query_scale, query_offset = query_pad
@@ -255,9 +253,9 @@ class LlamaAttention(nn.Module):
             )
 
         attn_output = self.attention_block(
-            query_states.to(torch.float32),
-            key_states.to(torch.float32),
-            value_states.to(torch.float32),
+            query_states,
+            key_states,
+            value_states,
             attention_mask
         )
         attn_output = attn_output.transpose(1, 2).contiguous()
@@ -322,10 +320,10 @@ class LlamaDecoderLayer(nn.Module):
         hidden_states = self.mlp(hidden_states)
         hidden_states = residual + hidden_states
 
-        return hidden_states.to(torch.float32)
+        return hidden_states
 
 
-class LlamaModel(nn.Module):
+class CustomLlamaModel(nn.Module):
     """
     Transformer decoder consisting of *config.num_hidden_layers* layers. Each layer is a [`LlamaDecoderLayer`]
 
@@ -437,9 +435,6 @@ class LlamaModel(nn.Module):
 
         seq_length = inputs_embeds.shape[1]
 
-        if elementwise_pad_mask is None:
-            elementwise_pad_mask = torch.ones_like(input_ids, dtype=torch.bool)
-
         # TODO(https://github.com/pytorch/xla/issues/8783): Pass position_ids as `long()`
         # when `scan` can take non-differentiable inputs.
         if position_ids is None:
@@ -458,6 +453,10 @@ class LlamaModel(nn.Module):
         if attention_mask is not None:
             causal_mask = causal_mask * attention_mask[:, None, None, :]
 
+        # get a mask for elementwise attention bias
+        # currently cannot be None because scan needs differentiable inputs
+        if elementwise_pad_mask is None:
+            elementwise_pad_mask = torch.ones_like(input_ids, dtype=torch.bool)
         elementwise_pad_mask = self.get_elementwise_pad_mask(elementwise_pad_mask)
 
         hidden_states = inputs_embeds
@@ -479,12 +478,12 @@ class LlamaModel(nn.Module):
         return hidden_states.to(torch.float32)
 
 
-class LlamaForCausalLM(nn.Module):
+class CustomLlamaForCausalLM(nn.Module):
     def __init__(self, config):
         super().__init__()
 
         self.config = config
-        self.model = LlamaModel(config)
+        self.model = CustomLlamaModel(config)
 
         self.vocab_size = config.vocab_size
         self.lm_head = nn.Linear(config.hidden_size, config.vocab_size, bias=False)

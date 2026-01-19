@@ -5,10 +5,10 @@ defaults:
 
 
 # Used to import the model from this class
-type: llama.LlamaForCausalLM 
+type: custom_llama.CustomLlamaForCausalLM 
 
 # Information about loading from a checkpoint
-pretrained_url: null
+pretrained_url: aklein4/SmolLM2-360M-TPU
 pretrained_step: 0
 pretrained_strict: false
 
@@ -16,18 +16,18 @@ pretrained_strict: false
 torch_dtype: float32
 
 # vocab information
-vocab_size: 32000
-bos_token_id: 1
-eos_token_id: 2
-pad_token_id: 32000
+vocab_size: 49152
+bos_token_id: 0
+eos_token_id: 0
+pad_token_id: 49152
 
 # architecture size
-hidden_size: 1024
-num_hidden_layers: 24
+hidden_size: 960
+num_hidden_layers: 32
 
 # attention configuration
-num_attention_heads: 16
-num_key_value_heads: 16
+num_attention_heads: 15
+num_key_value_heads: 5
 
 # MLP configuration
 intermediate_size: 2560
@@ -38,7 +38,8 @@ max_position_embeddings: 8192
 rope_theta: 100000
 
 # initialization
-initializer_range: 0.02
+initializer_range: null
+gaussian_init: true
 
 # misc
 attention_dropout: false

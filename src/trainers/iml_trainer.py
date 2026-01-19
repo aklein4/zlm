@@ -3,6 +3,7 @@ import torch
 import torch_xla
 
 from models.llama import LlamaForCausalLM
+from models.custom_llama import CustomLlamaForCausalLM
 from trainers.base_trainer import BaseTrainer
 from utils.loss_utils import lm_loss_fn, lm_acc_fn
 
@@ -10,7 +11,7 @@ from utils.loss_utils import lm_loss_fn, lm_acc_fn
 class IMLTrainer(BaseTrainer):
     """ Implicit Meta-Learning Trainer """
 
-    model: LlamaForCausalLM
+    model: LlamaForCausalLM | CustomLlamaForCausalLM
 
 
     @torch_xla.compile(full_graph=True)

@@ -1,13 +1,14 @@
 import torch
 
 from models.llama import LlamaForCausalLM
+from models.custom_llama import CustomLlamaForCausalLM
 from trainers.base_trainer import BaseTrainer
 from utils.loss_utils import lm_loss_fn, lm_acc_fn
 
 
 class LMTrainer(BaseTrainer):
 
-    model: LlamaForCausalLM
+    model: LlamaForCausalLM | CustomLlamaForCausalLM
 
 
     def forward(self, input_ids):

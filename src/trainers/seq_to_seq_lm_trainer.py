@@ -1,14 +1,13 @@
 import torch
-import torch.nn.functional as F
 
-from models.custom_llama import LlamaForCausalLM
+from models.custom_llama import CustomLlamaForCausalLM
 from trainers.base_trainer import BaseTrainer
 from utils.loss_utils import lm_loss_fn, lm_acc_fn, IGNORE_INDEX
 
 
 class SeqToSeqLMTrainer(BaseTrainer):
 
-    model: LlamaForCausalLM
+    model: CustomLlamaForCausalLM
 
 
     def forward(self, input_ids, output_ids):
@@ -58,5 +57,6 @@ class SeqToSeqLMTrainer(BaseTrainer):
             "lm_loss": lm_loss,
             "lm_acc": lm_acc,
             "atom_count": (output_ids != pad_token_id).long().sum(),
+            "logit_nan": (~torch.isfinite(logits)).any().long(),
         }
     
