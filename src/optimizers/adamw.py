@@ -118,7 +118,7 @@ class AdamW(Optimizer):
 
                 old_p = p.data.clone()
 
-                p.add_(update.to(p.type), alpha=-step_size)
+                p.add_(update.to(p.dtype), alpha=-step_size)
 
                 # Just adding the square of the weights to the loss function is *not*
                 # the correct way of using L2 regularization/weight decay with Adam,
