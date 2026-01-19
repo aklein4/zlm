@@ -21,20 +21,33 @@ if constants.XLA_AVAILABLE:
 
   class NanSafeFlashAttention(FlashAttention):
 
-    def forward(*args, **kwargs):
-      output = FlashAttention.forward(*args, **kwargs)
+    def forward(*args):
+      output = FlashAttention.forward(*args)
       return torch.nan_to_num(output, nan=0.0, posinf=0.0, neginf=0.0)
 
-    def backward(*args, **kwargs):
-      output = FlashAttention.backward(*args, **kwargs)
+    def backward(*args):
+      output = FlashAttention.backward(*args)
       return (
         torch.nan_to_num(o[0], nan=0.0, posinf=0.0, neginf=0.0)
         for o in output
         if o is not None
       )
 
-  def nan_safe_flash_attention(*args, **kwargs):
-    return NanSafeFlashAttention.apply(*args, **kwargs)
+  def nan_safe_flash_attention(
+      q,  # [batch_size, num_heads, q_seq_len, d_model]
+      k,  # [batch_size, num_heads, kv_seq_len, d_model]
+      v,  # [batch_size, num_heads, kv_seq_len, d_model]
+      causal=False,
+      q_segment_ids=None,  # [batch_size, q_seq_len]
+      kv_segment_ids=None,  # [batch_size, kv_seq_len]
+      sm_scale=1.0,
+      *,
+      ab=None,  # [batch_size, num_heads, q_seq_len, kv_seq_len]
+      partition_spec=None,
+      mesh=None,
+  ):
+    return NanSafeFlashAttention.apply(q, k, v, causal, q_segment_ids, kv_segment_ids,
+      sm_scale, ab, partition_spec, mesh)
 
 
 def repeat_kv(hidden_states: torch.Tensor, n_rep: int) -> torch.Tensor:
