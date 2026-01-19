@@ -28,7 +28,7 @@ if constants.XLA_AVAILABLE:
     def backward(*args):
       output = FlashAttention.backward(*args)
       return tuple(
-        None if o is None else torch.nan_to_num(o[0], nan=0.0, posinf=0.0, neginf=0.0)
+        None if o is None else torch.nan_to_num(o, nan=0.0, posinf=0.0, neginf=0.0)
         for o in output
       )
 
