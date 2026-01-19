@@ -265,6 +265,10 @@ class LlamaAttention(nn.Module):
 
 
 class LlamaDecoderLayer(nn.Module):
+    
+    offload_name: str = "decoder_input"
+
+    
     def __init__(self, config: DictConfig, layer_idx: int):
         super().__init__()
         self.hidden_size = config.hidden_size
@@ -298,7 +302,7 @@ class LlamaDecoderLayer(nn.Module):
         # torch API because there is no such feature in PyTorch. Instead, the name
         # becomes node metadata during FX graph capture.
         if constants.XLA_AVAILABLE:
-            hidden_states = offloading.offload_name(hidden_states, "decoder_input")
+            hidden_states = offloading.offload_name(hidden_states, self.offload_name)
 
         residual = hidden_states
 
@@ -331,6 +335,8 @@ class CustomLlamaModel(nn.Module):
         config: DictConfig
     """
 
+    layer_type = LlamaDecoderLayer
+
     skip_norm: bool = False
 
 
@@ -343,7 +349,7 @@ class CustomLlamaModel(nn.Module):
         # `scan` described in https://pytorch.org/xla/release/r2.6/features/scan.html.
         self.layers = HomogeneousSequential(
             *[
-                LlamaDecoderLayer(config, layer_idx)
+                self.layer_type(config, layer_idx)
                 for layer_idx in range(config.num_hidden_layers)
             ]
         )

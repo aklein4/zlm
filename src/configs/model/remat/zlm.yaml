@@ -1,6 +1,28 @@
-activation_checkpoint_layers:
- - LlamaDecoderLayer
 
-# Refer to https://github.com/pytorch/xla/issues/6379 for backward optimization barrier info.
-optimization_barrier_layers:
- - LlamaDecoderLayer
+advanced:
+ - name: self
+   settings:
+        activation_checkpoint_layers:
+         - DiffusionHead
+        activation_barrier_layers:
+         - DiffusionHead
+
+ - name: encoder_model
+   settings:
+        activation_checkpoint_layers:
+         - EncoderModelLayer
+        optimization_barrier_layers:
+         - EncoderModelLayer
+        scan_layers: layers
+        offload_tensors:
+         - encoder_model_input
+
+ - name: decoder_model
+   settings:
+        activation_checkpoint_layers:
+         - DecoderModelLayer
+        optimization_barrier_layers:
+         - DecoderModelLayer
+        scan_layers: layers
+        offload_tensors:
+         - decoder_model_input

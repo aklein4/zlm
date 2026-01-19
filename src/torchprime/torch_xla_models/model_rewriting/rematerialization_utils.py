@@ -98,7 +98,7 @@ def add_activation_checkpointing_and_scan(
   return scan_layers.compile(model, layers_to_scan, partition_fn=partition_fn)
 
 
-def add_optimization_barriers(model: nn.Module, config: DictConfig) -> nn.Module:
+def add_optimization_barriers(model: nn.Module, remat_config: DictConfig) -> nn.Module:
   """Applies backward optimization barriers to specified layer types.
 
   Barriers help mitigate recompute inefficiencies during backpropagation.
@@ -111,7 +111,6 @@ def add_optimization_barriers(model: nn.Module, config: DictConfig) -> nn.Module
   Returns:
     Modified model with optimization barriers.
   """
-  remat_config = config.model.remat
   classes = get_classes_by_names(
     model, remat_config.get("optimization_barrier_layers", [])
   )

@@ -38,10 +38,6 @@ from torchprime.torch_xla_models.model_rewriting.assume_pure import (
     mark_pure_modules,
 )
 from torchprime.torch_xla_models.model_rewriting.auto_trace import auto_trace
-from torchprime.torch_xla_models.model_rewriting.rematerialization_utils import (
-    add_activation_checkpointing_and_scan,
-    add_optimization_barriers,
-)
 from torchprime.torch_xla_models.model_rewriting.sharding_initialization import (
     setup_sharding_and_mesh,
 )
@@ -53,6 +49,7 @@ import huggingface_hub as hf
 from models.xla import BaseXLAModel
 from utils.import_utils import import_optimizer, import_collator
 from utils import constants
+from utils.remat_utils import advanced_remat
 
 
 logger = logging.getLogger(__name__)
@@ -137,20 +134,7 @@ class BaseTrainer:
         )
         model = mark_pure_modules(model, config)
 
-        if hasattr(config.model.remat, 'apply_to_modules'):
-            modules_to_remat = config.model.remat.apply_to_modules
-            logger.info(f"Applying rematerialization to modules: {modules_to_remat}")
-            for name in modules_to_remat:
-                setattr(
-                    model, name,
-                    add_activation_checkpointing_and_scan(
-                        getattr(model, name), config.model.remat
-                    )
-                )
-        else:
-            model = add_activation_checkpointing_and_scan(model, config.model.remat)
-        
-        model = add_optimization_barriers(model, config)
+        model = advanced_remat(model, config)
 
         return model
 

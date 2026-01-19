@@ -24,7 +24,7 @@ torchprime/torch_xla_models/model/model_utils.py
  - only import xla modules if on TPU
 
 torchprime/torch_xla_models/model_rewriting/rematerialization_utils.py
- - pass remat_config instead of base config containing it
+ - pass remat_config instead of base config containing it for add_activation_checkpointing_and_scan and add_optimization_barriers
 
 torchprime/torch_xla_models/attention.py
  - only import xla modules if on TPU
@@ -34,6 +34,7 @@ torchprime/torch_xla_models/attention.py
  - modify block sizes in flash_attention
  - pad to block sizes
  - cast to float32 in non-kernel attention
+ - nan_free_flash_attention option
 
 torchprime/torch_xla_models/utils/profiling.py
  - task.max_steps -> trainer.max_steps
@@ -93,7 +94,9 @@ models/llama.py (torchprime/torch_xla_models/model/llama/model.py)
 ### added
 
 optimizers/adamw.py
- - add gradient checkpointing and update clipping
+ - bfloat16 state
+ - update clipping
+ - nan_to_nums
 
 data/datasets.py
  - load dataset with correct sharding when streaming

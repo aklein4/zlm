@@ -1,7 +1,7 @@
 defaults:
   - _self_  # refers to this config file
   - sharding: zlm-fsdp  # refers to sharding/llama-fsdp.yaml
-  - remat: zlm-scan-offload  # refers to remat/llama-scan.yaml
+  - remat: zlm  # refers to remat/llama-scan.yaml
 
 
 # Used to import the model from this class
@@ -48,7 +48,7 @@ rms_norm_eps: 1.0e-05
 pad_attention_bias_value: -100.0
 
 # choose attention_kernel from: [flash_attention, splash_attention, null]
-attention_kernel: null
+attention_kernel: nan_safe_flash_attention
 
 # pretrained model to use as base
 pretrained_llama: aklein4/SmolLM2-360M-TPU
@@ -68,5 +68,5 @@ num_diffusion_timesteps: 32
 # diffusion head configuration
 num_t_embed_frequencies: 64
 t_mlp_size: 256
-num_diffusion_head_layers: 1 # 2
+num_diffusion_head_layers: 2
 diffusion_in_proj: false

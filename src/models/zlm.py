@@ -6,7 +6,6 @@ import math
 from omegaconf import DictConfig
 
 from transformers.activations import ACT2FN
-from transformers import LlamaForCausalLM
 
 from utils.torch_utils import (
     safe_copy_state,
@@ -17,7 +16,8 @@ from utils.torch_utils import (
     gaussian_init,
 )
 
-from models.llama import LlamaMLP, LlamaRMSNorm, LlamaModel, LlamaForCausalLM
+from models.llama import LlamaForCausalLM
+from models.custom_llama import LlamaMLP, LlamaRMSNorm, LlamaDecoderLayer, CustomLlamaModel
 from models import load_checkpoint_state
 from utils.torch_modules import ContinuousEmbedding
 import utils.constants as constants
@@ -242,6 +242,17 @@ class DiffusionHead(nn.Module):
         return pred
 
 
+class EncoderModelLayer(LlamaDecoderLayer):
+    offload_name = "encoder_model_input"
+class EncoderModel(CustomLlamaModel):
+    layer_type = EncoderModelLayer
+
+class DecoderModelLayer(LlamaDecoderLayer):
+    offload_name = "decoder_model_input"
+class DecoderModel(CustomLlamaModel):
+    layer_type = DecoderModelLayer
+
+
 class ZLMModel(nn.Module):
     
     def __init__(self, config: DictConfig):
@@ -256,8 +267,8 @@ class ZLMModel(nn.Module):
         self.latent_size = config.latent_size
 
         # craete the transformer backbones
-        self.encoder_model = LlamaModel(config)
-        self.decoder_model = LlamaModel(config)
+        self.encoder_model = EncoderModel(config)
+        self.decoder_model = DecoderModel(config)
 
         # create the LM head
         self.lm_head = nn.Linear(
