@@ -53,10 +53,15 @@ class SeqToSeqLMTrainer(BaseTrainer):
 
         loss = lm_loss
 
+        parameter_nan = torch.tensor([False], device=loss.device)
+        for p in self.model.parameters():
+            parameter_nan = parameter_nan | (~torch.isfinite(p)).any()
+
         return loss, {
             "lm_loss": lm_loss,
             "lm_acc": lm_acc,
             "atom_count": (output_ids != pad_token_id).long().sum(),
             "logit_nan": (~torch.isfinite(logits)).any().long(),
+            "parameter_nan": parameter_nan.long(),
         }
     
