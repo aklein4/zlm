@@ -316,13 +316,13 @@ class LlamaDecoderLayer(nn.Module):
             position_embeddings=position_embeddings,
             elementwise_pad_mask=elementwise_pad_mask,
         )
-        hidden_states = residual + hidden_states
+        hidden_states = residual + torch.nan_to_num(hidden_states, nan=0.0, posinf=0.0, neginf=0.0)
 
         # Fully Connected
         residual = hidden_states
         hidden_states = self.post_attention_layernorm(hidden_states)
         hidden_states = self.mlp(hidden_states)
-        hidden_states = residual + hidden_states
+        hidden_states = residual + torch.nan_to_num(hidden_states, nan=0.0, posinf=0.0, neginf=0.0)
 
         return hidden_states
 
