@@ -1,7 +1,7 @@
 import torch
-import torch_xla.core.xla_model as xm
+import torch_xla
 
-xla_device = xm.xla_device()
+xla_device = torch_xla.device()
 
 x = torch.zeros(4, device=xla_device)
 
