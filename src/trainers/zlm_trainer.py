@@ -64,7 +64,7 @@ class ZLMTrainer(BaseTrainer):
 
     def forward(self, input_ids, output_ids):
 
-        parameter_nan = torch.tensor([False], device=loss.device, dtype=torch.bool)
+        parameter_nan = torch.tensor([False], device=self.device, dtype=torch.bool)
         for p in self.model.parameters():
             parameter_nan = parameter_nan | (~torch.isfinite(p)).any()
         parameter_nan = parameter_nan.long()
