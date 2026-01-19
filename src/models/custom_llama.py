@@ -324,7 +324,7 @@ class LlamaDecoderLayer(nn.Module):
         hidden_states = self.mlp(hidden_states)
         hidden_states = residual + torch.nan_to_num(hidden_states, nan=0.0, posinf=0.0, neginf=0.0)
 
-        return hidden_states
+        return torch.nan_to_num(hidden_states, nan=0.0, posinf=0.0, neginf=0.0)
 
 
 class CustomLlamaModel(nn.Module):
