@@ -63,6 +63,12 @@ class ZLMTrainer(BaseTrainer):
 
 
     def forward(self, input_ids, output_ids):
+
+        parameter_nan = torch.tensor([False], device=loss.device, dtype=torch.bool)
+        for p in self.model.parameters():
+            parameter_nan = parameter_nan | (~torch.isfinite(p)).any()
+        parameter_nan = parameter_nan.long()
+
         pad_token_id = self.model.config.pad_token_id
 
         input_mask = (input_ids != pad_token_id)
@@ -84,6 +90,13 @@ class ZLMTrainer(BaseTrainer):
             input_for_model, output_for_model,
             input_mask=input_mask, output_mask=output_mask
         )
+
+        loss = z.mean()
+
+        return loss, {
+            "z_nan": (~torch.isfinite(z)).any().long(),
+            "parameter_nan": parameter_nan,
+        }
 
         logit_grad_scale = {}
         logits, z_states = self.model.decode(
