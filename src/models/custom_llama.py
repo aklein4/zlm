@@ -542,10 +542,8 @@ class CustomLlamaForCausalLM(nn.Module):
             # Shift the hidden states to the right for causal language modeling
             hidden_states = hidden_states[..., :-1, :].contiguous()
 
-        hidden_states = torch.nan_to_num(hidden_states, nan=0.0, posinf=0.0, neginf=0.0)
         logits = self.lm_head(hidden_states)
         logits = logits.to(torch.float32)
-        logits = torch.nan_to_num(logits, nan=0.0, posinf=0.0, neginf=0.0)
 
         # logits = torch.nn.functional.log_softmax(logits, dim=-1)
         
