@@ -286,8 +286,8 @@ class ZLMModel(nn.Module):
                 strict=False,
             )
 
-            safe_copy_state(llama.model, self.encoder_model, strict=True)
-            safe_copy_state(llama.model, self.decoder_model, strict=True)
+            safe_copy_state(llama.model, self.encoder_model, strict=False)
+            safe_copy_state(llama.model, self.decoder_model, strict=False)
 
             safe_copy_state(llama.lm_head, self.lm_head)
         
