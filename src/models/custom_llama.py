@@ -21,8 +21,10 @@
 import torch
 from omegaconf import DictConfig
 from torch import nn
+import torch.nn.functional as F
 from transformers.activations import ACT2FN
 from transformers.utils import logging
+import math
 
 from torchprime.layers.sequential import HomogeneousSequential
 from torchprime.rope.rope import RopeScaling, llama3_rope_frequencies
@@ -31,7 +33,9 @@ from torchprime.torch_xla_models.loss import cross_entropy_loss
 
 from utils import constants
 if constants.XLA_AVAILABLE:
+    import torch_xla.debug.profiler as xp
     from torchprime.torch_xla_models import offloading
+from utils.torch_utils import gaussian_init
 
 
 logger = logging.get_logger(__name__)
@@ -160,10 +164,10 @@ def repeat_kv(hidden_states: torch.Tensor, n_rep: int) -> torch.Tensor:
 class LlamaAttention(nn.Module):
     """Multi-headed attention from 'Attention Is All You Need' paper"""
 
-    def __init__(self, config: DictConfig, layer_idx: int | None = None):
+    def __init__(self, config: DictConfig, layer_idx: int | None = None, is_causal: bool = True):
         super().__init__()
         self.config = config
-        self.attention_block = AttentionModule(config)
+        self.attention_block = AttentionModule(config, is_causal=is_causal)
         self.layer_idx = layer_idx
         if layer_idx is None:
             logger.warning_once(
@@ -179,7 +183,7 @@ class LlamaAttention(nn.Module):
         self.num_key_value_groups = self.num_heads // self.num_key_value_heads
         self.max_position_embeddings = config.max_position_embeddings
         self.rope_theta = config.rope_theta
-        self.is_causal = True
+        self.is_causal = is_causal
 
         if (self.head_dim * self.num_heads) != self.hidden_size:
             raise ValueError(
@@ -213,6 +217,7 @@ class LlamaAttention(nn.Module):
         position_embeddings: tuple[torch.Tensor, torch.Tensor],
         attention_mask: torch.Tensor | None = None,
         position_ids: torch.LongTensor | None = None,
+        elementwise_pad_mask=None,
     ) -> torch.FloatTensor:
         bsz, q_len, _ = hidden_states.shape
 
@@ -233,10 +238,26 @@ class LlamaAttention(nn.Module):
         cos, sin = position_embeddings
         query_states, key_states = apply_rotary_pos_emb(query_states, key_states, cos, sin)
 
+        # apply elementwise attention bias 
+        if elementwise_pad_mask is not None and False:
+
+            query_pad, key_pad = elementwise_pad_mask
+            query_scale, query_offset = query_pad
+            key_scale, key_offset = key_pad
+
+            query_states = (
+                query_states * query_scale[:, None].to(query_states.dtype)
+                + query_offset[:, None].to(query_states.dtype)
+            )
+            key_states = (
+                key_states * key_scale[:, None].to(key_states.dtype)
+                + key_offset[:, None].to(key_states.dtype)
+            )
+
         attn_output = self.attention_block(
-            query_states,
-            key_states,
-            value_states,
+            query_states.to(torch.float32),
+            key_states.to(torch.float32),
+            value_states.to(torch.float32),
             attention_mask
         )
         attn_output = attn_output.transpose(1, 2).contiguous()
@@ -265,6 +286,7 @@ class LlamaDecoderLayer(nn.Module):
         attention_mask: torch.Tensor | None = None,
         position_ids: torch.Tensor | None = None,
         position_embeddings: tuple[torch.Tensor, torch.Tensor] | None = None,    # necessary, but kept here for BC
+        elementwise_pad_mask=None,
     ) -> torch.Tensor:
         """
         Args:
@@ -290,6 +312,7 @@ class LlamaDecoderLayer(nn.Module):
             attention_mask=attention_mask,
             position_ids=position_ids,
             position_embeddings=position_embeddings,
+            elementwise_pad_mask=elementwise_pad_mask,
         )
         hidden_states = residual + hidden_states
 
@@ -299,7 +322,7 @@ class LlamaDecoderLayer(nn.Module):
         hidden_states = self.mlp(hidden_states)
         hidden_states = residual + hidden_states
 
-        return hidden_states
+        return hidden_states.to(torch.float32)
 
 
 class LlamaModel(nn.Module):
@@ -309,6 +332,9 @@ class LlamaModel(nn.Module):
     Args:
         config: DictConfig
     """
+
+    skip_norm: bool = False
+
 
     def __init__(self, config: DictConfig):
         super().__init__()
@@ -334,22 +360,93 @@ class LlamaModel(nn.Module):
             head_dim=head_dim, rope_theta=config.rope_theta, scaling=rope_scaling
         )
 
+        self.init_elementwise_pad_mask(config)
+
+    
+    def init_elementwise_pad_mask(self, config):
+        head_dim = config.hidden_size // config.num_attention_heads
+
+        first_ind = (head_dim // 2) - 1
+        sec_ind = -1
+
+        query_scales = torch.ones(2, head_dim)
+        query_scales[:, first_ind] = 0.0
+        query_scales[:, sec_ind] = 0.0
+        self.register_buffer("query_scales", query_scales, persistent=True)
+
+        query_offsets = torch.zeros(2, head_dim)
+        query_offsets[:, first_ind] = 0.5
+        query_offsets[:, sec_ind] = 0.5
+        self.register_buffer("query_offsets", query_offsets, persistent=True)
+
+        key_scales = query_scales.clone()
+        self.register_buffer("key_scales", key_scales, persistent=True)
+
+        key_offsets = torch.zeros(2, head_dim)
+        key_offsets[0, first_ind] = config.pad_attention_bias_value
+        key_offsets[0, sec_ind] = config.pad_attention_bias_value
+        self.register_buffer("key_offsets", key_offsets, persistent=True)
+
+
+    def get_elementwise_pad_mask(self, elementwise_pad_mask: torch.Tensor | None):
+        if elementwise_pad_mask is None:
+            return None
+
+        elementwise_pad_mask = elementwise_pad_mask.long()
+        return (
+            (
+                F.embedding(elementwise_pad_mask, self.query_scales),
+                F.embedding(elementwise_pad_mask, self.query_offsets),
+            ),
+            (
+                F.embedding(elementwise_pad_mask, self.key_scales),
+                F.embedding(elementwise_pad_mask, self.key_offsets),
+            ),
+        )
+
+    
+    def get_default_position_ids(
+        self,
+        seq_length: int,
+        device: torch.device,
+        elementwise_pad_mask: torch.Tensor | None = None
+    ) -> torch.LongTensor:
+        if elementwise_pad_mask is None:
+            return torch.arange(seq_length, device=device).unsqueeze(0)
+        
+        mask = elementwise_pad_mask.long()
+        return torch.cumsum(mask, dim=1) - 1
+
+
     # @xp.trace_me("LlamaModel")
     def forward(
         self,
-        input_ids: torch.LongTensor,
+        input_ids: torch.LongTensor | None = None,
+        inputs_embeds: torch.FloatTensor | None = None,
         attention_mask: torch.FloatTensor | None = None, # only used in non-kernel attention
-    ) -> torch.Tensor:        
+        position_ids: torch.LongTensor | None = None,
+        elementwise_pad_mask: torch.BoolTensor | None = None,
+    ) -> torch.Tensor:
+        assert (input_ids is not None) ^ (inputs_embeds is not None), (
+            "You have to specify either input_ids or inputs_embeds, but not both."
+        )
+        
         # convert input ids to embeddings
-        inputs_embeds = self.embed_tokens(input_ids)
+        if inputs_embeds is None:
+            inputs_embeds = self.embed_tokens(input_ids)
 
         seq_length = inputs_embeds.shape[1]
 
+        if elementwise_pad_mask is None:
+            elementwise_pad_mask = torch.ones_like(input_ids, dtype=torch.bool)
+
         # TODO(https://github.com/pytorch/xla/issues/8783): Pass position_ids as `long()`
         # when `scan` can take non-differentiable inputs.
-        position_ids = (
-            torch.arange(seq_length, device=inputs_embeds.device).unsqueeze(0).float()
-        )
+        if position_ids is None:
+            position_ids = self.get_default_position_ids(
+                seq_length, inputs_embeds.device,
+                elementwise_pad_mask
+            ).float()
 
         # Create a causal attention mask
         causal_mask = torch.triu(
@@ -360,6 +457,8 @@ class LlamaModel(nn.Module):
 
         if attention_mask is not None:
             causal_mask = causal_mask * attention_mask[:, None, None, :]
+
+        elementwise_pad_mask = self.get_elementwise_pad_mask(elementwise_pad_mask)
 
         hidden_states = inputs_embeds
 
@@ -372,10 +471,12 @@ class LlamaModel(nn.Module):
             attention_mask=causal_mask,
             position_ids=position_ids,
             position_embeddings=position_embeddings,
+            elementwise_pad_mask=elementwise_pad_mask,
         )
 
-        hidden_states = self.norm(hidden_states)
-        return hidden_states
+        if not self.skip_norm:
+            hidden_states = self.norm(hidden_states)
+        return hidden_states.to(torch.float32)
 
 
 class LlamaForCausalLM(nn.Module):
@@ -402,6 +503,9 @@ class LlamaForCausalLM(nn.Module):
         Args:
             module: The module whose weights need to be initialized.
         """
+        if self.config.gaussian_init:
+            return gaussian_init(module)
+
         std = self.config.initializer_range
         
         if isinstance(module, nn.Linear):
@@ -420,11 +524,13 @@ class LlamaForCausalLM(nn.Module):
         labels: torch.LongTensor | None = None,
         attention_mask: torch.FloatTensor | None = None, # only used in non-kernel attention
         shift_states: bool = False,
+        elementwise_pad_mask: torch.BoolTensor | None = None,
     ) -> tuple[torch.FloatTensor, torch.FloatTensor | None]:
         
         hidden_states = self.model(
             input_ids=input_ids,
             attention_mask=attention_mask,
+            elementwise_pad_mask=elementwise_pad_mask,
         )
 
         if shift_states:
