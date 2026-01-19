@@ -28,7 +28,7 @@ optimizer:
 
     weight_decay: 0.1
 
-    update_clip: null
+    update_clip: 3.0
 
 
 # Learning rate scheduler configuration
@@ -42,7 +42,7 @@ lr_scheduler:
 
 # Defaults to clip the L2 norm of gradients to 1.0.
 # Set to null to disable gradient clipping by norm.
-max_grad_norm: 1.0
+max_grad_norm: null
 # Defaults to not clip gradients by their absolute value.
 # Set to a number to clip gradients by the specified max absolute value.
 max_grad_value: null
