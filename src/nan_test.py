@@ -3,7 +3,7 @@ import torch_xla
 
 xla_device = torch_xla.device()
 
-x = torch.zeros(4, device=xla_device)
+x = torch.zeros(4, device=xla_device, dtype=torch.bfloat16)
 
 x[1] = float('nan')
 x[2] = float('inf')
