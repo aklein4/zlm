@@ -112,12 +112,13 @@ class AdamW(Optimizer):
                     bias_correction2 = 1.0 - beta2 ** state["step"]
                     step_size = step_size * math.sqrt(bias_correction2) / bias_correction1
 
-                update = (exp_avg / denom).to(p.dtype)
-                update = torch.nan_to_num(update, nan=0.0, posinf=0.0, neginf=0.0)
+                update = exp_avg / denom
                 if group["update_clip"] is not None:
                     update = torch.clamp(update, -group["update_clip"], group["update_clip"])
 
-                p.add_(update, alpha=-step_size)
+                old_p = p.data.clone()
+
+                p.add_(update.to(p.type), alpha=-step_size)
 
                 # Just adding the square of the weights to the loss function is *not*
                 # the correct way of using L2 regularization/weight decay with Adam,
@@ -129,5 +130,14 @@ class AdamW(Optimizer):
                 # Add weight decay at the end (fixed version)
                 if group["weight_decay"] > 0.0:
                     p.add_(p, alpha=-group["lr"] * group["weight_decay"])
+
+                # enforce no NaNs or Infs in weights
+                p.copy_(
+                    torch.where(
+                        torch.isfinite(p),
+                        p,
+                        old_p
+                    )
+                )
 
         return loss
