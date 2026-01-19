@@ -38,8 +38,7 @@ max_position_embeddings: 8192
 rope_theta: 100000
 
 # initialization
-initializer_range: null
-gaussian_init: true
+initializer_range: 0.2
 
 # misc
 attention_dropout: false

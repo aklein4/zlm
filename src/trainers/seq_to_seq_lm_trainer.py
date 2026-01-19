@@ -1,7 +1,7 @@
 import torch
 import torch.nn.functional as F
 
-from models.llama import LlamaForCausalLM
+from models.custom_llama import LlamaForCausalLM
 from trainers.base_trainer import BaseTrainer
 from utils.loss_utils import lm_loss_fn, lm_acc_fn, IGNORE_INDEX
 
