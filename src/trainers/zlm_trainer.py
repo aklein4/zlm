@@ -255,6 +255,11 @@ class ZLMTrainer(BaseTrainer):
             uncond_kl_per_token
         )
 
+        parameter_nan = torch.tensor([False], device=loss.device)
+        for p in self.model.parameters():
+            parameter_nan = parameter_nan | (~torch.isfinite(p)).any()
+
+
         aux = {
             "lm_loss": lm_loss,
             "lm_acc": lm_acc,
@@ -273,6 +278,8 @@ class ZLMTrainer(BaseTrainer):
             "elbo": elbo,
             "hooked": self.hooked,
             "hook_step": self.hook_step,
+            "parameter_nan": parameter_nan,
+            "atom_count": (output_ids != pad_token_id).long().sum(),
         }
 
         return loss, aux
