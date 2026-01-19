@@ -68,9 +68,11 @@ def main(config: omegaconf.DictConfig):
 
     # Set the dtype
     torch.set_default_dtype(getattr(torch, config.torch_dtype))
+    torch_xla.backends.set_mat_mul_precision(config.matmul_precision)
 
     # print dtype environment info
     logger.info(f"Default torch dtype: {torch.get_default_dtype()}")
+    logger.info(f"Matmul precision: {torch_xla.backends.get_mat_mul_precision()}")
     logger.info(f"XLA_USE_BF16: {os.environ.get('XLA_USE_BF16', None)}")
     logger.info(f"XLA_DOWNCAST_BF16: {os.environ.get('XLA_DOWNCAST_BF16', None)}")
 

@@ -14,6 +14,7 @@ defaults:
 seed: 42
 
 torch_dtype: float32 # must be float32 for now?
+matmul_precision: high # [default, high, highest]
 
 
 # logging and saving configuration
