@@ -105,10 +105,10 @@ class AdamW(Optimizer):
                 )
                 exp_avg_sq.mul_(beta2).add_(
                     grad.pow(2).to(exp_avg_sq.dtype),
-                    value=1.0 - beta2
+                    alpha=1.0 - beta2
                 )
                 exp_avg_sq.clamp_(min=group["eps"]**2)
-                
+
                 denom = exp_avg_sq.to(p.dtype).sqrt()
 
                 step_size = group["lr"]
