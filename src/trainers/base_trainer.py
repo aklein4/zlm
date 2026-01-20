@@ -384,10 +384,13 @@ class BaseTrainer:
         loss.backward()
         
         grad_norm = self.clip_gradients()
-        self.optimizer.step()
+
+        opt_aux = self.optimizer.step()
+        aux.update(opt_aux)
+        self.model.zero_grad()
+
         lr = self.lr_scheduler.get_last_lr()[0]
         self.lr_scheduler.step()
-        self.model.zero_grad()
 
         return loss, aux, grad_norm, lr
 
