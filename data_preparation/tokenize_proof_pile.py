@@ -16,10 +16,10 @@ INPUT_REPO = "aklein4/proof-pile-2-fixed"
 SUBSET = "algebraic-stack"
 
 OUTPUT_REPO = "aklein4/compilation-SmolLM2"
-OUTPUT_SUBSET = "proof-pile"
+OUTPUT_SUBSET = f"EleutherAI/proof-pile-2/{SUBSET}".replace("/", "--")
 
 
-def tokenize_example(example, tokenizer: GPT2TokenizerFast=None):
+def tokenize_batch(example, tokenizer: GPT2TokenizerFast=None):
 
     text = []
     formats = []
@@ -53,7 +53,7 @@ def tokenize_example(example, tokenizer: GPT2TokenizerFast=None):
     }
 
 
-def split_example(example):
+def split_batch(example):
 
     input_ids = [
         x[:INPUT_LENGTH] for x in example["input_ids"]
@@ -73,8 +73,8 @@ def split_example(example):
     ]
 
     return {
-        "source": f"{INPUT_REPO}/{SUBSET}",
-        "kind": "web_code",
+        "source": [f"{INPUT_REPO}/{SUBSET}" for _ in input_ids],
+        "kind": ["web_code" for _ in input_ids],
         "format": example["format"],
         "input_ids": input_ids,
         "output_ids": output_ids,
@@ -96,7 +96,7 @@ def main():
     )
 
     data = data.map(
-        partial(tokenize_example, tokenizer=tokenizer),
+        partial(tokenize_batch, tokenizer=tokenizer),
         remove_columns=data.column_names,
         batched=True,
         batch_size=1024,
@@ -106,7 +106,7 @@ def main():
     )
 
     data = data.map(
-        split_example,
+        split_batch,
         remove_columns=data.column_names,
         batched=True,
         batch_size=1024,
