@@ -21,8 +21,6 @@ from models.custom_llama import LlamaMLP, LlamaRMSNorm, LlamaDecoderLayer, Custo
 from models import load_checkpoint_state
 from utils.torch_modules import ContinuousEmbedding
 import utils.constants as constants
-from utils.logging_utils import print_sharding_info
-from utils.sharding_utils import maybe_shard_with_gradients
 
 
 class DiffusionScheduler(nn.Module):
@@ -450,7 +448,6 @@ class ZLMModel(nn.Module):
             ],
             dim=-2
         )
-        tokens = maybe_shard_with_gradients(tokens)
 
         mask = None
         if input_mask is not None or output_mask is not None:
@@ -470,12 +467,10 @@ class ZLMModel(nn.Module):
             inputs_embeds=tokens,
             elementwise_pad_mask=mask,
         )
-        print_sharding_info(hidden_states, name="encoder output hidden states")
 
         mu = self.encoder_mu_proj_out(
             hidden_states[..., -self.z_length:, :]
         )
-        print_sharding_info(mu, name="mu before rms norm")
 
         # TODO: leave, remove, or scale?
         mu = F.rms_norm(mu, [mu.shape[-1]], eps=self.config.rms_norm_eps)
