@@ -426,38 +426,31 @@ class ZLMModel(nn.Module):
                 noise_scale=noise_scale,
             ) 
 
-        input_tokens = maybe_shard_with_gradients(
-                self.embed_tokens(input_ids) + unsqueeze_to_batch(
-                self.encoder_input_embeddings, input_ids
-            )
+        input_tokens = self.embed_tokens(input_ids) + unsqueeze_to_batch(
+            self.encoder_input_embeddings, input_ids
         )
-        output_tokens = maybe_shard_with_gradients(
-                self.embed_tokens(output_ids) + unsqueeze_to_batch(
-                self.encoder_output_embeddings, output_ids
-            )
+        output_tokens = self.embed_tokens(output_ids) + unsqueeze_to_batch(
+            self.encoder_output_embeddings, output_ids
         )
 
-        z_tokens = maybe_shard_with_gradients(
+        z_tokens = (
             unsqueeze_to_batch(self.encoder_z_tokens, noise) +
             shift(
                 self.encoder_noise_proj_in(noise),
                 n=1, dim=-2, direction="right", narrow=True
             )
         )
-        sep_token = maybe_shard_with_gradients(
-            expand_to_batch(self.encoder_sep_token, input_tokens)
-        )
 
         tokens = torch.cat(
             [
                 input_tokens,
-                sep_token,
+                expand_to_batch(self.encoder_sep_token, input_tokens),
                 output_tokens,
                 z_tokens
             ],
             dim=-2
         )
-        print_sharding_info(tokens, name="encoder input tokens")
+        tokens = maybe_shard_with_gradients(tokens)
 
         mask = None
         if input_mask is not None or output_mask is not None:
