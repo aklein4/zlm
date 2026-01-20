@@ -426,9 +426,9 @@ class ZLMModel(nn.Module):
                 noise_scale=noise_scale,
             ) 
 
-        input_tokens = self.embed_tokens(input_ids) + unsqueeze_to_batch(
-            self.encoder_input_embeddings, input_ids
-        )
+        input_tokens = self.embed_tokens(input_ids) # + unsqueeze_to_batch(
+        #     self.encoder_input_embeddings, input_ids
+        # )
         output_tokens = self.embed_tokens(output_ids) + unsqueeze_to_batch(
             self.encoder_output_embeddings, output_ids
         )
