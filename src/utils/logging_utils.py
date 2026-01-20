@@ -12,7 +12,10 @@ def print_sharding_info(tensor, name=None):
 
         print(f" ===== Sharding info for {name if name else 'tensor'} ===== ", flush=True)
         print(f" - Shape: {xt.shape}", flush=True)
-        print(f" - Sharding spec: {xt.sharding_spec}\n", flush=True)
+        if isinstance(xt, xs.ShardedTensor):
+            print(f" - Sharding spec: {xt.sharding_spec}\n", flush=True)
+        else:
+            print(" - Not sharded\n", flush=True)
 
     else:
         raise RuntimeError("Cannot print sharding info. XLA is not available.")
