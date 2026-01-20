@@ -11,7 +11,7 @@ from models.zlm import ZLMModel
 from utils.scheduling_utils import linear_warmup
 from utils.torch_utils import scale_gradient
 from utils.loss_utils import lm_loss_fn, lm_acc_fn
-
+from utils.logging_utils import print_sharding_info
 
 class ZLMTrainer(BaseTrainer):
     
@@ -66,12 +66,6 @@ class ZLMTrainer(BaseTrainer):
     def forward(self, input_ids, output_ids):
         pad_token_id = self.model.config.pad_token_id
 
-        xt = xs.wrap_if_sharded(input_ids)
-        print("Shape:", xt.shape, flush=True)
-        print("Mesh shape:", xt.mesh_shape, flush=True)
-        print("Partition spec:", xt.partition_spec, flush=True)
-        print("Sharding spec:", xt.sharding_spec, flush=True)
-
         # prepare inputs
         input_mask = (input_ids != pad_token_id)
         output_mask = (output_ids != pad_token_id)
@@ -100,6 +94,11 @@ class ZLMTrainer(BaseTrainer):
             input_mask=input_mask,
             output_mask=output_mask,
         )
+
+        print_sharding_info(z, "z")
+        print_sharding_info(mu, "mu")
+        print_sharding_info(logits, "logits")
+        print_sharding_info(z_states, "z_states")
 
         # get the lm loss metrics
         lm_loss = lm_loss_fn(
