@@ -65,7 +65,7 @@ class ZLMTrainer(BaseTrainer):
     def forward(self, input_ids, output_ids):
         pad_token_id = self.model.config.pad_token_id
 
-        print("Partition spec:", output_ids.mesh_spec, flush=True)
+        print("Partition spec:", output_ids.partition_spec, flush=True)
         print("Mesh shape:", output_ids.mesh_shape, flush=True)
 
         # prepare inputs
