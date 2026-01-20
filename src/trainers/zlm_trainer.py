@@ -2,7 +2,6 @@ import torch
 import torch.nn.functional as F
 
 from torch_xla.experimental.scan import scan
-import torch_xla.distributed.spmd as xs
 
 import numpy as np
 
@@ -11,7 +10,6 @@ from models.zlm import ZLMModel
 from utils.scheduling_utils import linear_warmup
 from utils.torch_utils import scale_gradient
 from utils.loss_utils import lm_loss_fn, lm_acc_fn
-from utils.logging_utils import print_sharding_info
 
 class ZLMTrainer(BaseTrainer):
     
@@ -94,11 +92,6 @@ class ZLMTrainer(BaseTrainer):
             input_mask=input_mask,
             output_mask=output_mask,
         )
-
-        print_sharding_info(z, "z")
-        print_sharding_info(mu, "mu")
-        print_sharding_info(logits, "logits")
-        print_sharding_info(z_states, "z_states")
 
         # get the lm loss metrics
         lm_loss = lm_loss_fn(
