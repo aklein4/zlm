@@ -108,7 +108,10 @@ decoder_model.layers.*: [[data, fsdp], null, null]
 
 
 # diffusion heads
+diffusion_head.layer_norms.*: [[data, fsdp], null, null]
 diffusion_head.layers.*: [[data, fsdp], null, null]
+
+uncond_diffusion_head.layer_norms.*: [[data, fsdp], null, null]
 uncond_diffusion_head.layers.*: [[data, fsdp], null, null]
 
 
