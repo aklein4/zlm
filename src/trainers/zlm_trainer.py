@@ -80,16 +80,10 @@ class ZLMTrainer(BaseTrainer):
             torch.zeros_like(output_ids)
         )
 
-        noise_scale = torch.sqrt(
-            linear_warmup(self.hook_step.float(), self.config.trainer.hook_warmup_steps)
-            + self.model.config.rms_norm_eps
-        )
-
         # encode and decode
         z, mu = self.model.encode(
             input_for_model, output_for_model,
             input_mask=input_mask, output_mask=output_mask,
-            noise_scale=noise_scale,
         )
 
         logit_grad_scale = {}
@@ -223,7 +217,6 @@ class ZLMTrainer(BaseTrainer):
         aux = {
             "lm_loss": lm_loss,
             "lm_acc": lm_acc,
-            "noise_scale": noise_scale,
             "lm_loss_scale": lm_loss_scale,
             "kl_grad_scale": kl_grad_scale,
             "full_grad_scale": full_grad_scale,

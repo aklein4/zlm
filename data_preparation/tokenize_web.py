@@ -9,9 +9,10 @@ from transformers import AutoTokenizer, GPT2TokenizerFast
 TOKENIZER = './tokenizer'
 
 DATASETS = [
-    ("HuggingFaceFW/fineweb", "sample-10BT"),
-    ("HuggingFaceFW/fineweb-edu", "sample-10BT"),
-    ("HuggingFaceTB/finemath", "finemath-4plus")
+    # ("HuggingFaceFW/fineweb", "sample-10BT"),
+    # ("HuggingFaceFW/fineweb-edu", "sample-10BT"),
+    # ("HuggingFaceTB/finemath", "finemath-4plus"),
+    ("HuggingFaceTB/smollm-corpus", "cosmopedia-v2"),
 ]
 
 INPUT_LENGTH = 256
@@ -61,7 +62,7 @@ def split_example(example, source: str=None):
 
     return {
         "source": [source for _ in input_ids],
-        "kind": ["web_text" for _ in input_ids],
+        "kind": ["textbook" if "cosmopedia" in source else "web_text" for _ in input_ids],
         "format": ["raw_text" for _ in input_ids],
         "input_ids": input_ids,
         "output_ids": output_ids,

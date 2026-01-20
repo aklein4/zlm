@@ -208,9 +208,14 @@ class DiffusionHead(nn.Module):
         self.layer_norms = nn.ModuleList(
             [LlamaRMSNorm(config.hidden_size, eps=config.rms_norm_eps) for _ in range(config.num_diffusion_head_layers)]
         )
-        self.layers = nn.ModuleList(
-            [LlamaMLP(config) for _ in range(config.num_diffusion_head_layers)]
-        )
+        self.layers = nn.ModuleList([
+            LlamaMLP(
+                hidden_size=config.hidden_size,
+                intermediate_size=config.diffusion_mlp_size,
+                hidden_act=config.hidden_act,
+            )
+            for _ in range(config.num_diffusion_head_layers)
+        ])
 
         self.out_norm = LlamaRMSNorm(config.hidden_size, eps=config.rms_norm_eps)
         self.out_proj = nn.Linear(config.hidden_size, config.latent_size, bias=False)
@@ -352,8 +357,8 @@ class ZLMModel(nn.Module):
         self.decoder_z_proj_in = nn.Linear(self.latent_size, self.hidden_size, bias=False)
 
         # scale input layers by embedding stats
-        # self.encoder_noise_proj_in.weight.data *= embed_std[:, None]
-        self.encoder_noise_proj_in.weight.data.zero_()
+        self.encoder_noise_proj_in.weight.data *= embed_std[:, None]
+        # self.encoder_noise_proj_in.weight.data.zero_()
         self.decoder_z_proj_in.weight.data *= embed_std[:, None]
 
         # create the output linear
