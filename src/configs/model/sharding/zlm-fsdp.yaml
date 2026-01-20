@@ -110,10 +110,14 @@ decoder_model.layers.*: [[data, fsdp], null, null]
 # diffusion heads
 diffusion_head.layer_norms.*: [[data, fsdp], null, null]
 diffusion_head.layers.*: [[data, fsdp], null, null]
+diffusion_head.out_proj: [[data, fsdp], null, null]
 
 uncond_diffusion_head.layer_norms.*: [[data, fsdp], null, null]
 uncond_diffusion_head.layers.*: [[data, fsdp], null, null]
+uncond_diffusion_head.out_proj: [[data, fsdp], null, null]
 
 
 # output
+encoder_mu_proj_out: [[data, fsdp], null, null]
+
 lm_head: [[data, fsdp], null, null]
