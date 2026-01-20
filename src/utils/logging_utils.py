@@ -12,7 +12,7 @@ def print_sharding_info(tensor, name=None):
 
         print(f" ===== Sharding info for {name if name else 'tensor'} ===== ", flush=True)
         print(f" - Shape: {xt.shape}", flush=True)
-        if isinstance(xt, xs.ShardedTensor):
+        if isinstance(xt, xs.XLAShardedTensor):
             print(f" - Sharding spec: {xt.sharding_spec}\n", flush=True)
         else:
             print(" - Not sharded\n", flush=True)
