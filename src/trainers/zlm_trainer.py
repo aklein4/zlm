@@ -116,11 +116,6 @@ class ZLMTrainer(BaseTrainer):
         ).reshape(1)
         logit_grad_scale["value"] = lm_loss_scale
 
-        return lm_loss, {
-            "z_nan": (~torch.isfinite(z)).any().long(),
-            "logit_nan": (~torch.isfinite(logits)).any().long(),
-        }
-
         # update hooking status
         self.hooked = self.hooked | (lm_loss < self.config.trainer.loss_threshold).reshape(1)
         self.hook_step += self.hooked.long()
@@ -194,7 +189,6 @@ class ZLMTrainer(BaseTrainer):
             )
             noise = torch.randn_like(z)
 
-            # TODO: does having gradient going into alpha from here cause the rising alpha issue?
             z_t = self.model.scheduler.add_noise(
                 mu, t, noise
             )
@@ -211,26 +205,26 @@ class ZLMTrainer(BaseTrainer):
                 pred_z_0,
                 dim=-1
             )
-
-            uncond_pred_z_0 = self.model.uncond_diffusion_head(
-                z_t.detach(),
-                t,
-                self.model.uncond_tokens[None, :, :],
-                self.model.scheduler,
-            )
-            uncond_kl = self.model.scheduler.kl(
-                mu.detach(),
-                t,
-                uncond_pred_z_0,
-                dim=-1
-            )
-
             kls = kls + kl
-            uncond_kls = uncond_kls + uncond_kl
+
+            if i < self.config.trainer.num_uncond_diffusion_samples
+                uncond_pred_z_0 = self.model.uncond_diffusion_head(
+                    z_t.detach(),
+                    t,
+                    self.model.uncond_tokens[None, :, :],
+                    self.model.scheduler,
+                )
+                uncond_kl = self.model.scheduler.kl(
+                    mu.detach(),
+                    t,
+                    uncond_pred_z_0,
+                    dim=-1
+                )
+                uncond_kls = uncond_kls + uncond_kl
 
         # mean over samples and sum over batch to get [Z,]
         kl = kls.sum(0) * (self.model.config.num_diffusion_timesteps - 1) / self.config.trainer.num_diffusion_samples
-        uncond_kl = uncond_kls.sum(0) * (self.model.config.num_diffusion_timesteps - 1) / self.config.trainer.num_diffusion_samples
+        uncond_kl = uncond_kls.sum(0) * (self.model.config.num_diffusion_timesteps - 1) / self.config.trainer.num_uncond_diffusion_samples
 
         denom = (output_ids != pad_token_id).float().sum() + self.model.config.rms_norm_eps
 
@@ -260,11 +254,6 @@ class ZLMTrainer(BaseTrainer):
             uncond_kl_per_token
         )
 
-        parameter_nan = torch.tensor([False], device=loss.device, dtype=torch.bool)
-        for p in self.model.parameters():
-            parameter_nan = parameter_nan | (~torch.isfinite(p)).any()
-        parameter_nan = parameter_nan.long()
-
         aux = {
             "lm_loss": lm_loss,
             "lm_acc": lm_acc,
@@ -283,7 +272,6 @@ class ZLMTrainer(BaseTrainer):
             "elbo": elbo,
             "hooked": self.hooked,
             "hook_step": self.hook_step,
-            "parameter_nan": parameter_nan,
             "atom_count": (output_ids != pad_token_id).long().sum(),
         }
 

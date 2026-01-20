@@ -59,7 +59,8 @@ lower_loss_threshold: 0.25
 min_lm_loss_scale: 0.01
 
 # diffusion sampling configuration
-num_diffusion_samples: 3
+num_diffusion_samples: 4
+num_uncond_diffusion_samples: 1
 
 # loss weighting configuration
 kl_weight_relu_shift: 0.5
