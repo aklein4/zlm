@@ -102,6 +102,9 @@ encoder_mu_proj_out.weight: [null, fsdp]
 
 # === Activations ===
 
+# input
+embed_tokens: [[data, fsdp], null, null]
+
 # transformers
 encoder_model.layers.*: [[data, fsdp], null, null]
 decoder_model.layers.*: [[data, fsdp], null, null]

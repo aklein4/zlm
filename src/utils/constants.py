@@ -42,5 +42,8 @@ TRAINER_MODULE = "trainers"
 COLLATOR_MODULE = "collators"
 OPTIMIZER_MODULE = "optimizers"
 
+# default batch sharding spec
+BATCH_SHARD_SPEC = (("data", "fsdp"), None, None)
+
 # huggingface login id
 HF_ID = "aklein4"
