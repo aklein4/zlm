@@ -1,16 +1,16 @@
 
 # vvvvvvvvvv Don't forget to change this for new experiments vvvvvvvvvv
-type: seq_to_seq_lm_trainer.SeqToSeqLMTrainer  # Used to import the trainer from this class
+type: zlm_trainer.ZLMTrainer  # Used to import the trainer from this class
 
 
 # total batch size across all devices
 global_batch_size: 256
 
 # run for N steps
-max_steps: 1000000 
+max_steps: 1000000
 
 # Save a checkpoint every N steps
-checkpoint_interval: 1000000 
+checkpoint_interval: 2500 
 
 
 # optimizer configuration
@@ -46,3 +46,22 @@ max_grad_norm: 1.0
 # Defaults to not clip gradients by their absolute value.
 # Set to a number to clip gradients by the specified max absolute value.
 max_grad_value: null
+
+# hook configuration
+init_hook: false
+init_hook_step: null
+hook_warmup_steps: 1000
+hook_wait_steps: 1000
+
+# threshold configuration
+loss_threshold: 0.5
+lower_loss_threshold: 0.25
+min_lm_loss_scale: 0.01
+
+# diffusion sampling configuration
+num_diffusion_samples: 4
+num_uncond_diffusion_samples: 1
+
+# loss weighting configuration
+kl_weight_relu_shift: 0.5
+beta: 0.1
