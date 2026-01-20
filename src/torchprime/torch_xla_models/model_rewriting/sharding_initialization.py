@@ -59,6 +59,7 @@ def setup_sharding_and_mesh(
     input_sharding_spec = xs.ShardingSpec(
       mesh, (("data", "fsdp"), None), minibatch=minibatch
     )
+  logger.info("Partition spec: %s", input_sharding_spec.partition_spec)
 
   # Annotate model weights and activations with sharding constraints to distribute
   # the training across devices following the SPMD paradigm.
