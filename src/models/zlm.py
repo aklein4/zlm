@@ -22,6 +22,7 @@ from models import load_checkpoint_state
 from utils.torch_modules import ContinuousEmbedding
 import utils.constants as constants
 from utils.logging_utils import print_sharding_info
+from utils.sharding_utils import maybe_shard_with_gradients
 
 
 class DiffusionScheduler(nn.Module):
@@ -431,6 +432,7 @@ class ZLMModel(nn.Module):
         output_tokens = self.embed_tokens(output_ids) + unsqueeze_to_batch(
             self.encoder_output_embeddings, output_ids
         )
+        print_sharding_info(input_tokens, name="encoder input tokens")
 
         z_tokens = (
             unsqueeze_to_batch(self.encoder_z_tokens, noise) +
