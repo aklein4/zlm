@@ -99,6 +99,8 @@ def tokenize_dataset(
         batch_size=1024,
     )
 
+    return data
+
 
 def main():
 
