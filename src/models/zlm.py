@@ -352,7 +352,8 @@ class ZLMModel(nn.Module):
         self.decoder_z_proj_in = nn.Linear(self.latent_size, self.hidden_size, bias=False)
 
         # scale input layers by embedding stats
-        self.encoder_noise_proj_in.weight.data *= embed_std[:, None]
+        # self.encoder_noise_proj_in.weight.data *= embed_std[:, None]
+        self.encoder_noise_proj_in.weight.data.zero_()
         self.decoder_z_proj_in.weight.data *= embed_std[:, None]
 
         # create the output linear
@@ -381,19 +382,25 @@ class ZLMModel(nn.Module):
     
     def sample_noise(
         self, 
-        input_ids: torch.LongTensor
+        input_ids: torch.LongTensor,
+        noise_scale: torch.FloatTensor = None,
     ) -> torch.FloatTensor:
 
         input_tokens = self.embed_tokens(input_ids)
         
         # generate the noise
-        return torch.randn(
+        noise = torch.randn(
             *input_ids.shape[:-1],
             self.z_length,
             self.latent_size,
             device=input_tokens.device,
             dtype=input_tokens.dtype,
         )
+
+        if noise_scale is not None:
+            noise = noise * noise_scale
+
+        return noise
 
 
     def encode(
@@ -403,10 +410,14 @@ class ZLMModel(nn.Module):
         noise: torch.FloatTensor=None,
         input_mask: torch.BoolTensor=None,
         output_mask: torch.BoolTensor=None,
+        noise_scale: torch.FloatTensor=None,
     ):
 
         if noise is None:
-            noise = self.sample_noise(input_ids)
+            noise = self.sample_noise(
+                input_ids,
+                noise_scale=noise_scale,
+            ) 
 
         input_tokens = self.embed_tokens(input_ids) + unsqueeze_to_batch(
             self.encoder_input_embeddings, input_ids

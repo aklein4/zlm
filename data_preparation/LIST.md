@@ -50,3 +50,7 @@
  - [ ] HuggingFaceTB/finemath -> finemath-4plus
  - [ ] EleutherAI/proof-pile-2 -> algebraic-stack
  
+
+### For later
+ - glaiveai/reasoning-v1-20m
+ - HuggingFaceTB/smollm-corpus/cosmopedia-v2

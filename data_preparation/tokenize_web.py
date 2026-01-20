@@ -117,7 +117,7 @@ def main():
 
         data.push_to_hub(
             OUTPUT_REPO,
-            config_name=f"{data_path[0]/data_path[1]}".replace("/", "--"),
+            config_name=f"{data_path[0]}/{data_path[1]}".replace("/", "--"),
             private=False,
         )
 

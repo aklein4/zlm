@@ -94,7 +94,7 @@ class BaseTrainer:
             self.repo_name = f"{constants.HF_ID}/{self.config.project}_{self.config.name}"
 
             hf.create_repo(
-                self.repo_name, private=True, exist_ok=True
+                self.repo_name, private=False, exist_ok=True
             )
 
             # create the wandb project
