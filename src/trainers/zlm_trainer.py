@@ -207,7 +207,7 @@ class ZLMTrainer(BaseTrainer):
             )
             kls = kls + kl
 
-            if i < self.config.trainer.num_uncond_diffusion_samples
+            if i < self.config.trainer.num_uncond_diffusion_samples:
                 uncond_pred_z_0 = self.model.uncond_diffusion_head(
                     z_t.detach(),
                     t,
