@@ -91,9 +91,11 @@ def main(config: omegaconf.DictConfig):
             config.model.pretrained_step,
             strict=config.model.pretrained_strict,
         )
+    print(model.lm_head.weight.min(), model.lm_head.weight.max(), flush=True)
 
     # TODO: initialize the model weights directly on the XLA device
     model = model.to(torch_xla.device())
+    print(model.lm_head.weight.min(), model.lm_head.weight.max(), flush=True)
 
     xm.rendezvous("Model Initialization")
     logger.info(f"Model initialized: {config.model.type}")
