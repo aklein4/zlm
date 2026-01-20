@@ -68,7 +68,7 @@ class ZLMTrainer(BaseTrainer):
 
         xt = xs.wrap_if_sharded(input_ids)
         print("Shape:", xt.shape, flush=True)
-        print("Sharding spec:", xt.sharding_spec(), flush=True)
+        print("Sharding spec:", xt.sharding_spec, flush=True)
 
         # prepare inputs
         input_mask = (input_ids != pad_token_id)
