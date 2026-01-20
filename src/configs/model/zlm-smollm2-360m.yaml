@@ -40,7 +40,7 @@ rope_theta: 100000
 # misc
 attention_dropout: false
 attention_bias: false
-initializer_range: 0.02
+initializer_range: 0.02 # should be overwritten
 rms_norm_eps: 1.0e-05
 
 # value added to pad token attention scores
