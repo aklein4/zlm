@@ -4,7 +4,7 @@ type: zlm_trainer.ZLMTrainer  # Used to import the trainer from this class
 
 
 # total batch size across all devices
-global_batch_size: 256
+global_batch_size: 512
 
 # run for N steps
 max_steps: 1000000
@@ -20,7 +20,7 @@ optimizer:
 
   kwargs:
 
-    lr: 1.0e-4
+    lr: 3.0e-4
 
     betas: [0.9, 0.95]
     
