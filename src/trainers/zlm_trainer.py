@@ -2,6 +2,7 @@ import torch
 import torch.nn.functional as F
 
 from torch_xla.experimental.scan import scan
+import torch_xla.distributed.spmd as xs
 
 import numpy as np
 
@@ -65,8 +66,10 @@ class ZLMTrainer(BaseTrainer):
     def forward(self, input_ids, output_ids):
         pad_token_id = self.model.config.pad_token_id
 
-        print("Partition spec:", output_ids.partition_spec, flush=True)
-        print("Mesh shape:", output_ids.mesh_shape, flush=True)
+        xt = xs.wrap_if_sharded(input_ids)
+        print("Shape:", xt.shape, flush=True)
+        print("Partition spec:", xt.partition_spec, flush=True)
+        print("Mesh shape:", xt.mesh_shape, flush=True)
 
         # prepare inputs
         input_mask = (input_ids != pad_token_id)
