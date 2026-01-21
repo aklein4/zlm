@@ -155,7 +155,6 @@ class ZLMTrainer(BaseTrainer):
                 scale_gradient(z_t, kl_grad_weights),
                 t,
                 scale_gradient(z_states, full_grad_scale),
-                self.model.scheduler,
             )
             kl = self.model.scheduler.kl(
                 scale_gradient(mu, kl_grad_weights),
@@ -171,7 +170,6 @@ class ZLMTrainer(BaseTrainer):
                     z_t.detach(),
                     t,
                     self.model.uncond_tokens[None, :, :],
-                    self.model.scheduler,
                 )
                 uncond_kl = self.model.scheduler.kl(
                     mu.detach(),
