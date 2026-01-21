@@ -1,0 +1,526 @@
+
+
+ ========== Example 0 ==========
+
+ --- Input --- 
+
+[[[# Square roots and logarithms without a calculator (Part 8)
+
+I’m in the middle of a series of posts concerning the elementary operation of computing a root. This is such an elementary operation because nearly every calculator has a $\sqrt{~~}$ button, and so students today are accustomed to quickly getting an answer without giving much thought to (1) what the answer means or (2) what magic the calculator uses to find roots. I like to show my future secondary teachers a brief history on this topic… partially to deepen their knowledge about what they likely think is a simple concept, but also to give them a little appreciation for their elders.
+
+To begin, let’s again go back to a time before the advent of pocket calculators… say, 1952.
+
+This story doesn’t go back to 1952 but to Boxing Day 2012 (the day after Christmas). For some reason, my daughter — out of the blue — asked me to compute $\sqrt[19]{25727}$ without a calculator. As my daughter adores the ground I walk on — and I want to maintain this state of mind for as long as humanly possible — I had no]]]
+
+ --- Output --- 
+
+[[[ choice but to comply. So I might as well have been back in 1952.
+
+In the past few posts, I discussed how log tables and slide rules were used by previous generations to perform this calculation. The problem was that all of these tools were in my office and not at home, and hence were not of immediate use.
+
+The good news is that I had a few logarithms memorized:
+
+$\log_{10} 2 \approx 0.301$, $\log_{10} 3 \approx 0.477$, $\log_{10} 7 = 0.845$,
+
+and $\ln 10 = 2.3$.
+
+I had the first two logs memorized when I was a child; the third I memorized later. As I’ll describe, the first three logarithms can be used with the laws of logarithms to closely approximate the base-10 logarithm of nearly any number. The last logarithm was important in previous generations for using the change-of-base formula from $\log_{10}$ to $\ln$. It was also prominently mentioned in the chapter “Lucky Numbers” from a favorite book of my childhood, Surely You’re Joking Mr. Feynman, so I had that memorized as well.
+
+I also knew that $\ln(1+x) \approx x$ for $x = 0$ from the Taylor expansion of $\ln(1+x)$.
+
+To begin, I first noticed that $25727 \approx 25600$, and I knew I could get $\log_{10} 25600$ since $25600 = 2^8 \times 100$. So I started with
+
+$\log_{10} 25727 = \log_{10} \left(100 \times 256 \times \displaystyle \frac{257.27}{256} \right)$
+
+$\log_{10} 25727 \approx \log_{10} 100 + 8 \log_{10} 2 + \log_{10} 1.005$
+
+$\log_{10} 25727 \approx 2 + 8]]]
+
+ ========== Example 1 ==========
+
+ --- Input --- 
+
+[[[# lower bounding first derivative of polynomial
+
+f is uni-variate polynomial of degree d. I am interested in lower bounding modulus first derivative of f (i.e. |f'|)in interval [a,b] given the promise that in interval [a,b] f' don't have any root.
+
+Like in Markoff theorem..to upper bound first derivative of polynomial in open interval (a,b) is
+|f'(x)|<=(2*M*d*d)/(b-a) where M is upper bound of f in (a,b),but I don't know proof of this theorem.
+
+I know polynomial f i.e. its coefficient,degree and upper bound as well as lower bound of f in interval [a,b], Now I want to lower bound f' in [a,b] in terms of these terms..say like Markoff theorem.
+
+Pls let me know whether this time I able to put my question clearly :)
+
+Thanks Ram
+
+-
+How about using the Mean Value Theorem, if you know the values of f at some points? – Yemon Choi Feb 13 '11 at 7:16]]]
+
+ --- Output --- 
+
+[[[
+that would go in recursion of finding min of till d-th derivative of f e.g. min|f'|= min{f'(a),f'(b),min{f'(c)}} where c is root of f" and f"(c)>=0 I need much cleaner approach like "Markoff Theorem" – Ram Feb 13 '11 at 10:32
+Ram, you misunderstood me. If you know the minimum value of p, call it $M$, and you know some other value of p, call it $K>M$, then the mean value theorem tells you that there exists u in your interval such that $K-M \leq |f'(u)|(b-a)$. I agree with all the other commenters that your original question may not admit an answer; just because you want such a bound to exist, that is not a reason to expect such a bound to exist. – Yemon Choi Feb 14 '11 at 0:30
+
+I think you need to be a bit more precise. For example, choose any polynomial $g(x)$ that does not vanish on $[a,b]$, let $f'(x)=(x-a+\epsilon)g(x)$, let $F(x)$ be an antiderivative of $f'(x)$, and let $f(x)=F(x)+C$ for some constant $C$. Choosing $\epsilon$ small, you can make $f'(a)=\epsilon g(a)$ small, while choosing an appropriate $C$, you can make $\sup |f(x)|$ or $\inf |f(x)|$ on the interval $[a,b]$ to be anything that you want. So it's really not clear what sort of lower bound you have in mind.
+
+-
+
+This is basically repeating what Joe Silverman wrote, in a concrete example. (I do so, as a misunderstanding between asker and answerers seems to persist.)
+
+It might be difficult (or impossible) to get a lower bound similar to the upper bound. Let us fix the interval $[0,1]$.
+
+1. For $x^2$ the derivative is $0$ in $0$, and this polynomial is thus not admissible by your question.
+
+2. For $(x+0.001)^2$ the derivative]]]
+
+ ========== Example 2 ==========
+
+ --- Input --- 
+
+[[[LFD Book Forum Problem 1.1
+ User Name Remember Me? Password
+ Register FAQ Calendar Mark Forums Read
+
+ Thread Tools Display Modes
+#1
+08-22-2015, 01:50 PM
+ Rotimi Junior Member Join Date: Aug 2015 Posts: 3
+Problem 1.1
+
+I could not use Bayes' theorem to solve Problem 1.1 but I thought of an 'alternative' method which gave me the answer 2/3. I want to know if this method is right or not. It's as follows:
+
+Since there are 2 black balls and 1 white ball left are choosing the first black ball, the chances that the second ball is black is 2/3 since there are 3 balls left.
+
+Is this method right or not?
+#2
+08-23-2015, 10:11 PM
+ yaser Caltech Join Date: Aug 2009 Location: Pasadena, California, USA Posts: 1,478
+Re: Problem 1.1
+
+Quote:
+ Originally Posted by Rotimi I could not use Bayes]]]
+
+ --- Output --- 
+
+[[[' theorem to solve Problem 1.1 but I thought of an 'alternative' method which gave me the answer 2/3. I want to know if this method is right or not. It's as follows: Since there are 2 black balls and 1 white ball left are choosing the first black ball, the chances that the second ball is black is 2/3 since there are 3 balls left. Is this method right or not?
+This would have been right if the question had specified that we picked the second ball from all remaining balls. However, the second ball is picked only from the same bag that produced the first (black) ball, so the logic of the problem is different.
+
+For instance, if we changed the statement of the problem to having two bags one with two black balls and one with two white balls, and you picked a bag that produced a black ball, the second ball will be black with probability 100%, notwithstanding that the total remaining balls in both bags are two white and one black.
+__________________
+Where everyone thinks alike, no one thinks very much
+#3
+09-09-2015, 11:48 AM
+ eshmrt Junior Member Join Date: Sep 2015 Posts: 2
+Re: Problem 1.1
+
+Can you elaborate on the hint for this problem? It seems to me that in your alternative problem you aren't using Bayes' Theorem. Wouldn't using Bays' dictate that you would say P[A|B] stands for the probability that the second ball is black assuming that the first ball is black, which in your problem would be 100% and P[B] stands for the probability that the first ball is black, which would be 50% because either the bag with two white balls or the bag with two black balls could be chosen. Therefore P[A|B]P[B] = 1/2.
+
+I understand your result intuitively. I just don't understand how Bayes' Theorem is being applied to arrive at that result as direction by the hint in the textbook.
+#4
+09-09-2015, 10:20 PM
+ yaser Caltech Join Date: Aug 2009 Location: Pasadena, California, USA Posts: 1,478
+Re: Problem 1.1
+
+Quote:
+ Originally]]]
+
+ ========== Example 3 ==========
+
+ --- Input --- 
+
+[[[Linear functional equivalence in vsp and subsp
+
+Main Question or Discussion Point
+
+I am writing a solution for the following problem, I hope someone can correct it, because I am not sure what I am missing.
+
+Q. V is a finite dim. vsp over K, and W is a subspace of V. Let f be a linear functional on W. Show that there exists a linear functional g on V s. t. g(w)=f(w).
+
+Ans. So far:
+For all w in W, w = c_1*v_1 + c_2*v_2 + ... + c_n*v_n (where v_i for all i is the basis of V and c_i for all i are scalars part of K).
+
+f(p*w1 + q*w1) = p*f(w1) + q*f(w2)
+
+But since w for any w can be represented by a linear comnbination of the basis for V, there exists g, s.t.
+
+f(w) = c_1*g(v_1)+c_2*g(v_2)+]]]
+
+ --- Output --- 
+
+[[[....
+
+How can I complete this? Can I make the above assertion?
+
+Related Linear and Abstract Algebra News on Phys.org
+matt grime
+Homework Helper
+You're going from the wrong direction.
+
+You need to start from W and extend to V. Picking a basis for V won't help you. Try picking a basis of W, then using the standard results.
+
+You don't need to pick a basis explicitly either, if it helps. You can just think in terms of complementary subspaces.
+
+HallsofIvy
+Homework Helper
+Given any basis, BW, for W, there exist a basis, BV for V that contains BW. There are an infinite number of ways to define g so that it reduces to f on W.
+
+That is of course the basis extension principle (theorem?).
+
+So here is my revised take on the Ans (please tell me if I am reasoning it):
+
+Take some $$B_W = { w_1, w_2, w_3, ..., w_n}$$, n = dim W <= dim V
+
+$$B_W \subset B_V$$ for some Basis of V.
+
+We know $$f(p*w1 + q*w2) = p*f(w1) + q*f(w2)$$ over all $$w1, w2 \subset W$$.
+
+But what about all the elements r of V not in W (for $$r \in V and \notin W$$? Those can be anything we want. Therefore there exists linear functional g on V s.t. when restricted to W, g(w) = f(w).
+
+Is this complete?
+
+matt grime
+Homework Helper
+No. Saying 'they can be anything we want' doesn't prove anything at all. How do you know that there is a choice of g that makes it linear? Prove there is by writing down such a choice (by picking a basis of V if necessary). You were told, and understood the basis extension principle, so why didn't you use it?
+
+Forget about w1, w2 in W. You have nothing to prove for them, since f is already a linear functional on W. Just give me one example of a linear functional on V that agrees with f on W. Just one. One of]]]
+
+ ========== Example 4 ==========
+
+ --- Input --- 
+
+[[[﻿ Improve Your Chess - Basic Tactics: Exploiting The Power Of The Pin
+
+# Lesson 9 - Basic Chess Tactics: Exploiting The Power Of The Pin
+
+"The Pin is mightier than the sword"
+- Fred Reinfeld
+
+Now that we know what is a pin, let's try to see the maximum of benefits we can get from this tactic. If you start to be more comfortable with it, you can already feel its potential and usefulness. Indeed, the pin can help a player in gaining permanent or temporary advantages over his opponent:
+
+Not bad at all for a single tactic! But now, how can we succeed in getting these advantages in our own games? Let's see together some ways to capitalize on the pin with concrete examples.
+
+## The Material Gain
+
+We know that a pinned piece cannot move without revealing an attack on a more important piece. If a player threatens the pinned piece with another piece of less value than the pinned piece, he will then succeed to capture the pinned piece for this other piece and wins the exchange. For example, it is White to move in the following diagram and Black's knight is pinned on the queen by the white rook]]]
+
+ --- Output --- 
+
+[[[ posted on d1. The g2 bishop can take the knight but Black would then capture the bishop with the c6 pawn, getting back the minor piece. White will still get the upper hand in the exchange since he can win a pawn by capturing on d5 with his rook after Black has taken the bishop, but this variation is not the maximum they can get from this position. In fact, White has plenty of time for attacking the knight with another piece since the knight does not want to move...
+
+Diagram 9.22 - Material gain with the help of a pin
+
+## Neutralization Of Enemy Pieces
+
+This type of advantage is usually temporary and is possible when the pin is absolute. Indeed, we can succeed in neutralizing the action of an enemy piece by pinning it on his king. By immobilizing a piece, we can disturb the attacking or defensive schemes of our opponent. In the diagram below, it is White to play and we can see that he does not seem in good shape as he his down an exchange (he has a bishop against a rook) and his queen and bishop are both being attacked. While he can get out of this double attack by moving the queen to f2 or e1 to get both pieces out of danger, White will allow Black to have time to get things more organized by coordonating his pieces and increase the attacking pressure. There is a much better move available for White... with an absolute pin, he could counter Black's initiative. Do you see it? The move is 1. Bc3!
+
+ Click here to see the move Bc3. Diagram 9.23 - Neutralizing enemy<>pieces with a pin
+
+With this move, White leaves his queen on the black rook's path but the rook cannot feast on its prey: it is pinned on its king. Moreover, if Black does not do something about it, White would win the game with 2. Qxg7# and all of a sudden, the hunter becomes the prey! So Black needs to support the g7 square properly with 1... Qf7 or 1... Qg8.  The pin is really effective since it succeeded in neutralizing the two enemy pieces which were mosr active than white pieces and transformed a position that was favourable to Black into a winning position for White!
+
+## Winning Tempi
+
+We will see in the lesson on strategies that the time notion is really important in]]]
+
+ ========== Example 5 ==========
+
+ --- Input --- 
+
+[[[# Help with hyperbolic functions: cosh(arcsinh(x/2))=?
+
+1. Nov 11, 2009
+
+### wshfulthinker
+
+1. The problem statement, all variables and given/known data
+I need to solve:
+1/4tanh(θ) + c
+
+2. Relevant equations
+x=2sinh(θ)
+θ = arcsinh(x/2)
+
+3. The attempt at a solution
+
+I worked out that since tanh(θ) = sin(θ)/cosh(θ)
+then
+1/4tanh(θ) + c = x/8cosh(θ) + c
+
+But i don't know how to work out cosh(θ) or cosh(arcsinh(x/2))
+I looked on the internet and i think there seems to be a rule? but i don't understand how to work it out by hand. Thankyou
+
+P.S the answer is x/(4√(x² + 4)) + c
+
+2. Nov 12, 2009
+
+### Staff: Mentor
+
+This is]]]
+
+ --- Output --- 
+
+[[[ not an equation, so there is nothing to solve.
+
+What is the exact wording of the problem?
+
+3. Nov 12, 2009
+
+### wshfulthinker
+
+Sorry, i was trying to cut out the part i needed help with, this is the whole question:
+
+Evaluate the following indefinite integral:
+∫1/(x² + 4)^(3/2).dx
+
+Here is my working out;
+
+put x = 2sinh(θ)
+dx/dθ = 2cosh(θ)
+dx = 2cosh(θ).dθ
+
+(x² + 4)^(3/2) = (4sinh²(θ) + 4)^(3/2)
+
+Since cosh²(θ) - sinh²(θ) = 1
+=> cosh²(θ) = 1 + sinh²(θ)
+
+so,
+(x² + 4)^(3/2) = (2²cosh²(θ))^(3/2)
+= 8cosh³(θ)
+
+So ∫1/(x² + 4)^(3/2).dx = ∫(1/8cosh³(θ)). 2cosh(θ).dθ
+= ∫1/4cosh²(θ).dθ
+= (1/4)tanh(θ) + c
+
+and then that's where i worked out that since tanh(θ) = sin(θ)/cosh(θ) then:
+1/4tanh(θ) + c = x/8cosh(θ) + c
+
+but i don't know how to work out the cosh(θ) part of it
+
+4. Nov 12, 2009
+
+### Staff: Mentor
+
+5. Nov 12, 2009
+
+### wshfulthinker
+
+yeah it says cosh(arcsinh(x)) = √(1 + x²)
+But i want to know how you get that from cosh(arcsinh(x)). I have been trying to find proof for it.
+
+edit:
+never mind, i have figured it out now!
+let y = arcsinhx
+x =]]]
+
+ ========== Example 6 ==========
+
+ --- Input --- 
+
+[[[Explore BrainMass
+Share
+
+# Statistics Problem Set: Intervals
+
+This content was COPIED from BrainMass.com - View the original, and get the already-completed solution here!
+
+5.2. What is the confidence level of each of the following confidence intervals for the mean? (see attached).
+
+5.20. The "Raid" test kitchen. According to scientists, the cockroach has had 300 million years to develop a resistance to destruction. In a study conducted by researchers for S.C. Johnson & Son, Inc. (manufacturers of Raid), 5,000 roaches (the expected number in a roach-infested house) were released in the Raid test kitchen. One week later, the kitchen was fumigated, and 16,298 dead roaches were counted, a gain of 11,298% roaches for the 1-week period. Assume that none of the original roaches died during the 1-week period and that the standard deviation of the number of roaches produced per roach in a 1-week period is 1.5. Use the number of roaches produced by the sample of ]]]
+
+ --- Output --- 
+
+[[[5,000 roaches to find a 95% confidence interval for the mean number of roaches produced per week for each roach in a typical roach-infested house.
+
+5.4. A random sample of 90 observations produced a mean of 25.9 and a standard deviation of 2.7.
+a. Find an approximate 95% confidence interval for the population mean.
+b. Find an approximate 90% confidence interval for the mean.
+c. Find an approximate 99% confidence interval for the mean.
+
+5.10. Latex allergy in health care workers. Health care workers who use latex gloves with glove powder on a daily basis are particularly susceptible to developing a latex allergy. Symptoms of a latex allergy include conjunctivitis, hand eczema, nasal congestion, skin rash, and shortness of breath. Each in a sample of 46 hospital employees who were diagnosed with latex allergy based on a skin-prick test reported their exposure to latex gloves. Summary statistics for the number of latex gloves used per week are mean =19.3 and standard deviation = 11.9.
+a. Give a point estimate for the average number of latex gloves used per week by all health care workers with a latex allergy.
+b. Form a 95% confidence interval for the average number of latex gloves used per week by all health care workers with a latex allergy.
+c. Give a practical interpretation of the interval, part b.
+d. Give the conditions required for the interval, part b, to be valid.
+
+https://brainmass.com/statistics/confidence-interval/statistics-problem-set-intervals-506929
+
+#### Solution Preview
+
+5.2. a. confidence level =P(z<1.96)-P(z<-1.96)=0.975-0.025=0.95. Therefore, it is 95% confidence interval.
+b. confidence level=P(z<1.645)-P(z<-1.645)=0.95-0.05=0.90. Therefore, it is 90% confidence interval.
+c. confidence level=P(z<2.575)-P(z<-2.575)=0.995-0.00]]]
+
+ ========== Example 7 ==========
+
+ --- Input --- 
+
+[[[# Trees – A Primer
+
+This post comes in preparation for a post on decision trees (a specific type of tree used for classification in machine learning). While most mathematicians and programmers are familiar with trees, we have yet to discuss them on this blog. For completeness, we’ll give a brief overview of the terminology and constructions associated with trees, and describe a few common algorithms on trees. We will assume the reader has read our first primer on graph theory, which is a light assumption. Furthermore, we will use the terms node and vertex interchangeably, as mathematicians use the latter and computer scientists the former.
+
+## Definitions
+
+Mathematically, a tree can be described in a very simple way.
+
+Definition: A path $(v_1, e_1, v_2, e_2, \dots, v_n)$ in a graph $G$ is called a cycle if $v_1 = v_n$. Here we assume no edge is repeated in a path (we use the term trail for a path which allows repeated edges).
+
+Definition: A graph $G$ is called connected if every pair of vertices has a path between them. Otherwise it is called disconnected.
+
+]]]
+
+ --- Output --- 
+
+[[[Definition: A connected graph $G$ is called a tree if it has no cycles. Equivalently, $G$ is a tree if for any two vertices $v,w$ there is a unique path connecting them.
+
+The image at the beginning of this post gives an example of a simple tree. Although the edges need not be directed (as implied by the arrows on the edges), there is usually a sort of hierarchy associated with trees. One vertex is usually singled out as the root vertex, and the choice of a root depends on the problem. Below are three examples of trees, each drawn in a different perspective. People who work with trees like to joke that trees are supposed to grow upwards from the root, but in mathematics they’re usually drawn with the root on top.
+
+We call a tree with a distinguished root vertex a rooted tree, and we denote it $(T,r)$, where $T$ is the tree and $r$ is the root. The important thing about the hierarchy is that it breaks the tree into discrete “levels” of depth. That is, we call the depth of a vertex $v$ the length of the shortest path from the root $r$ to $v$. As you can see in the rightmost tree in the above picture, we often draw a tree so that its vertices are horizontally aligned by their depth. Continuing with nature-inspired names, the vertices at the bottom of the tree (more rigorously, vertices of degree 1) are called leaves. A vertex which is neither a leaf nor the root is called an internal node. Extending the metaphor to family trees, given a vertex $v$ of depth $n$, the adjacent vertices of depth $late n+1$ (if there are any) are called the child nodes (or children) of $v$. Similarly, $v$ is called the parent node of its children. Extrapolating, any node on the path from $v$ to the root $r$ is an ancestor of $v$, and $v$ is a descendant of each of them.
+
+As a side note, all of this naming is simply a fancy way of imposing a partial ordering on the vertices of a tree, in that the vertex $v \leq w$ if $v$ is on the path from $r$ to $w$. In this case, a chain in this partial order is simply]]]
+
+ ========== Example 8 ==========
+
+ --- Input --- 
+
+[[[# IBPS Clerk Prelims: Reasoning Day 14
+
+Hello Aspirants. Welcome to Online Reasoning Section in AffairsCloud.com. We are providing Free IBPS Clerk course 2015 and creating sample questions in Reasoning, the type of which will be asked in IBPS Clerk Prelims Exam.
+
+Stratus – IBPS Clerk Course 2015
+
+[flipclock]
+
+Directions (Q. 1-5): Study the following information to answer the given questions:
+There are seven persons named A, B, C, D, K, L and N who are seated in a straight line facing North in ascending order of their salaries. N earns more than L and D. N earns more than A but he does not earn the highest. A earns more than L. The person who earns the second highest receives a salary of Rs 35,000 while the third lowest earner receives Rs 23,000. K earns less than L but more than D. C earns Rs 18,000.
+
+1. Who among the following earn(s) more than 23,000 but less than 35,00]]]
+
+ --- Output --- 
+
+[[[0?
+A) Only A
+B) Only L
+C) A and L
+D) K and L
+E) Cannot be determined
+C) A and L
+Explanation:
+
+We get the order as D     K       L       A        N
+Now two are left, B and C, it is given that N does not earn the highest and C earns 18000. This implies that B must earn the highest.
+Now third lowest earns 23,000 and C earns 18,000, so K should earn 23,000. Final order is
+C(18000)/D         D/C(18000)            K(23000)          L      A       N(35000)          B
+
+2. Who among the following may earn 21,000?
+A) K
+B) D
+C) L
+D) C
+E) Cannot be determined
+B) D
+Explanation:
+
+21000 < 23000, so either C or D, but for C 18000 is given, So D – 21000
+
+3. Who among the following earns more than K but less than A?
+A) C
+B) N
+C) D
+D) L
+E) Cannot be determined
+D) L
+Explanation:
+
+L is in between
+
+4. Who among the following earns the highest?
+A) B
+B) N
+C) A
+D) L
+E) Cannot be determined
+A) B
+
+5. Who among the following earns 35,000?
+A) N
+B) A
+C) L
+D) B
+E) Cannot be determined
+A) N
+
+Directions (6 – 10):
+(A) only 1st follows
+(B) only 2nd follows
+(C) either 1st or 2nd
+(D) neither ]]]
+
+ ========== Example 9 ==========
+
+ --- Input --- 
+
+[[[# Implicit Systems
+
+This section presents some real world examples of implicit nonlinear dynamics.
+
+## Implicit Nonlinear Dynamics : Michaelis Menten
+
+What if you want to estimate an implicitly defined system of the form $f(u_t, u, p, t) = 0$? The solution : Implicit Sparse Identification. This method was originally described in this paper, and currently there exist robust algorithms to identify these systems.
+
+We will focus on Michaelis Menten Kinetics. As before, we will define the DataDrivenProblem and the Basis containing possible candidate functions for our sparse_regression!.
+
+using DataDrivenDiffEq
+using LinearAlgebra
+using ModelingToolkit
+using Plots
+using OrdinaryDiffEq
+
+function michaelis_menten(u, p, t)
+[0.6 - 1.5u[1]/(0.3+u[1])]
+end
+
+u0 = [0.5]
+
+problem_1 = ODEProblem(michaelis_menten, u0, (0.0, 4.0))
+solution_1 = solve(problem_1, Tsit]]]
+
+ --- Output --- 
+
+[[[5(), saveat = 0.1)
+problem_2 = ODEProblem(michaelis_menten, 2*u0, (4.0, 8.0))
+solution_2 = solve(problem_2, Tsit5(), saveat = 0.1)
+X = [solution_1[:,:] solution_2[:,:]]
+ts = [solution_1.t; solution_2.t]
+
+DX = similar(X)
+for (i, xi) in enumerate(eachcol(X))
+DX[:, i] = michaelis_menten(xi, [], ts[i])
+end
+
+@parameters t
+D = Differential(t)
+@variables u[1:1](t)
+h = [monomial_basis(u[1:1], 4)...]
+basis = Basis([h; h .* D(u[1])], [u; D(u[1])], iv = t)
+Model ##Basis#333 with 10 equations
+States : u[1](t) Differential(t)(u[1](t))
+Independent variable: t
+Equations
+φ₁ = 1
+φ₂ = u[1](t)
+φ₃ = u[1](t)^2
+φ₄ = u[1](t)^3
+...
+φ₁₀ = (u[1](t)^4)*Differential(t)(u[1](t))
+
+Next, we define the ImplicitOptimizer and solve the problem.
+
+opt = ImplicitOptimizer(4e-1)
+res = solve(prob, basis, opt, [D(u[1])], normalize = false, denoise = false, maxiter = 1000);
+Linear Solution with 1 equations and 4 parameters.
+Returncode: solved
+L₂ Norm error : [0.0005232967550040873]
+AIC : [1969.7812992345657]
+R² : [1.066610823134123]
+
+As we can see, the DataDrivenSolution has good metrics. Furthermore, inspection of the]]]

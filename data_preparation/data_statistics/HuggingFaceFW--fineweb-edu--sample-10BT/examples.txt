@@ -1,0 +1,207 @@
+
+
+ ========== Example 0 ==========
+
+ --- Input --- 
+
+[[[Unlocking the secrets of gallstones
+We know all too well from fairy tales that stones in your stomach generally aren’t good for your health. However, while the stones in these stories are placed in the wolf’s belly, the human body can cunningly produce stones by itself. How stones are formed in the body was previously unknown, despite the fact that gallstones are among the ten most common reasons for a stay in hospital. The secret behind gallstones has now been revealed by a team of researchers at the Department of Medicine 1 and 3 at Universitätsklinikum Erlangen at FAU. The researchers’ findings have recently been published in the journal ‘Immunity’.
+Gallstones and the problems they cause are very common. Around 25 million Americans as well as 6 million people in Germany have gallstones that can not only cause extremely painful colic but also life-threatening infections in the abdomen. Patients who have gallstones very often need surgery to remove them. Surprisingly, very little was known until now about how these stones form and what they comprise of. Whilst scientists have known that crystals are involved, and in the case of gallstones, these are usually crystals of cholesterol, little or no research had been conducted up to]]]
+
+ --- Output --- 
+
+[[[ now about how gallstones are formed from microscopic crystals and the mechanism behind this process has now been discovered.
+During their research, Dr. Luis Munoz, Sebastian Böltz and Prof. Dr. Martin Herrmann from the Department of Medicine 3, who collaborate in Collaborative Research Centre 1181 and were supported by a team led by Dr. Moritz Leppkes and Prof. Dr. Markus F. Neurath at the Department of Medicine 1 at FAU, had to use an unconventional approach that took them to museums, abattoirs and operating theatres. They investigated human gallstones from the collection kept at the museum at the Charité hospital in Berlin, bile from pigs from an abattoir and bile and gallstones from patients who underwent surgery to the abdomen. During the detailed investigation of these materials using modern methods, the team made a very surprising discovery. All gallstones are covered with the traces of a special type of white blood cell called neutrophil granulocytes. These cells are the body’s first form of defence and they attack bacteria and other pathogens and also identify crystals as a threat. While attempting to ingest the crystals, these cells die and cover the crystals with their genetic material like a net. These nets, or neutrophil extracellular traps (NET), wind themselves around the crystals, clump them together and thus form stones that can take on surprising proportions.
+‘We observed that the nets, when released in the already sticky bile, clumped together calcium and cholesterol crystals to form gallstones. The production of gallstones can be greatly reduced or even stopped if the formation of these nets is inhibited using drugs,’ says Dr. Munoz. This discovery has opened up previously unknown options for the treatment of gallstones. A simple pharmacological approach could be especially useful, for example, the use of Metoprolol, which is a so-called beta blocker that has been used successfully for many years for the treatment of high blood pressure. Metoprolol prevents neutrophil granulocytes from entering tissue from the blood supply, thus reducing the capacity for forming nets and therefore gallstones. In addition, specific inhibitors for preventing the formation of nets from neutrophil granulocytes, so-called PAD inhibitors, are already known that can inhibit the formation of gallstones produced in experiments, thus proving the significance of the immune system for the formation of these structures. The FAU research team also emphasises that this process is significant not only for gallstones, but also for other types of stones in the body]]]
+
+ ========== Example 1 ==========
+
+ --- Input --- 
+
+[[[Ontario students were the only ones in the country who did not show a statistically significant improvement over a six-year period in math, according to the latest standardized test results by an intergovernmental group founded by Canada’s education ministers.
+The results released on Monday by the Council of Ministers of Education, Canada showed that while students in all other provinces showed a statistically significant positive change in achievement in mathematics between 2010 and 2016, Ontario’s results rose by one which was not deemed a statistically significant change.
+Students in Quebec and Prince Edward Island showed the greatest gains over that time period.
+The Pan-Canadian Assessment Program (PCAP) test was administered to about 27,000 Grade 8 students and Secondary II students in Quebec in the spring of 2016. It offers insight into how students in different provinces compare and provides data that can be used to compare the impact of education policy on student learning.
+The focus of the 2016 test was reading, but math and science were also assessed.
+Even though almost every province - except Ontario - saw a positive change in math over time, the results also showed that only Quebec students scored significantly above the Canadian average in 2]]]
+
+ --- Output --- 
+
+[[[016. Ontario and Prince Edward Island achieved results statistically similar to the Canadian average, while every other province scored below.
+The test in math measured student’s problem solving, communication and reasoning skills.
+Math has emerged as a challenge for Canadian educators. The country has dropped out of the top 10 in international standings. Some parents have been appealing to the ministries of education to take a back-to-basics approach to teaching math, emphasizing repetition and drills over problem solving.
+Rob Fleming, B.C.’s Education Minister, said the PCAP test results help provincial governments evaluate curriculum and guide teaching methods.
+“It’s important to remember that ministers across Canada have repeatedly underlined the importance of excellence in mathematics education,” Mr. Fleming said. “We have made numeracy skills a top priority in curricula across the country, and this is a lasting commitment.”
+Ontario’s Premier, Kathleen Wynne, has previously acknowledged that something in the way math is taught has led to disappointing results in her province and the subject will be the first to be revamped as part of a wider “curriculum refresh.”
+Ontario’s standardized tests have shown math scores falling or stagnating. Half of Grade 6 students failed to meet provincial standards in math in the 2016-17 academic year.
+Asked why Ontario students haven’t shown improvement like other provinces, Education Minister Indira Naidoo-Harris said the PCAP test took place before the government injected $60-million into the education system to add math-specialist teachers to every school and provide additional training for staff. The Liberal government have also made 60 minutes of math instruction each day mandatory in elementary-school classrooms.
+“As this assessment took place before the implementation of our $60-million renewed math strategy, we look forward to seeing the impact of this strategy in supporting students with math,” Ms. Naidoo-Harris said in an e-mail statement.
+The PCAP test results also showed that close to 90 per cent of Grade 8 or Secondary II students in Quebec performed at or above Level 2 in reading. Level 2 is the baseline level at which students demonstrate reading skills that would enable them to participate effectively and productively in life, the report said.
+The test in reading involved understanding texts and then interpreting and responding personally and critically to them.
+In reading, only Saskatchewan, Manitoba, New Brunswick, Nova Scotia and]]]
+
+ ========== Example 2 ==========
+
+ --- Input --- 
+
+[[[The author’s ignorance of historical matters artistic will show through as the light of the Last Judgement over Patmos, but one subject that came to mind today was the issue of ‘fan art’ and its precursors or prototypes in the History of Art. It would be easy to reduce fan art to an invention of the digital natives, or at the very least a product of twentieth century mass culture and mass communications. Drawing one’s own conceptions of images from cinema or television is a hobby of any child raised with a visual medium as a major influence alongside those of creative disciplines. For me, that meant drawing my own reimaginings of the Death Star Attack and the Batte of Endor with felt tip pens. The freedom to extrapolate an existing license or canon of ltierature, film, television or otherwise and add one’s own spin has been the impulse behind the world of fan fiction and Live Action Role-Playing in vast subcultures of ‘fandom’, as well as the titular subject of fan art.
+However, is fan art something which came into existence only with mass culture and the age of comic books and the cinema screen? Fandom as a social force existed before the movie camera; the hounding of Sir Arthur Conan-D]]]
+
+ --- Output --- 
+
+[[[oyle following his decision to send Sherlock Holmes falling to his death is known well enough, though authors long before Doyle had legions of devoted followers. Goethe’s novel The Sorrows of Young Werther became famous for the wrong reasons after a wave of copycat suicides were attributed to young men in depsondency deciding to emulate the character in dress, philosophy and self-destruction. This behaviour was subsequently named the ‘Werther effect’ in 1974 by the American sociologist David Phillips. Modern studies have challenged the extent to which media reporting and the power of suggestion influence the overall rate of suicides, as well as the number of suicides causally linked to the novel itself in the late 1700s, but the power that Goethe’s novel held over some of its fans was one approaching religious fervour. Among those who did not follow Werther’s pistol-based solution to rejection, the character remained an endearing hero for the bitter and unrequited. Antecedent to the bard Morrissey, doth thou not concur?
+Fandoms are understudied social movements; the impact they can have on cultural evolution in the long term can be immense. Arnold Schwarzenegger would unlikely have risen to the public prominence which allowed him to sweep into the California Governor’s mansion had it not been for truck driver and future Terminator creator-director James Cameron’s obsession with emulating 2001: A Space Odyssey and Star Wars, resulting in his aggressive advance through the film industry. The enduring devotional power of fandoms to have killed-off characters resurrected or entire series returned to publication and airtime (think the original Sherlock Holmes and his current Cumberbatchian iterations as well as Futurama and Family Guy) is a force to be reckoned with that historians have paid relatively little attention to cf. labour movements, permanently rising middle classes and social activist groups. Something for the future, perhaps.
+But away from this and to the matter of fan art. If fandoms existed before the term itself entered the lexicon and before ‘fans’ would even self-identify as such, could their artisitc proclivities have done so likewise? This is an area that, were the author an art historian, it would be consuming a great deal of my time in the library. We know the famous trope, established most prominently by journalist and full-time science-denying crackpot Christopher Booker of there]]]
+
+ ========== Example 3 ==========
+
+ --- Input --- 
+
+[[[Last week I wrote about how the Chapel staff meets weekly to discuss all aspects of worship, and the process that we undertake to create a sacred space for worship each week. Amidst the prayer, thoughtful discussion, and opening ourselves up to the voice of God speaking to us about preaching, music and themes, we get down and dirty with some good old-fashioned biblical exegesis. Which is just a fancy way of saying we try to figure out what the heck is really being communicated.
+Remember the old TV show, “Diff’rent Strokes”? Gary Coleman’s adorable character made himself famous by saying, “Whatchou talkin’ ‘bout, Willis?” When trying to understand scripture, sometimes it works best if we cock our heads just so, scrunch up our faces, and say in our best Gary Coleman voice, “Whatchou talkin’ ‘bout, Jesus?”
+Historical Criticism is one method that informs the way we read the Bible, and it helps us to better understand what was happening given the cultural, political, and societal climate in a particular time and place. (Historians are going to have a heyday looking back at the 21st century, don’t you think?! But I digress….)]]]
+
+ --- Output --- 
+
+[[[ Literary Criticism is another method. It takes into account the written and oral traditions which show up in unexpected places throughout the Bible. For example, in Matthew 22:41-46 Jesus asked the Pharisees a question about the Messiah (“Who’s son is he?”), and then he quotes from Psalm 110 to basically answer his own question. By quoting the ancient Hebrew Bible, Jesus helps modern day scholars (and Snowmass Chapel staff members!) tease out more meaning by taking us back into the world of the ancient texts to which he refers. That Jesus — he doesn’t miss a beat, does he? He knew the Psalms were an important part of the Jewish faith and he used them to help the Pharisees make sense of the long-awaited Messiah standing before their very eyes!
+And here’s where literary criticism gets rather fun. What if we omitted this passage completely from the Gospel of Matthew? Would it make a difference? Of what significance is it? This is a technique that literary scholars employ to get more information. In the case of Matthew 22:41-46 a quick analysis demonstrates that the final verse of the passage (“from that day forward, no one dared to ask him any more questions”) relates us right back to the beginning of Chapter 21 when the Pharisees were scrutinizing Jesus’ authority (Matt. 21:23). They began to question him on many of his teachings, trying to entrap him (22:34). But Jesus was having none of it. This passage IS significant because it’s critical that you and I, some 2000 years later, know this: Jesus SHUT THEM DOWN. In his very Jesus way he simply outsmarted, outshined and outdid the highest, most respected religious leaders of the day. “You think the Messiah is David’s own son? Um. No. Let me just school you on this one, boys.” End of conversation.
+This passage, then, is sandwiched right here for a reason, and literary criticism shows it is a necessary thing. Jesus has just finished telling everyone that the most important commandment is to love God and love people. In a few verses he is going to give the Pharisees a piece of his mind about hypocrisy and being good role models and how the kingdom of heaven is for EVERYBODY. But first he needs to settle a little matter of his Sonship once and for all. No more questions]]]
+
+ ========== Example 4 ==========
+
+ --- Input --- 
+
+[[[S. Austin Allibone, comp. Prose Quotations from Socrates to Macaulay. 1880.
+If writings are thus durable, and may pass from age to age through the whole course of time, how careful should an author be of committing anything to print that may corrupt posterity and poison the minds of men with vice and error! Writers of great talents who employ their parts in propagating immorality, and seasoning vicious sentiments with wit and humour, are to be looked upon as the pests of society, and the enemies of mankind. They leave books behind them (as it is said of those who die in distempers which breed an ill-will towards their own species) to scatter infection and destroy their posterity. They act the counterparts of a Confucius or a Socrates; and seem to have been sent into the world to deprave human nature and sink it into the condition of brutality.
+And here give me leave to mention what Monsieur Boileau has so very well enlarged upon in the preface to his works, that wit and fine writing do not consist so much in advancing things that are new, as in giving things that are known an agreeable turn. It is impossible for us, who live in the latter ages of the world]]]
+
+ --- Output --- 
+
+[[[, to make observations in criticism, morality, or in any art or science, which have not been touched upon by others. We have little else left us but to represent the common sense of mankind in more strong, more beautiful, or more uncommon lights. If a reader examines Horaces Art of Poetry, he will find but very few precepts in it which he may not meet with in Aristotle, and which were not commonly known by all the poets of the Augustan age.
+Method is of advantage to a work both in respect to the writer and the reader. In regard to the first, it is a great help to his invention. When a man has planned his discourse, he finds a great many thoughts rising out of every head, that do not offer themselves upon the general survey of a subject. His thoughts are at the same time more intelligible, and better discover their drift and meaning, when they are placed in their proper lights, and follow one another in a regular series, than when they are thrown together without order and connection. There is always an obscurity in confusion; and the same sentence that would have enlightened the reader in one part of a discourse perplexes him in another. For the same reason, likewise, every thought in a methodical discourse shows itself in its greatest beauty, as the several figures in a piece of painting receive new grace from their disposition in the picture. The advantages of a reader from a methodical discourse are correspondent with those of the writer. He comprehends everything easily, takes it in with pleasure, and retains it long.
+On this point I have a piece of advice to offer to all young intellectual aspirants: they should keep their commodities to themselves; they should not produce their notions until they have wrought them into form. I did the contrary of this myself, and I smarted severely for it. In the first place, I used to confuse myself with the perplexity of my thoughts,half conceptions, abortions of truth that came to the birth when my mind had not strength to bring them forth,monsters begotten out of the cloud, like those in the old fable. With Cassio, I saw a mass of things, but nothing distinctly. I had chosen my own points of observation; I viewed many things differently from the vulgar, but my visions for some time, until my eye was accustomed to the change, were wont to float before me vaguely and inapprehensibly. I had rejected the hack notions, the uses of other men, and had as yet made]]]
+
+ ========== Example 5 ==========
+
+ --- Input --- 
+
+[[[As a proud Shiba Inu owner, I am no stranger to the "dramatic" antics that dogs sometimes give off. What if I told you that dogs don't know how to act dramatically? Well, not in the way that they are accused of.
+When dogs act dramatically, they try to communicate with the people around them. Most of the time, dramatic dogs are just trying to express their fear or anxiety about something. However, dogs sometimes also act "dramatically" when they are in pain or need something from their owners.
+Here I will explain the science behind this method of communication from dogs and why dogs sometimes exhibit unusual and dramatic behavior. Alright, let's get to the bottom of this.
+Do Dogs Act Dramatic or Are They Trying to Communicate?
+Dogs don't know how to act dramatically as humans do. This is because to act dramatically, the dog must see the gravity of every given situation and give an appropriate response through reason.
+Though dogs are intelligent, it is improbable that they can apply reason in this way simply because they are not human.
+Instead, most "dramatic" dogs are just communicating or have learned that the behavior gets them what they need.
+Here are the most common causes behind]]]
+
+ --- Output --- 
+
+[[[ this dramatic behavior and some helpful clues to help you discover why your dog behaves this way.
+1. Communicating Fear
+Dogs can sometimes behave as being dramatic when they are afraid of something. However, the dog is experiencing fear and cannot reason in the way humans can. Therefore, it is arguable if they are really being dramatic.
+After all, would you call someone terrified of something they believe to be dangerous dramatic?
+A fearful dog will likely shake or tremble, whine, or bark. It is also common for a fearful dog to exhibit specific body language, such as:
+- Whale Eye (the whites of the eyes showing)
+- Hair standing on end
+- Ears pinned back
+- Tail tucked between the legs
+- Body crouched low to the ground
+Dogs prone to anxiety are more likely to have bouts of fear now and again. Still, it is not uncommon for dogs to be afraid of loud noises, unusual environments, and unpleasant situations like vet visits.
+2. Communicating Anxiety
+Many dog owners confuse signs of anxiety in dogs for dramatic behavior.
+This is especially true if the dog is experiencing frequent anxiety around a large variety of stimuli. Some common symptoms of anxiety in dogs that could be confused for dramatic behavior include:
+- Excessive barking or howling
+- Excessive panting
+- Excessive drooling
+- Pacing and other restless behaviors
+- Excessive chewing and other destructive behaviors
+- Suddenly having bathroom accidents
+- Refusing to eat
+- Trembling or shaking and exhibiting fearful body language
+Anxiety is a more common problem that dogs face than some may believe. Speaking with a vet about this issue can be extremely beneficial.
+You Might Also Like: What Would Cause a Dog To Lose His Appetite?
+3. Communicating Pain
+Dogs will also exhibit behaviors often confused with dramatism when they are sick or in pain. Signs of pain in dogs often overlap with the symptoms of anxiety. This is most likely because the pain they are experiencing is anxiety-inducing for them.
+However, other signs of pain or illness may also come along with this anxiety. Limping, favoring one leg over another, lethargy, and other troubling symptoms are all signs of a medical problem. Please note, dogs do not tend to fake illness and injury, so you should visit a vet if something does not seem right with your dog.
+4. Communicating That They Need Something
+Dogs are incredibly intuitive, and they learn what gets them the things that they want]]]
+
+ ========== Example 6 ==========
+
+ --- Input --- 
+
+[[[There is little worse than having acid reflux. The terrible pain and burning can drive anyone crazy. If you have acid reflux, you are not the only one, as many suffer from it too. Others refuse to live with this, and you can join them with the application of the provided tips.
+Plan your meal several hours before you go to bed. The acid and foods you’ve eaten stay in your stomach when you are awake and upright. When laying down, the acid may climb back up. This is why it’s best to stop eating several hours before bedtime.
+If you aren’t overweight, your GERD may go away. When extra pounds press down on your abdomen, it causes your esophageal sphincter to relax. Once you tone up, your sphincter will tighten and the acid will stay put.
+Be sure to watch what kind of foods you ate before you noticed the reflux symptoms. There are probably foods that trigger acid reflux every time. When you figure out what causes the problem to occur, you will know what foods to avoid, especially at night when it can get worse.
+Try raising your bed’s head. You can raise your bed with bricks or wood blocks. You want to work against gravity, so keep your head at least a half a]]]
+
+ --- Output --- 
+
+[[[ foot higher than your feet. By elevating your chest and head, you prevent stomach acid from traveling upward to your esophagus.
+Don’t wear tight clothes. Tight fitting pants, belts and pantyhose can really make you feel worse. Restrictive clothing can put your stomach under additional pressure. Tight clothes could be responsible for acid reflux. Wear clothes that do not squeeze your mid-section.
+Refrain from drinking alcohol, which can irritate your stomach lining. Drinking alcohol can cause acid reflux and damage the lining in your stomach. If you’re socializing with friends, limit alcohol consumption to remain feeling good.
+Learn how to combat stress. Heartburn and inflammation can be started or exacerbated by stress. Whatever the source of stress in your life, limit it or eliminate it.
+Take your time during your meal to prevent acid reflux. You should eat slowly and stop when you are full. Sit and take the time to chew and taste the meal. If you eat too quickly or eat more food than you need, you will experience acid reflux. One trick to alleviate some of your issues is to place your fork on your plate between each bite.
+Eat small meals frequently. Having a couple of large meals a day will put you at risk for acid reflux. When your stomach is full, it can cause a lot of pressure to build up making your acid reflux worse. Heartburn is caused when the stomach acid comes back to your esophagus. Instead, consume smaller meals through the day.
+You should drink between meals if you are dealing with acid reflux. Drinking and eating simultaneously will put more pressure on your esophagus. If your stomach is too full, the acid will reach the esophagus and damage the lining of your digestive track.
+If you are a pregnant, there is a chance that the weight of the baby is pushing against your stomach and causing your acid reflux to form. Speak with a physician in order to identify a treatment path, particularly if your pregnancy is rather far along.
+You should exercise on a regular basis if acid reflux is a frequent problem. Low-impact exercises, such as swimming and walking, are known to help relieve acid reflux. Keeping your body upright helps put gravity on your side when it comes to digestion.
+Acid reflux is often exacerbated by gluten. Foods with gluten, such as oats, barely or wheat, need to be avoided by people who have acid reflux. You may think you have to eliminate all grain from your diet, but this isn’t true. Some great grains that provide your body]]]
+
+ ========== Example 7 ==========
+
+ --- Input --- 
+
+[[[This post comes from Brian Ryder, one of our volunteers here at Special Collections. Brian’s history with Reading collections is a long one; he used to be one of our project cataloguers and is now working his way through the Routledge & Kegan Paul archive. Here, upon the 100th anniversary of the birth of Alun Lewis, using examples from our special collections archives, Brian tells the fascinating tale of Welsh war poet Alun Lewis (1915-1944) and asks ‘what does a poet need to be successful?’.
+Alun Lewis material
+Alun Lewis, one of the foremost poets of World War II, was born one hundred years ago this month and his centenary was marked by the BBC with a dramatization of his short life on Radio 4. He was born into a family from a Welsh mining community in which his father was the only one of four brothers who did not spend his working life down the mines – becoming instead a schoolteacher and later Director of Education for Aberdare. Alun won a scholarship to a boarding school where he was extremely unhappy but where he began to write poetry and remained determined to work hard and escape the pits as his father had done. After university he followed]]]
+
+ --- Output --- 
+
+[[[ his father into teaching but in the spring of 1940, wanting “to experience life in as many phases as I’m capable of”, he enlisted in the army, writing to a friend that:
+“I’m not going to kill. Be killed perhaps, instead”.
+In May 1941 publisher George Allen & Unwin, whose archive is held by the university, having seen his poetry and short stories appear in newspapers and periodicals, wrote to Lewis saying that they would be interested in seeing his future work with a view to publication. He wrote back to them with enthusiasm, providing a full list of his published work and throwing in for good measure a copy of Caseg Press Broadsheet No. 1 (shown below), first of a series initiated by Lewis and his friend John Petts with poems by one and woodcuts by the other (AUC 117/7). The more they saw of his writing the more keen Allen & Unwin were to become his publisher and they began in 1942 with both Raiders’ dawn (poetry) and The last inspection (short stories).
+Alun Lewis (AUC 117/7).
+In July 1941 Lewis married Gweno Ellis, also a school teacher. After her husband’s war service moved him, late in 1942, from the home front to India with the prospect of active service in Burma against the Japanese, Gweno played a significant role in seeing her husband’s literary output pass smoothly through the publishing process.
+When he became entitled to a few days’ leave in July 1943 Lewis presented himself at the home in the Nilgiri hills of Dr Wallace Aykroyd, Director of the Nutrition Research Laboratories in nearby Coonor, and his wife Freda who offered open house to British military and nursing personnel stationed in the area. Alun found that Dr Aykroyd was away at a Conference on Food and Agriculture in Hot Springs, Virginia but was none the less made welcome by his wife with whom he fell instantly in love. The two continued to meet when circumstances permitted and when they were apart exchanged frequent letters for the rest of that year and into 1944.
+Early in 1944 Lewis was posted to the north Burma coast and prepared for action against the Japanese. He wrote his last letter to his publisher on 23 January 1944 with the post script: (]]]
+
+ ========== Example 8 ==========
+
+ --- Input --- 
+
+[[[Birds Moving North
+As winters get warmer, birds once rare at northern backyard feeders are becoming more common during the cold months
+- Doreen Cubie
+- Jan 26, 2015
+THE WINTER BIRDS THAT FLOCK to northern sunflower feeders and suet cages are changing, right along with the climate. “Even 50 years ago, cardinals and tufted titmouse were rare in the upper Midwest,” says Benjamin Zuckerberg, a University of Wisconsin–Madison ecologist and assistant professor. But today these and other once-rare bird species are common in northern climes that have become warmer. Along with postdoctoral fellow Karine Princé, Zuckerberg is searching for—and finding—the ecological fingerprints of climate change in people’s backyards.
+In their recent study published in Global Change Biology, the two researchers uncovered “compelling evidence” that the composition of eastern and midwestern winter bird communities is undergoing a transformation to species that prefer warmer temperatures. “A changing climate is shortening the winter season,” says Princé, leading to rising temperatures, less snow cover and an earlier spring melt. “All of these changes are favoring smaller-bodied, warm-adapted species” such as Carolina wrens,]]]
+
+ --- Output --- 
+
+[[[ chipping sparrows and yellow-rumped warblers, Princé says.
+Tracking 38 Common Species
+For their research, Zuckerberg and Princé analyzed data from Project FeederWatch, a 28-year-old citizen-science program run by the Cornell Lab of Ornithology and Bird Studies Canada that enlists participants to conduct periodic two-day bird counts in their backyards during the winter. Examining tens of thousands of these reports, the biologists tracked 38 common bird species from the tip of Florida north to southern Ontario and west to the 100th meridian, the nations’ midpoints. They discovered that this “group of 38”—which includes blue jays, eastern bluebirds, American goldfinches, Carolina wrens, chipping and song sparrows and purple finches—had moved north approximately 7 kilometers a year or 155 kilometers (about 96 miles) during the 22-year period from 1990 to 2011.
+In another study, Cornell Lab researcher Frank La Sorte found that winter ranges of many of the 59 bird species he studied across the United States and southern Canada had changed from 1975 to 2009. Like Princé and Zuckerberg, La Sorte relied on data collected by citizen scientists—in this case, the National Audubon Society’s Christmas Bird Counts (CBCs) conducted every year in late December or early January. “The data for CBCs were standardized around 1970,” he explains, “giving researchers about 40 years of consistent data and a reliable look at how species are changing over time.”
+Specialists Lose Out to Generalists
+La Sorte discovered that many of the birds pushing north in winter “tend to be generalists, not specialists,” he says, and are often backyard birds. Unfortunately, La Sorte’s research also revealed that some specialists, such as red-cockaded woodpeckers, are not moving at all. This endangered species is tied to longleaf pine forests of the southeastern United States and cannot survive without this habitat. No one knows what an altered climate will do to the already imperiled bird.
+Another unknown: What will happen to cold-loving species such as the evening grosbeak? In the past, these birds often migrated south during the winter, but since the mid-1980s they have been observed much less]]]
+
+ ========== Example 9 ==========
+
+ --- Input --- 
+
+[[[Aaron Sheehan-Dean is Professor of History at Louisiana State University. This interview is based on his new book The Calculus of Violence: How Americans Fought the Civil War (Harvard University Press, 2018).
+JF: What led you to write The Calculus of Violence: How Americans Fought the Civil War?
+ASD: Several years ago, I was invited to write an essay for edited collection on violence in different Civil Wars (Greek, Russian, Finnish, etc.). The US Civil War was supposed to provide a nineteenth-century example against which the classic civil wars of the twentieth century could be compared. I expected a challenging but manageable, essay-length project. Instead, I wrote 20,000 words and realized I had generated more questions than answers. How exactly did participants in the war balance violence and restraint? Under what conditions did violence escalate or diminish? How did the guerrilla war and the regular war intersect? What kind of violence was committed against non-combatants, women in particular? Most of the previous answers to these questions have considered only one side of the story – the Union’s – and it seemed to me that any complete answer would have to consider the perspectives and experiences of people on both sides]]]
+
+ --- Output --- 
+
+[[[.
+JF: In 2 sentences, what is the argument of The Calculus of Violence: How Americans Fought the Civil War?
+ASD: The Civil War was both violent and restrained. This strange mixture of malice and charity derived from the fact that Northerners and Southerners crafted competing moral explanations for how they waged war.
+JF: Why do we need to read The Calculus of Violence: How Americans Fought the Civil War?
+ASD: One of the great appeals of teaching and writing on the Civil War is the huge audience interested in this part of the past. My hope is that that community of readers will join me in using the history of the US Civil War to think about how we wage war today. Given that I began this project in 2010, it was clearly influenced by reporting about the wars in Iraq and Afghanistan. History does not offer easy to follow guides to behavior, but by resuscitating the debates among Civil War Americans about what kind of conduct they accepted in war and what they rejected, it may help us to approach our own actions with greater awareness. In democracies, the army is an extension of the people and regular citizens as well as soldiers need to think seriously about the moral ramifications of military actions. Participants in the Civil War did this – Confederates argued with Federals, Republicans argued with Democrats, women argued with men, enslaved people and free people of color argued with slaveholders and army officers. All these arguments help us see the contours of the conflict in a way that illuminates questions we should continue to ask about our conduct today.
+JF: When and why did you decide to become an American historian?
+ASD: After college I worked on Capitol Hill for US Senator Carl Levin (I am originally from Levin’s home state of Michigan). During my time there, I began reading more history and also giving tours of the US capitol. These projects gradually merged until I could only give tours when I could take two hours and lead people through the nooks and crannies of the building (this was pre-9/11 when a staff pass would enable access to the Senate and House floors and almost every part of the capitol). I found that I enjoyed talking about the American past more than I enjoyed the policy work I was doing as a staff member and so applied to graduate school. I am still trying to find a classroom as remarkable and captivating as the capitol building but I continue to love the daily process of helping students understand the past and what it means to them]]]
