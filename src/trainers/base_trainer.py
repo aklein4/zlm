@@ -289,6 +289,7 @@ class BaseTrainer:
         # initialize counters
         epoch = 0
         self.atoms_seen = 0 # must be self. for step_closure
+        training_start_time = timer()
 
         # run the training loop
         for step in range(max_step):
@@ -329,8 +330,13 @@ class BaseTrainer:
 
             # post-step closure for logging
             def step_closure(
-                epoch, step, loss, grad_norm, aux, trace_start_time, trace_end_time, lr
+                start_time, epoch, step, loss, grad_norm, aux, trace_start_time, trace_end_time, lr
             ):
+                training_time_elapsed = (
+                    timer() - start_time
+                    / 3600 # in hours
+                )
+
                 if "atom_count" in aux.keys():
                     self.atoms_seen += aux["atom_count"].detach().item()
 
@@ -338,12 +344,12 @@ class BaseTrainer:
                 grad_norm = grad_norm.detach().item()
 
                 logger.info(
-                    "Epoch: %d, step: %d, loss: %.3f, grad_norm: %.3f, lr: %.2e, trace time: %.0f ms",
+                    "Hours elapsed: %.3f, epoch: %d, step: %d, loss: %.3f, grad_norm: %.3f, trace time: %.0f ms",
+                    training_time_elapsed,
                     epoch,
                     step,
                     loss,
                     grad_norm,
-                    lr,
                     (trace_end_time - trace_start_time) * 1000,
                 )
 
@@ -362,6 +368,8 @@ class BaseTrainer:
                 if "atom_count" in aux.keys():
                     to_wandb["atoms_seen"] = self.atoms_seen
                 to_wandb["nan"] = 1 - int(math.isfinite(loss))
+                to_wandb["training_time_elapsed_hr"] = training_time_elapsed
+                to_wandb["avg_time_per_step_s"] = training_time_elapsed * 3600 / (step + 1)
 
                 if not self.config.debug and constants.PROCESS_IS_MAIN():
                     wandb.log(to_wandb)
@@ -370,6 +378,7 @@ class BaseTrainer:
             xm.add_step_closure(
                 step_closure,
                 args=(
+                    training_start_time,
                     epoch,
                     step,
                     loss.detach().clone(),
