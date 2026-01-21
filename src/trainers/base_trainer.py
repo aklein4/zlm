@@ -134,7 +134,7 @@ class BaseTrainer:
         param_names = set()
         for name, p in model.named_parameters():
             if p is not None:
-                param_names.add(re.sub("\[\d+\]", ".*", name))
+                param_names.add(re.sub("\.\d+\.", ".*.", name))
         for name in param_names:
             if name not in config_names:
                 logger.warning(f"Parameter {name} does not have sharding spec!")
