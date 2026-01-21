@@ -140,7 +140,8 @@ class BaseTrainer:
                 logger.warning(f"Parameter {name} does not have sharding spec!")
         if config_names == param_names:
             logger.info("All model parameters have sharding spec.")
-            
+        exit(0)
+
         # Setup SPMD mesh and shard the model.
         model, self.input_sharding_spec, self.minibatch = setup_sharding_and_mesh(
             model, config
