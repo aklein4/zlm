@@ -142,7 +142,6 @@ class BaseTrainer:
                 all_found = False
         if all_found:
             logger.info("All model parameters have sharding spec.")
-        exit(0)
 
         # Setup SPMD mesh and shard the model.
         model, self.input_sharding_spec, self.minibatch = setup_sharding_and_mesh(
