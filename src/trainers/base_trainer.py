@@ -135,10 +135,12 @@ class BaseTrainer:
         for name, p in model.named_parameters():
             if p is not None:
                 param_names.add(re.sub("\.\d+\.", ".*.", name))
+        all_found = True
         for name in param_names:
             if name not in config_names:
                 logger.warning(f"Parameter {name} does not have sharding spec!")
-        if config_names == param_names:
+                all_found = False
+        if all_found:
             logger.info("All model parameters have sharding spec.")
         exit(0)
 
