@@ -17,6 +17,7 @@ from timeit import default_timer as timer
 import shutil
 import json
 import numpy as np
+import re
 
 import torch
 import torch.nn.utils as nn_utils
@@ -128,6 +129,18 @@ class BaseTrainer:
         # Add `xp.Trace` to linear layers in the module tree (just for profiling?).
         model = auto_trace(model)
 
+        # print model parameters that to not have sharding spec
+        config_names = set(config.model.remat.keys())
+        param_names = set()
+        for name, p in model.named_parameters():
+            if p is not None:
+                param_names.add(re.sub("\[\d+\]", ".*", name))
+        for name in param_names:
+            if name not in config_names:
+                logger.warning(f"Parameter {name} does not have sharding spec!")
+        if config_names == param_names:
+            logger.info("All model parameters have sharding spec.")
+            
         # Setup SPMD mesh and shard the model.
         model, self.input_sharding_spec, self.minibatch = setup_sharding_and_mesh(
             model, config
