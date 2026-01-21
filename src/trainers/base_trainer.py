@@ -51,7 +51,6 @@ from models.xla import BaseXLAModel
 from utils.import_utils import import_optimizer, import_collator
 from utils import constants
 from utils.remat_utils import advanced_remat
-from utils.logging_utils import print_sharding_info
 
 
 logger = logging.getLogger(__name__)
@@ -399,11 +398,6 @@ class BaseTrainer:
 
         loss.backward()
         
-        print_sharding_info(self.model.lm_head._orig_mod.weight.data, name="lm_head weight")
-        print_sharding_info(self.model.lm_head._orig_mod.weight.grad, name="lm_head grad")
-        print_sharding_info(self.model.encoder_model.norm.weight.data, name="encoder_model norm weight")
-        print_sharding_info(self.model.encoder_model.norm.weight.grad, name="encoder_model norm grad")
-
         grad_norm = self.clip_gradients()
 
         opt_aux = self.optimizer.step()
