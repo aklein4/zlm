@@ -1,4 +1,6 @@
 
+import numpy as np
+
 import datasets
 
 
@@ -14,35 +16,42 @@ WEB_SUBSETS = [
 ]
 
 
+def uint_map(batch):
+    return {
+        "input_ids": [np.array(x, dtype=np.uint16) for x in batch["input_ids"]],
+        "output_ids": [np.array(x, dtype=np.uint16) for x in batch["output_ids"]],
+    }
+
+
 def main():
     
-    dss = []
-    for subset in WEB_SUBSETS:
+    # dss = []
+    # for subset in WEB_SUBSETS:
 
-        ds = datasets.load_dataset(
-            INPUT_REPO,
-            subset,
-            split="train",
-            streaming=False,
-        )
-        dss.append(ds)
+    #     ds = datasets.load_dataset(
+    #         INPUT_REPO,
+    #         subset,
+    #         split="train",
+    #         streaming=False,
+    #     )
+    #     dss.append(ds)
 
-    web_ds = datasets.concatenate_datasets(dss)
-    web_ds = web_ds.shuffle(seed=42)
+    # web_ds = datasets.concatenate_datasets(dss)
+    # web_ds = web_ds.shuffle(seed=42)
 
-    web_ds.push_to_hub(
-        OUTPUT_REPO,
-        "web",
-        private=False,
-        split="train",
-    )
-
-    # web_ds = datasets.load_dataset(
+    # web_ds.push_to_hub(
     #     OUTPUT_REPO,
     #     "web",
+    #     private=False,
     #     split="train",
-    #     streaming=False,
     # )
+
+    web_ds = datasets.load_dataset(
+        OUTPUT_REPO,
+        "web",
+        split="train",
+        streaming=False,
+    )
 
     sft_ds = datasets.load_dataset(
         OUTPUT_REPO,
@@ -50,6 +59,9 @@ def main():
         split="train",
         streaming=False,
     )
+
+    web_ds = web_ds.map(uint_map, batched=True, batch_size=1000)
+    sft_ds = sft_ds.map(uint_map, batched=True, batch_size=1000)
 
     ds = datasets.concatenate_datasets([web_ds, sft_ds])
     ds = ds.shuffle(seed=42)
