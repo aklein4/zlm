@@ -359,17 +359,22 @@ class BaseTrainer:
                         to_wandb[k] = v.detach().item()
                     else:
                         to_wandb[k] = v
+                        
                 to_wandb["loss"] = loss
                 to_wandb["grad_norm"] = grad_norm
                 to_wandb["trace_time_ms"] = (trace_end_time - trace_start_time) * 1000
                 to_wandb["lr"] = lr
                 to_wandb["epoch"] = epoch
+
                 to_wandb["examples_seen"] = (step + 1) * self.global_batch_size
                 if "atom_count" in aux.keys():
                     to_wandb["atoms_seen"] = self.atoms_seen
+
                 to_wandb["nan"] = 1 - int(math.isfinite(loss))
+
                 to_wandb["training_time_elapsed_hr"] = training_time_elapsed
                 to_wandb["avg_time_per_step_s"] = training_time_elapsed * 3600 / (step + 1)
+                to_wandb["avg_steps_per_hr"] = (step + 1) / training_time_elapsed
 
                 if not self.config.debug and constants.PROCESS_IS_MAIN():
                     wandb.log(to_wandb)
