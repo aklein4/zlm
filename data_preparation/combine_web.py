@@ -16,13 +16,6 @@ WEB_SUBSETS = [
 ]
 
 
-def uint_map(batch):
-    return {
-        "input_ids": [np.array(x, dtype=np.uint16) for x in batch["input_ids"]],
-        "output_ids": [np.array(x, dtype=np.uint16) for x in batch["output_ids"]],
-    }
-
-
 def main():
     
     # dss = []
@@ -60,14 +53,14 @@ def main():
         streaming=False,
     )
 
-    web_ds = web_ds.map(uint_map, batched=True, batch_size=1000)
-    sft_ds = sft_ds.map(uint_map, batched=True, batch_size=1000)
+    web_ds = web_ds.cast_column("input_ids", sft_ds.features["input_ids"])
+    web_ds = web_ds.cast_column("output_ids", sft_ds.features["output_ids"])
 
     ds = datasets.concatenate_datasets([web_ds, sft_ds])
     ds = ds.shuffle(seed=42)
 
     # 90% train, 5% test, 5% valid
-    train_testvalid = ds['train'].train_test_split(test_size=0.1)
+    train_testvalid = ds.train_test_split(test_size=0.1)
     test_valid = train_testvalid['test'].train_test_split(test_size=0.5)
     split_ds = datasets.DatasetDict(
         {
@@ -84,5 +77,5 @@ def main():
     )
 
 
-if __name__ == "__main__":
+if __name__ == "__main__": 
     main()
