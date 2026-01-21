@@ -131,6 +131,8 @@ class BaseTrainer:
 
         # print model parameters that to not have sharding spec
         config_names = set(OmegaConf.to_container(self.config, resolve=True).keys())
+        print(config_names)
+        exit(0)
         param_names = set()
         for name, p in model.named_parameters():
             if p is not None:
