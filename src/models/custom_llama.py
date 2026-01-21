@@ -40,13 +40,20 @@ logger = logging.get_logger(__name__)
 
 
 class LlamaRMSNorm(nn.Module):
-    def __init__(self, hidden_size, eps=1e-6):
+    def __init__(self, hidden_size, eps=1e-6, elementwise_affine: bool = True):
         """
         LlamaRMSNorm is equivalent to T5LayerNorm
         """
         super().__init__()
-        self.weight = nn.Parameter(torch.ones(hidden_size))
+        self.elementwise_affine = elementwise_affine
         self.variance_epsilon = eps
+        self.normalized_shape = (hidden_size,)
+
+        if self.elementwise_affine:
+            self.weight = nn.Parameter(torch.ones(hidden_size))
+        else:
+            self.register_parameter("weight", None)
+        
 
     def forward(self, hidden_states):
         input_dtype = hidden_states.dtype
@@ -54,7 +61,7 @@ class LlamaRMSNorm(nn.Module):
         
         out = F.rms_norm(
             hidden_states,
-            self.weight.shape,
+            self.normalized_shape,
             weight=self.weight,
             eps=self.variance_epsilon,
         )

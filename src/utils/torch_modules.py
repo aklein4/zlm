@@ -5,6 +5,25 @@ import torch.nn.functional as F
 import numpy as np
 
 
+class ScaledEmbedding(nn.Embedding):
+
+    def __init__(
+        self,
+        *args,
+        **kwargs,
+    ):
+        super().__init__(*args, **kwargs)
+        self.scale = self.embedding_dim ** 0.5
+
+
+    def ones_init(self):
+        self.weight.data.fill_(1.0 / self.scale)
+
+
+    def forward(self, input: torch.Tensor) -> torch.Tensor:
+        return super().forward(input) * self.scale
+
+
 class ContinuousEmbedding(nn.Module):
 
     def __init__(

@@ -16,9 +16,9 @@ encoder_model.layers.*.mlp.gate_proj.weight: [fsdp, null]
 encoder_model.layers.*.mlp.up_proj.weight: [fsdp, null]
 encoder_model.layers.*.mlp.down_proj.weight: [null, fsdp]
 
-encoder_model.layers.*.input_layernorm.weight: [fsdp]
-encoder_model.layers.*.post_attention_layernorm.weight: [fsdp]
-encoder_model.norm.weight: [fsdp]
+encoder_model.layers.*.input_layernorm.weight: [null]
+encoder_model.layers.*.post_attention_layernorm.weight: [null]
+encoder_model.norm.weight: [null]
 
 
 # decoder
@@ -31,9 +31,9 @@ decoder_model.layers.*.mlp.gate_proj.weight: [fsdp, null]
 decoder_model.layers.*.mlp.up_proj.weight: [fsdp, null]
 decoder_model.layers.*.mlp.down_proj.weight: [null, fsdp]
 
-decoder_model.layers.*.input_layernorm.weight: [fsdp]
-decoder_model.layers.*.post_attention_layernorm.weight: [fsdp]
-decoder_model.norm.weight: [fsdp]
+decoder_model.layers.*.input_layernorm.weight: [null]
+decoder_model.layers.*.post_attention_layernorm.weight: [null]
+decoder_model.norm.weight: [null]
 
 
 # scheduler
@@ -43,56 +43,45 @@ scheduler.b: [null]
 
 
 # diffusion head
-diffusion_head.t_embed.frequencies: [fsdp]
-diffusion_head.t_embed.proj.weight: [fsdp, null]
-diffusion_head.t_mlp_proj.weight: [fsdp, null]
-
-diffusion_head.x_in_proj.weight: [fsdp, null]
-
-diffusion_head.hidden_states_norm.weight: [fsdp]
+diffusion_head.x_t_in_proj.weight: [fsdp, null]
 # diffusion_head.hidden_states_in_proj.weight: [fsdp, null]
 
-diffusion_head.layer_norms.*.weight: [fsdp]
-
+diffusion_head.layers.*.norm.embed.weight: [null, null]
 diffusion_head.layers.*.gate_proj.weight: [fsdp, null]
 diffusion_head.layers.*.up_proj.weight: [fsdp, null]
 diffusion_head.layers.*.down_proj.weight: [null, fsdp]
+diffusion_head.layers.*.out_scale.embed.weight: [null, null]
 
-diffusion_head.out_norm.weight: [fsdp]
+diffusion_head.out_norm.embed.weight: [null, null]
 diffusion_head.out_proj.weight: [null, fsdp]
 
 
 # uncond diffusion head
-uncond_diffusion_head.t_embed.frequencies: [fsdp]
-uncond_diffusion_head.t_embed.proj.weight: [fsdp, null]
-uncond_diffusion_head.t_mlp_proj.weight: [fsdp, null]
-
-uncond_diffusion_head.x_in_proj.weight: [fsdp, null]
-
-uncond_diffusion_head.hidden_states_norm.weight: [fsdp]
+uncond_diffusion_head.x_t_in_proj.weight: [fsdp, null]
 # uncond_diffusion_head.hidden_states_in_proj.weight: [fsdp, null]
 
-uncond_diffusion_head.layer_norms.*.weight: [fsdp]
+uncond_diffusion_head.layers.*.norm.embed.weight: [null, null]
 uncond_diffusion_head.layers.*.gate_proj.weight: [fsdp, null]
 uncond_diffusion_head.layers.*.up_proj.weight: [fsdp, null]
 uncond_diffusion_head.layers.*.down_proj.weight: [null, fsdp]
+uncond_diffusion_head.layers.*.out_scale.embed.weight: [null, null]
 
-uncond_diffusion_head.out_norm.weight: [fsdp]
+uncond_diffusion_head.out_norm.embed.weight: [null, null]
 uncond_diffusion_head.out_proj.weight: [null, fsdp]
 
 
 # external
-encoder_sep_token: [null, fsdp]
+encoder_sep_token: [null, null]
 encoder_z_tokens: [null, fsdp]
 
 decoder_z_tokens: [null, fsdp]
-decoder_start_output_token: [null, fsdp]
+decoder_start_output_token: [null, null]
 
-encoder_input_embeddings: [fsdp]
-encoder_output_embeddings: [fsdp]
+encoder_input_embeddings: [null]
+encoder_output_embeddings: [null]
 
-decoder_input_embeddings: [fsdp]
-decoder_output_embeddings: [fsdp]
+decoder_input_embeddings: [null]
+decoder_output_embeddings: [null]
 
 encoder_noise_proj_in.weight: [fsdp, null]
 decoder_z_proj_in.weight: [fsdp, null]
@@ -112,14 +101,11 @@ decoder_model.layers.*: [[data, fsdp], null, null]
 
 
 # diffusion heads
-diffusion_head.layer_norms.*: [[data, fsdp], null, null]
 diffusion_head.layers.*: [[data, fsdp], null, null]
 diffusion_head.out_proj: [[data, fsdp], null, null]
 
-uncond_diffusion_head.layer_norms.*: [[data, fsdp], null, null]
 uncond_diffusion_head.layers.*: [[data, fsdp], null, null]
 uncond_diffusion_head.out_proj: [[data, fsdp], null, null]
-
 
 # output
 encoder_mu_proj_out: [[data, fsdp], null, null]

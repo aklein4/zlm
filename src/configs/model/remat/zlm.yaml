@@ -1,14 +1,23 @@
 
 advanced:
- - name: self
-   settings:
+
+ -  name: diffusion_head
+    settings:
+        scan_layers: layers
+
+ -  name: uncond_diffusion_head
+    settings:
+        scan_layers: layers
+
+ -  name: self
+    settings:
         activation_checkpoint_layers:
          - DiffusionHead
         activation_barrier_layers:
          - DiffusionHead
 
- - name: encoder_model
-   settings:
+ -  name: encoder_model
+    settings:
         activation_checkpoint_layers:
          - EncoderModelLayer
         optimization_barrier_layers:
@@ -17,8 +26,8 @@ advanced:
         offload_tensors:
          - encoder_model_input
 
- - name: decoder_model
-   settings:
+ -  name: decoder_model
+    settings:
         activation_checkpoint_layers:
          - DecoderModelLayer
         optimization_barrier_layers:

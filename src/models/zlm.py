@@ -5,7 +5,7 @@ import torch.nn.functional as F
 import math
 from omegaconf import DictConfig
 
-from transformers.activations import ACT2FN
+from torchprime.layers.sequential import HomogeneousSequential
 
 from utils.torch_utils import (
     safe_copy_state,
@@ -19,7 +19,7 @@ from utils.torch_utils import (
 from models.llama import LlamaForCausalLM
 from models.custom_llama import LlamaMLP, LlamaRMSNorm, LlamaDecoderLayer, CustomLlamaModel
 from models import load_checkpoint_state
-from utils.torch_modules import ContinuousEmbedding
+from utils.torch_modules import ScaledEmbedding
 import utils.constants as constants
 
 
@@ -179,6 +179,92 @@ class DiffusionScheduler(nn.Module):
         )
 
 
+class AdaScale(nn.Module):
+
+    def __init__(
+        self,
+        hidden_size: int,
+        num_embeddings: int,
+        do_norm: bool=False,
+        rms_norm_eps: float=None,
+    ):
+        super().__init__()
+
+        self.embed = ScaledEmbedding(
+            num_embeddings=num_embeddings,
+            embedding_dim=hidden_size,
+        )
+
+        self.do_norm = do_norm
+        if do_norm:
+            assert rms_norm_eps is not None
+            self.norm = LlamaRMSNorm(
+                hidden_size,
+                eps=rms_norm_eps,
+                elementwise_affine=False,
+            )
+        else:
+            assert rms_norm_eps is None
+    
+
+    def forward(
+        self,
+        x: torch.FloatTensor,
+        condition: torch.LongTensor,
+    ) -> torch.FloatTensor:
+
+        if self.do_norm:
+            x = self.norm(x)
+
+        return x * self.embed(condition)
+
+
+class DiffusionHeadLayer(nn.Module):
+
+    def __init__(
+        self,
+        config: DictConfig
+    ):
+        super().__init__()
+
+        self.norm = AdaScale(
+            config.hidden_size,
+            config.num_diffusion_timesteps,
+            do_norm=True,
+            rms_norm_eps=config.rms_norm_eps,
+        )
+
+        self.mlp = LlamaMLP(
+            hidden_size=config.hidden_size,
+            intermediate_size=config.diffusion_mlp_size,
+            hidden_act=config.hidden_act,
+        )
+
+        self.out_scale = AdaScale(
+            config.hidden_size,
+            config.num_diffusion_timesteps,
+            do_norm=False,
+        )
+    
+
+    def forward(
+        self,
+        hidden_states: torch.FloatTensor,
+        timestep: torch.FloatTensor,
+    ) -> torch.FloatTensor:
+        timestep = timestep.long()
+
+        residual = hidden_states
+
+        hidden_states = self.norm(hidden_states, timestep)
+        hidden_states = self.mlp(hidden_states)
+        hidden_states = self.out_scale(hidden_states, timestep)
+
+        hidden_states = residual + hidden_states
+
+        return hidden_states
+
+
 class DiffusionHead(nn.Module):
 
     def __init__(
@@ -187,61 +273,49 @@ class DiffusionHead(nn.Module):
     ):
         super().__init__()
 
-        # modules
-        self.t_embed = ContinuousEmbedding(
-            num_frequencies=config.num_t_embed_frequencies,
-            embedding_dim=config.t_mlp_size,
-            input_min=config.minimum_diffusion_timestep,
-            input_max=1.0,
-            bias=True,
-        )
-        self.t_act = ACT2FN[config.hidden_act]
-        self.t_mlp_proj = nn.Linear(config.t_mlp_size, config.hidden_size, bias=False)
+        self.x_t_in_proj = nn.Linear(config.latent_size, config.hidden_size, bias=False)
 
-        self.x_in_proj = nn.Linear(config.latent_size, config.hidden_size, bias=False)
-
-        self.hidden_states_norm = LlamaRMSNorm(config.hidden_size, eps=config.rms_norm_eps)
-        self.hidden_states_in_proj = (
+        self.input_states_norm = LlamaRMSNorm(config.hidden_size, eps=config.rms_norm_eps, elementwise_affine=False)
+        self.input_states_in_proj = (
             nn.Linear(config.hidden_size, config.hidden_size, bias=False) if config.diffusion_in_proj else nn.Identity()
         )
 
-        self.layer_norms = nn.ModuleList(
-            [LlamaRMSNorm(config.hidden_size, eps=config.rms_norm_eps) for _ in range(config.num_diffusion_head_layers)]
+        self.layers = HomogeneousSequential(
+            *[
+                DiffusionHeadLayer(config)
+                for _ in range(config.num_diffusion_head_layers)
+            ]
         )
-        self.layers = nn.ModuleList([
-            LlamaMLP(
-                hidden_size=config.hidden_size,
-                intermediate_size=config.diffusion_mlp_size,
-                hidden_act=config.hidden_act,
-            )
-            for _ in range(config.num_diffusion_head_layers)
-        ])
 
-        self.out_norm = LlamaRMSNorm(config.hidden_size, eps=config.rms_norm_eps)
+        self.out_norm = AdaScale(
+            config.hidden_size,
+            config.num_diffusion_timesteps,
+            do_norm=True,
+            rms_norm_eps=config.rms_norm_eps,
+        )
         self.out_proj = nn.Linear(config.hidden_size, config.latent_size, bias=False)
 
     
     def forward(
         self,
         x_t: torch.FloatTensor,
-        timestep: torch.FloatTensor,
-        hidden_states: torch.FloatTensor,
-        scheduler: DiffusionScheduler,
+        timestep: torch.LongTensor,
+        input_states: torch.FloatTensor,
     ) -> torch.FloatTensor:
 
-        t = scheduler.timesteps[timestep]
-
-        # process the hidden inputs
+        # process the inputs
         hidden_states = (
-            self.t_mlp_proj(self.t_act(self.t_embed(t))) +
-            self.hidden_states_in_proj(self.hidden_states_norm(hidden_states)) +
-            self.x_in_proj(x_t)
+            self.input_states_in_proj(self.input_states_norm(input_states)) +
+            self.x_t_in_proj(x_t)
         )
 
-        for layer_norm, layer in zip(self.layer_norms, self.layers):
-            hidden_states = hidden_states + layer(layer_norm(hidden_states))
+        # pass through the layers
+        hidden_states = self.layers(
+            hidden_states,
+            timestep.float(), # xla scan only supports differentiable dtypes
+        )
 
-        hidden_states = self.out_norm(hidden_states)
+        hidden_states = self.out_norm(hidden_states, timestep)
         pred = self.out_proj(hidden_states)
 
         return pred
@@ -364,6 +438,10 @@ class ZLMModel(nn.Module):
         # create the output linear
         self.encoder_mu_proj_out = nn.Linear(self.hidden_size, self.latent_size, bias=False)
 
+        # create the norms
+        self.mu_out_norm = LlamaRMSNorm(self.latent_size, eps=config.rms_norm_eps, elementwise_affine=False)
+        self.z_in_norm = LlamaRMSNorm(self.latent_size, eps=config.rms_norm_eps, elementwise_affine=False)
+
         # create the diffusion components
         self.diffusion_head = DiffusionHead(config)
         self.scheduler = DiffusionScheduler(config)
@@ -383,6 +461,13 @@ class ZLMModel(nn.Module):
             gaussian_init(self.encoder_noise_proj_in)
             gaussian_init(self.decoder_z_proj_in)
             gaussian_init(self.encoder_mu_proj_out)
+
+        self.apply(self.scaled_embed_init)
+
+
+    def scaled_embed_init(self, module):
+        if isinstance(module, ScaledEmbedding):
+            module.ones_init()
 
     
     def sample_noise(
@@ -473,7 +558,7 @@ class ZLMModel(nn.Module):
         )
 
         # TODO: leave, remove, or scale?
-        mu = F.rms_norm(mu, [mu.shape[-1]], eps=self.config.rms_norm_eps)
+        mu = self.mu_out_norm(mu)
 
         z = self.scheduler.add_noise(
             mu, torch.zeros(1, dtype=torch.long, device=mu.device), noise
@@ -491,7 +576,8 @@ class ZLMModel(nn.Module):
         input_mask: torch.BoolTensor=None,
         output_mask: torch.BoolTensor=None,
     ):
-        z = F.rms_norm(z, [z.shape[-1]], eps=self.config.rms_norm_eps)
+        
+        z = self.z_in_norm(z)
 
         input_tokens = self.embed_tokens(input_ids) + unsqueeze_to_batch(
             self.decoder_input_embeddings, input_ids
