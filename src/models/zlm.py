@@ -250,7 +250,7 @@ class DiffusionHeadLayer(nn.Module):
     def forward(
         self,
         hidden_states: torch.FloatTensor,
-        timestep: torch.FloatTensor,
+        timestep: torch.FloatTensor=None,
     ) -> torch.FloatTensor:
         timestep = timestep.long()
 
@@ -312,7 +312,7 @@ class DiffusionHead(nn.Module):
         # pass through the layers
         hidden_states = self.layers(
             hidden_states,
-            timestep.float(), # xla scan only supports differentiable dtypes
+            timestep=timestep.float(), # xla scan only supports differentiable dtypes
         )
 
         hidden_states = self.out_norm(hidden_states, timestep)
