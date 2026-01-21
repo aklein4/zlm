@@ -399,8 +399,8 @@ class BaseTrainer:
 
         loss.backward()
         
-        print_sharding_info(self.model.lm_head.weight.data, name="lm_head weight")
-        print_sharding_info(self.model.lm_head.weight.grad, name="lm_head grad")
+        print_sharding_info(self.model.lm_head._orig_mod.weight.data, name="lm_head weight")
+        print_sharding_info(self.model.lm_head._orig_mod.weight.grad, name="lm_head grad")
         print_sharding_info(self.model.encoder_model.norm.weight.data, name="encoder_model norm weight")
         print_sharding_info(self.model.encoder_model.norm.weight.grad, name="encoder_model norm grad")
 
