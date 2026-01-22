@@ -1,13 +1,13 @@
 
 advanced:
 
- -  name: diffusion_head
-    settings:
-        scan_layers: layers
+#  -  name: diffusion_head
+#     settings:
+#         scan_layers: layers
 
- -  name: uncond_diffusion_head
-    settings:
-        scan_layers: layers
+#  -  name: uncond_diffusion_head
+#     settings:
+#         scan_layers: layers
 
  -  name: self
     settings:

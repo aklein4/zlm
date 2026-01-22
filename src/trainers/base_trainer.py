@@ -333,9 +333,8 @@ class BaseTrainer:
                 start_time, epoch, step, loss, grad_norm, aux, trace_start_time, trace_end_time, lr
             ):
                 training_time_elapsed = (
-                    timer() - start_time
-                    / 3600 # in hours
-                )
+                    timer() - start_time  
+                ) / 3600 # in hours
 
                 if "atom_count" in aux.keys():
                     self.atoms_seen += aux["atom_count"].detach().item()
@@ -359,7 +358,7 @@ class BaseTrainer:
                         to_wandb[k] = v.detach().item()
                     else:
                         to_wandb[k] = v
-                        
+
                 to_wandb["loss"] = loss
                 to_wandb["grad_norm"] = grad_norm
                 to_wandb["trace_time_ms"] = (trace_end_time - trace_start_time) * 1000
