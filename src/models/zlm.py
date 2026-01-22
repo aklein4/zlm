@@ -656,7 +656,6 @@ class ZLMModel(nn.Module):
         )
         self.decoder_model(
             inputs_embeds=input_tokens,
-            use_cache=True,
             past_key_values=cache,
         )
 
@@ -664,7 +663,7 @@ class ZLMModel(nn.Module):
         all_z = []
         prev_normed_z = torch.zeros_like(noise[:, 0, :]) # [B, latent_size]
         t_iter = torch.arange(1, self.scheduler.num_timesteps).to(noise.device).flip(0)
-        for i in tqdm(range(self.z_length), desc="sampling z"):
+        for i in tqdm(range(self.z_length + 1), desc="sampling z"):
             
             # pass the previous z token through the decoder
             z_token = (
@@ -673,46 +672,48 @@ class ZLMModel(nn.Module):
             ) # [B, hidden_size]
             z_states = self.decoder_model(
                 inputs_embeds=z_token[:, None, :],
-                use_cache=True,
                 past_key_values=cache,
             )[:, -1, :] # [B, hidden_size]
 
-            # diffusion loop to sample the next z
-            z_t = noise[:, i, :] # [B, latent_size]
-            for t in t_iter:
+            # we do an extra pass to put the last z in the cache
+            if i >= self.z_length:
+                break
 
-                pred_z_0 = self.diffusion_head(
-                    z_t,
-                    t,
-                    z_states,
-                    self.scheduler,
-                ) # [B, latent_size]
-                z_t = self.scheduler.ddim_step(
-                    z_t,
-                    t,
-                    pred_z_0,
-                ) # [B, latent_size]
+            if encoded_z is None:
+                # diffusion loop to sample the next z
+                z_t = noise[:, i, :] # [B, latent_size]
+                for t in t_iter:
 
-            if encoded_z is not None:
-                z_t = encoded_z[:, i, :]
+                    pred_z_0 = self.diffusion_head(
+                        z_t,
+                        t,
+                        z_states,
+                    ) # [B, latent_size]
+                    z_t = self.scheduler.ddim_step(
+                        z_t,
+                        t,
+                        pred_z_0,
+                    ) # [B, latent_size]
+
+            else:
+                z_t = encoded_z[:, i, :] # [B, latent_size]
 
             # handle the sampled z
             all_z.append(z_t)
-            prev_normed_z = F.rms_norm(z_t, [pred_z_0.shape[-1]], eps=self.config.rms_norm_eps)
+            prev_normed_z = self.z_in_norm(z_t)
 
+        # save the z
         all_z = torch.stack(all_z, dim=1) # [B, z_length, latent_size]
 
         # sample the output tokens
         output_ids = []
-        prev_logit_token = (
-            unsqueeze_to_batch(self.decoder_z_tokens[-1], prev_normed_z) +
-            self.decoder_z_proj_in(prev_normed_z)
-        ) # [B, hidden_size]
+        prev_logit_token = expand_to_batch(
+            self.decoder_start_output_token, prev_normed_z[:, None, :]
+        )[:, 0, :] # [B, hidden_size]
         for i in tqdm(range(self.output_length), desc="sampling output"):
 
             logit_states = self.decoder_model(
                 inputs_embeds=prev_logit_token[:, None, :],
-                use_cache=True,
                 past_key_values=cache,
             )[:, -1, :] # [B, hidden_size]
 
@@ -725,6 +726,7 @@ class ZLMModel(nn.Module):
                 self.embed_tokens(next_token)
             ) # [B, hidden_size]
 
+        # stack output ids [B, output_length]
         output_ids = torch.stack(output_ids, dim=-1)
 
         return output_ids, all_z
