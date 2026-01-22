@@ -169,7 +169,7 @@ class BaseTrainer:
         lr_scheduler = get_scheduler(
             name=config.trainer.lr_scheduler.type,
             optimizer=optimizer,
-            num_warmup_steps=config.trainer.lr_scheduler.warmup_steps,
+            num_warmup_steps=config.trainer.lr_scheduler.num_warmup_steps,
             scheduler_specific_kwargs=config.trainer.lr_scheduler.kwargs,
         )
 
