@@ -280,7 +280,7 @@ class DiffusionHead(nn.Module):
             nn.Linear(config.hidden_size, config.hidden_size, bias=False) if config.diffusion_in_proj else nn.Identity()
         )
 
-        self.layers = nn.Sequential(
+        self.layers = HomogeneousSequential(
             *[
                 DiffusionHeadLayer(config)
                 for _ in range(config.num_diffusion_head_layers)
