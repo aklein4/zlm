@@ -216,7 +216,7 @@ class AdaScale(nn.Module):
         if self.do_norm:
             x = self.norm(x)
 
-        return x * self.embed(condition)
+        return x # * self.embed(condition)
 
 
 class DiffusionHeadLayer(nn.Module):
