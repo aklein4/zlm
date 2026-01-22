@@ -36,9 +36,11 @@ lr_scheduler:
 
   type: warmup_stable_decay
 
+  # get_scheduler requires this outside of kwargs
+  num_warmup_steps: 500
+
   kwargs:
 
-    num_warmup_steps: 500
     num_stable_steps: 20000
     num_decay_steps: 1000
 
