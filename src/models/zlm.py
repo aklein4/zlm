@@ -363,7 +363,7 @@ class ZLMModel(nn.Module):
                 llama,
                 config.pretrained_llama,
                 step=0,
-                strict=False,
+                strict=True,
             )
 
             safe_copy_state(llama.model, self.encoder_model, strict=False)

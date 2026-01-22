@@ -10,7 +10,7 @@ global_batch_size: 512
 max_steps: 1000000
 
 # Save a checkpoint every N steps
-checkpoint_interval: 2500 
+checkpoint_interval: 5000 
 
 
 # optimizer configuration
@@ -22,7 +22,7 @@ optimizer:
 
     lr: 1.0e-4
 
-    betas: [0.95, 0.98]
+    betas: [0.9, 0.98]
     
     eps: 1e-6
 
@@ -37,12 +37,12 @@ lr_scheduler:
   type: warmup_stable_decay
 
   # get_scheduler requires this outside of kwargs
-  num_warmup_steps: 500
+  num_warmup_steps: 1000
 
   kwargs:
 
-    num_stable_steps: 20000
-    num_decay_steps: 1000
+    num_stable_steps: 1000000
+    num_decay_steps: 5000
 
     min_lr_ratio: 0.0
 
@@ -64,8 +64,8 @@ hook_warmup_steps: 1000
 hook_wait_steps: 1000
 
 # threshold configuration
-upper_loss_threshold: 0.5
-lower_loss_threshold: 0.25
+upper_loss_threshold: 0.75
+lower_loss_threshold: 0.5
 min_lm_loss_scale: 0.01
 
 # diffusion sampling configuration
