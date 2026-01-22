@@ -34,16 +34,18 @@ optimizer:
 # Learning rate scheduler configuration
 lr_scheduler:
 
-  type: wsd
+  type: warmup_stable_decay
 
-  num_warmup_steps: 500
-  num_stable_steps: 20000
-  num_decay_steps: 1000
+  kwargs:
 
-  min_lr_ratio: 0.0
+    num_warmup_steps: 500
+    num_stable_steps: 20000
+    num_decay_steps: 1000
 
-  warmup_type: linear
-  decay_type: linear
+    min_lr_ratio: 0.0
+
+    warmup_type: linear
+    decay_type: linear
 
 
 # Defaults to clip the L2 norm of gradients to 1.0.
