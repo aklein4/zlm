@@ -415,7 +415,7 @@ class BaseTrainer:
 
         opt_aux = self.optimizer.step()
         aux.update(opt_aux)
-        self.model.zero_grad()
+        self.model.zero_grad(set_to_none=False)
 
         lr = self.lr_scheduler.get_last_lr()[0]
         self.lr_scheduler.step()

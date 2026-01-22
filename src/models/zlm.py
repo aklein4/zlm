@@ -216,7 +216,7 @@ class AdaScale(nn.Module):
         if self.do_norm:
             x = self.norm(x)
 
-        return x * self.embed(condition).detach()
+        return x * self.embed(condition)
 
 
 class DiffusionHeadLayer(nn.Module):
@@ -229,7 +229,7 @@ class DiffusionHeadLayer(nn.Module):
 
         self.norm = AdaScale(
             config.hidden_size,
-            config.num_diffusion_timesteps,
+            config.num_diffusion_timesteps-1,
             do_norm=True,
             rms_norm_eps=config.rms_norm_eps,
         )
@@ -242,7 +242,7 @@ class DiffusionHeadLayer(nn.Module):
 
         self.out_scale = AdaScale(
             config.hidden_size,
-            config.num_diffusion_timesteps,
+            config.num_diffusion_timesteps-1,
             do_norm=False,
         )
     
@@ -289,7 +289,7 @@ class DiffusionHead(nn.Module):
 
         self.out_norm = AdaScale(
             config.hidden_size,
-            config.num_diffusion_timesteps,
+            config.num_diffusion_timesteps-1,
             do_norm=True,
             rms_norm_eps=config.rms_norm_eps,
         )
@@ -312,10 +312,11 @@ class DiffusionHead(nn.Module):
         # pass through the layers
         hidden_states = self.layers(
             hidden_states,
-            timestep=timestep.float(), # xla scan only supports differentiable dtypes
+            timestep=(timestep - 1).float(), # xla scan only supports differentiable dtypes
         )
 
-        hidden_states = self.out_norm(hidden_states, timestep)
+        # remove 1 from timestep since 0 is never used (unused embedding entries can cause issues with xla)
+        hidden_states = self.out_norm(hidden_states, (timestep - 1))
         pred = self.out_proj(hidden_states)
 
         return pred
