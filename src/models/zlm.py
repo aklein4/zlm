@@ -638,6 +638,7 @@ class ZLMModel(nn.Module):
         input_ids: torch.LongTensor,
         noise: torch.FloatTensor=None,
         encoded_z: torch.FloatTensor=None,
+        temperature: float | str = "greedy",
     ):
         from transformers.cache_utils import DynamicCache
         from tqdm import tqdm
@@ -689,10 +690,16 @@ class ZLMModel(nn.Module):
                         t,
                         z_states,
                     ) # [B, latent_size]
-                    z_t = self.scheduler.ddim_step(
+                    # z_t = self.scheduler.ddim_step(
+                    #     z_t,
+                    #     t,
+                    #     pred_z_0,
+                    # ) # [B, latent_size]
+                    z_t = self.scheduler.step(
                         z_t,
                         t,
                         pred_z_0,
+                        torch.randn_like(z_t),
                     ) # [B, latent_size]
 
             else:
@@ -716,9 +723,15 @@ class ZLMModel(nn.Module):
                 inputs_embeds=prev_logit_token[:, None, :],
                 past_key_values=cache,
             )[:, -1, :] # [B, hidden_size]
-
             logits = self.lm_head(self.decoder_model.norm(logit_states))
-            next_token = torch.argmax(logits, dim=-1) # [B]
+            
+            if isinstance(temperature, str):
+                assert temperature == "greedy", "Only 'greedy' temperature string is supported"
+                next_token = torch.argmax(logits, dim=-1) # [B]
+            
+            else:
+                probs = F.softmax(logits / temperature, dim=-1) # [B, vocab_size]
+                next_token = torch.multinomial(probs, num_samples=1)[:, 0] # [B]
 
             output_ids.append(next_token)
             prev_logit_token = (
