@@ -6,6 +6,11 @@ if constants.XLA_AVAILABLE:
     import torch_xla.distributed.spmd as xs
 
 
+def batch_shard_spec(x):
+    assert x.dim() >= 1, "Input tensor must have at least 1 dimension to shard on batch."
+    return (("data", "fsdp"),) + (None,) * (x.dim() - 1)
+
+
 def shard_with_gradients(
     x: torch.Tensor,
     mesh = None,
@@ -21,7 +26,7 @@ def shard_with_gradients(
         assert mesh is not None, "No sharding mesh found."
 
     if spec is None:
-        spec = constants.BATCH_SHARD_SPEC
+        spec = batch_shard_spec(x)
 
     return xs.mark_sharding_with_gradients(
         x, mesh, spec
@@ -37,26 +42,3 @@ def maybe_shard_with_gradients(
         return shard_with_gradients(x, mesh, spec)
     else:
         return x
-
-
-def replicated_optimizer_step(
-    optimizer: torch.optim.Optimizer,
-):
-    if not constants.XLA_AVAILABLE:
-        raise RuntimeError(
-            "XLA is not available, cannot perform replicated optimizer step."
-        )
-
-    for group in optimizer.param_groups:
-        for p in group["params"]:
-            if p.grad is not None:
-
-                
-
-                p.grad = xs.all_reduce(
-                    p.grad,
-                    mesh=xs.get_global_mesh(),
-                    reduce_op="sum",
-                )   
-
-    return optimizer.step()
