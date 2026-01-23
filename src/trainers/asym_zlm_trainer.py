@@ -10,7 +10,6 @@ from models.zlm import ZLMModel
 from utils.scheduling_utils import linear_warmup
 from utils.torch_utils import scale_gradient
 from utils.loss_utils import lm_loss_fn, lm_acc_fn
-from utils.sharding_utils import shard_with_gradients
 
 
 class AsymZLMTrainer(BaseTrainer):
@@ -97,38 +96,17 @@ class AsymZLMTrainer(BaseTrainer):
         )
 
         # we pass z through the decoder TWICE in this version
-        # [:bs] for lm loss, [bs:] for kl loss
-        input_for_model_2 = shard_with_gradients(
-            input_for_model.repeat(2, 1)
+        logits, _ = self.model.decode(
+            input_for_model, output_for_model,
+            scale_gradient(z, enc_lm_grad_scale),
+            input_mask=input_mask,
+            output_mask=output_mask,
         )
-        output_for_model_2 = shard_with_gradients(
-            output_for_model.repeat(2, 1)
-        )
-        input_mask_2 = shard_with_gradients(
-            input_mask.repeat(2, 1)
-        )
-        output_mask_2 = shard_with_gradients(
-            output_mask.repeat(2, 1)
-        )
-        z_2 = shard_with_gradients(
-            torch.cat(
-                [
-                    scale_gradient(z, enc_lm_grad_scale),
-                    scale_gradient(z, enc_kl_grad_scale)
-                ],
-                dim=0
-            )
-        )
-        logits, z_states = self.model.decode(
-            input_for_model_2, output_for_model_2, z_2,
-            input_mask=input_mask_2,
-            output_mask=output_mask_2,
-        )
-        logits = shard_with_gradients(
-            logits[:bs]
-        )
-        z_states = shard_with_gradients(
-            z_states[bs:]
+        _, z_states = self.model.decode(
+            input_for_model, output_for_model,
+            scale_gradient(z, enc_kl_grad_scale),
+            input_mask=input_mask,
+            output_mask=output_mask,
         )
 
         # get the lm loss metrics
