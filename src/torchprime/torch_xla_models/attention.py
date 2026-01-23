@@ -15,6 +15,11 @@ if constants.XLA_AVAILABLE:
   )
   import torchprime.utils.kernel_utils as kernel_utils
   import torchprime.utils.parallelism_utils as parallelism_utils
+else:
+  try:
+    from flash_attn import flash_attn_func
+  except ImportError:
+    flash_attn_func = None
 
 
 if constants.XLA_AVAILABLE:
@@ -208,6 +213,18 @@ class AttentionModule(nn.Module):
             partition_spec=self.partition_spec,
           )
         attn_output = attn_output[:, :, :og_len, :]
+
+      case "gpu_flash_attention":
+        assert flash_attn_func is not None, (
+          "flash_attn package is required for GPU Flash Attention"
+        )
+
+        attn_output = flash_attn_func(
+          query_states.transpose(1, 2).to(torch.bfloat16),  # [B, q_len, num_heads, head_dim]
+          key_states.transpose(1, 2).to(torch.bfloat16),    # [B, kv_len, num_heads, head_dim]
+          value_states.transpose(1, 2).to(torch.bfloat16),  # [B, kv_len, num_heads, head_dim]
+          causal=self.is_causal,
+        ).transpose(1, 2).to(query_states.dtype)  # [B, num_heads, q_len, head_dim]
 
       case _:
         attn_weights = torch.matmul(

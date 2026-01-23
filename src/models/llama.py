@@ -21,6 +21,7 @@
 import torch
 from omegaconf import DictConfig
 from torch import nn
+import torch.nn.functional as F
 from transformers.activations import ACT2FN
 from transformers.utils import logging
 
@@ -49,9 +50,15 @@ class LlamaRMSNorm(nn.Module):
     def forward(self, hidden_states):
         input_dtype = hidden_states.dtype
         hidden_states = hidden_states.to(torch.float32)
-        variance = hidden_states.pow(2).mean(-1, keepdim=True)
-        hidden_states = hidden_states * torch.rsqrt(variance + self.variance_epsilon)
-        return self.weight * hidden_states.to(input_dtype)
+        
+        out = F.rms_norm(
+            hidden_states,
+            self.weight.shape,
+            weight=self.weight,
+            eps=self.variance_epsilon,
+        )
+        
+        return out.to(input_dtype)
 
 
 class LlamaRotaryEmbedding(nn.Module):

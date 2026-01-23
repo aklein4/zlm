@@ -47,7 +47,13 @@ def load_checkpoint(
     state_path = os.path.join(subfolder_path, "model.pt")
     state_dict = torch.load(state_path, map_location="cpu")
 
-    model.load_state_dict(state_dict, strict=strict)
+    # remove and xla specific keys
+    cleaned_state_dict = {
+        k.replace("_orig_mod.", ""): v
+        for k, v in state_dict.items()
+    }
+
+    model.load_state_dict(cleaned_state_dict, strict=strict)
 
     if remove_folder:
         shutil.rmtree(subfolder_path, ignore_errors=True)
@@ -84,7 +90,13 @@ def load_checkpoint_state(
     state_path = os.path.join(subfolder_path, "model.pt")
     state_dict = torch.load(state_path, map_location="cpu")
 
-    model.load_state_dict(state_dict, strict=strict)
+    # remove and xla specific keys
+    cleaned_state_dict = {
+        k.replace("_orig_mod.", ""): v
+        for k, v in state_dict.items()
+    }
+
+    model.load_state_dict(cleaned_state_dict, strict=strict)
 
     if remove_folder:
         shutil.rmtree(subfolder_path, ignore_errors=True)

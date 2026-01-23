@@ -6,7 +6,7 @@ dataset:
     kwargs:
 
         split: train
-        name: all
+        name: sft_no_text
 
         streaming: true
 

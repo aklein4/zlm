@@ -10,7 +10,7 @@ global_batch_size: 512
 max_steps: 1000000 
 
 # Save a checkpoint every N steps
-checkpoint_interval: 1000000 
+checkpoint_interval: 1000000
 
 
 # optimizer configuration
@@ -20,7 +20,7 @@ optimizer:
 
   kwargs:
 
-    lr: 3.0e-4
+    lr: 1.0e-4
 
     betas: [0.9, 0.95]
     
@@ -36,7 +36,7 @@ lr_scheduler:
 
   type: linear
 
-  warmup_steps: 500
+  warmup_steps: 100
   training_steps: 1000000
   
 

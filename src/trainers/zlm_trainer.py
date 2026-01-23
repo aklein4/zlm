@@ -11,7 +11,6 @@ from utils.scheduling_utils import linear_warmup
 from utils.torch_utils import scale_gradient
 from utils.loss_utils import lm_loss_fn, lm_acc_fn
 
-
 class ZLMTrainer(BaseTrainer):
     
     model: ZLMModel
@@ -63,14 +62,9 @@ class ZLMTrainer(BaseTrainer):
 
 
     def forward(self, input_ids, output_ids):
-
-        parameter_nan = torch.tensor([False], device=self.device, dtype=torch.bool)
-        for p in self.model.parameters():
-            parameter_nan = parameter_nan | (~torch.isfinite(p)).any()
-        parameter_nan = parameter_nan.long()
-
         pad_token_id = self.model.config.pad_token_id
 
+        # prepare inputs
         input_mask = (input_ids != pad_token_id)
         output_mask = (output_ids != pad_token_id)
 
@@ -88,7 +82,7 @@ class ZLMTrainer(BaseTrainer):
         # encode and decode
         z, mu = self.model.encode(
             input_for_model, output_for_model,
-            input_mask=input_mask, output_mask=output_mask
+            input_mask=input_mask, output_mask=output_mask,
         )
 
         logit_grad_scale = {}
@@ -98,7 +92,6 @@ class ZLMTrainer(BaseTrainer):
             input_mask=input_mask,
             output_mask=output_mask,
         )
-        logits = torch.nan_to_num(logits, nan=0.0, posinf=0.0, neginf=0.0)
 
         # get the lm loss metrics
         lm_loss = lm_loss_fn(
@@ -117,82 +110,33 @@ class ZLMTrainer(BaseTrainer):
         )
 
         # calculate logit grad scale
-        lm_loss_scale = self.config.trainer.min_lm_loss_scale + (1 - self.config.trainer.min_lm_loss_scale) * torch.clip(
-            (lm_loss - self.config.trainer.lower_loss_threshold) / (self.config.trainer.loss_threshold - self.config.trainer.lower_loss_threshold),
-            0.0, 1.0
+        lm_loss_scale = self.config.trainer.min_lm_loss_scale + (1 - self.config.trainer.min_lm_loss_scale) * linear_warmup(
+            lm_loss - self.config.trainer.lower_loss_threshold,
+            self.config.trainer.upper_loss_threshold - self.config.trainer.lower_loss_threshold,
         ).reshape(1)
         logit_grad_scale["value"] = lm_loss_scale
 
-        return lm_loss, {
-            "z_nan": (~torch.isfinite(z)).any().long(),
-            "parameter_nan": parameter_nan,
-            "logit_nan": (~torch.isfinite(logits)).any().long(),
-        }
-
         # update hooking status
-        self.hooked = self.hooked | (lm_loss < self.config.trainer.loss_threshold).reshape(1)
+        self.hooked = self.hooked | (lm_loss < self.config.trainer.upper_loss_threshold).reshape(1)
         self.hook_step += self.hooked.long()
 
-        kl_grad_scale = linear_warmup(self.hook_step.float(), self.config.trainer.hook_warmup_steps)
-        full_grad_scale = linear_warmup(self.hook_step.float() - self.config.trainer.hook_wait_steps, self.config.trainer.hook_warmup_steps)
+        # gradient scales
+        kl_grad_scale = linear_warmup(
+            self.hook_step.float(),
+            self.config.trainer.hook_warmup_steps
+        ) # only used in kl_grad_weights
+        full_grad_scale = linear_warmup(
+            self.hook_step.float() - self.config.trainer.hook_wait_steps,
+            self.config.trainer.hook_warmup_steps
+        )
         kl_grad_weights = {}
-
-        # def scan_fn(carry, t_curr):
-        #     t_curr = t_curr.long()
-
-        #     noise = torch.randn_like(z)
-
-        #     z_t = self.model.scheduler.add_noise(
-        #         mu, t_curr, noise
-        #     )
-
-        #     pred_z_0 = self.model.diffusion_head(
-        #         scale_gradient(z_t, kl_grad_weights),
-        #         t_curr,
-        #         scale_gradient(z_states, full_grad_scale),
-        #         self.model.scheduler,
-        #     )
-        #     kl = self.model.scheduler.kl(
-        #         scale_gradient(mu, kl_grad_weights),
-        #         t_curr,
-        #         pred_z_0,
-        #         dim=-1
-        #     )
-
-        #     uncond_pred_z_0 = self.model.uncond_diffusion_head(
-        #         z_t.detach(),
-        #         t_curr,
-        #         self.model.uncond_tokens[None, :, :],
-        #         self.model.scheduler,
-        #     )
-        #     uncond_kl = self.model.scheduler.kl(
-        #         mu.detach(),
-        #         t,
-        #         uncond_pred_z_0,
-        #         dim=-1
-        #     )
-
-        #     return carry, torch.stack([kl, uncond_kl], dim=-1)
-
-        # t = torch.randint(
-        #     low=1,
-        #     high=self.model.config.num_diffusion_timesteps,
-        #     size=(self.config.trainer.num_diffusion_samples, *z.shape[:-1]),
-        #     device=input_ids.device,
-        #     dtype=torch.long,
-        # )
-
-        # _, kl_uncond_kl = scan(
-        #     scan_fn,
-        #     t.clone().float(),
-        #     t.float(),
-        # )
 
         # get the kls by diffusion sampling
         kls = 0.0
         uncond_kls = 0.0
         for i in range(self.config.trainer.num_diffusion_samples):
 
+            # sample z_t
             t = torch.randint(
                 low=1,
                 high=self.model.config.num_diffusion_timesteps,
@@ -202,16 +146,15 @@ class ZLMTrainer(BaseTrainer):
             )
             noise = torch.randn_like(z)
 
-            # TODO: does having gradient going into alpha from here cause the rising alpha issue?
             z_t = self.model.scheduler.add_noise(
                 mu, t, noise
             )
 
+            # conditional kl
             pred_z_0 = self.model.diffusion_head(
                 scale_gradient(z_t, kl_grad_weights),
                 t,
                 scale_gradient(z_states, full_grad_scale),
-                self.model.scheduler,
             )
             kl = self.model.scheduler.kl(
                 scale_gradient(mu, kl_grad_weights),
@@ -219,26 +162,26 @@ class ZLMTrainer(BaseTrainer):
                 pred_z_0,
                 dim=-1
             )
-
-            uncond_pred_z_0 = self.model.uncond_diffusion_head(
-                z_t.detach(),
-                t,
-                self.model.uncond_tokens[None, :, :],
-                self.model.scheduler,
-            )
-            uncond_kl = self.model.scheduler.kl(
-                mu.detach(),
-                t,
-                uncond_pred_z_0,
-                dim=-1
-            )
-
             kls = kls + kl
-            uncond_kls = uncond_kls + uncond_kl
+
+            # unconditional kl
+            if i < self.config.trainer.num_uncond_diffusion_samples:
+                uncond_pred_z_0 = self.model.uncond_diffusion_head(
+                    z_t.detach(),
+                    t,
+                    self.model.uncond_tokens[None, :, :],
+                )
+                uncond_kl = self.model.scheduler.kl(
+                    mu.detach(),
+                    t,
+                    uncond_pred_z_0,
+                    dim=-1
+                )
+                uncond_kls = uncond_kls + uncond_kl
 
         # mean over samples and sum over batch to get [Z,]
         kl = kls.sum(0) * (self.model.config.num_diffusion_timesteps - 1) / self.config.trainer.num_diffusion_samples
-        uncond_kl = uncond_kls.sum(0) * (self.model.config.num_diffusion_timesteps - 1) / self.config.trainer.num_diffusion_samples
+        uncond_kl = uncond_kls.sum(0) * (self.model.config.num_diffusion_timesteps - 1) / self.config.trainer.num_uncond_diffusion_samples
 
         denom = (output_ids != pad_token_id).float().sum() + self.model.config.rms_norm_eps
 
@@ -268,11 +211,6 @@ class ZLMTrainer(BaseTrainer):
             uncond_kl_per_token
         )
 
-        parameter_nan = torch.tensor([False], device=loss.device, dtype=torch.bool)
-        for p in self.model.parameters():
-            parameter_nan = parameter_nan | (~torch.isfinite(p)).any()
-        parameter_nan = parameter_nan.long()
-
         aux = {
             "lm_loss": lm_loss,
             "lm_acc": lm_acc,
@@ -291,9 +229,61 @@ class ZLMTrainer(BaseTrainer):
             "elbo": elbo,
             "hooked": self.hooked,
             "hook_step": self.hook_step,
-            "parameter_nan": parameter_nan,
             "atom_count": (output_ids != pad_token_id).long().sum(),
         }
 
         return loss, aux
     
+
+    # def scan_kl(self):
+
+    #     def scan_fn(carry, t_curr):
+    #         t_curr = t_curr.long()
+
+    #         noise = torch.randn_like(z)
+
+    #         z_t = self.model.scheduler.add_noise(
+    #             mu, t_curr, noise
+    #         )
+
+    #         pred_z_0 = self.model.diffusion_head(
+    #             scale_gradient(z_t, kl_grad_weights),
+    #             t_curr,
+    #             scale_gradient(z_states, full_grad_scale),
+    #             self.model.scheduler,
+    #         )
+    #         kl = self.model.scheduler.kl(
+    #             scale_gradient(mu, kl_grad_weights),
+    #             t_curr,
+    #             pred_z_0,
+    #             dim=-1
+    #         )
+
+    #         uncond_pred_z_0 = self.model.uncond_diffusion_head(
+    #             z_t.detach(),
+    #             t_curr,
+    #             self.model.uncond_tokens[None, :, :],
+    #             self.model.scheduler,
+    #         )
+    #         uncond_kl = self.model.scheduler.kl(
+    #             mu.detach(),
+    #             t,
+    #             uncond_pred_z_0,
+    #             dim=-1
+    #         )
+
+    #         return carry, torch.stack([kl, uncond_kl], dim=-1)
+
+    #     t = torch.randint(
+    #         low=1,
+    #         high=self.model.config.num_diffusion_timesteps,
+    #         size=(self.config.trainer.num_diffusion_samples, *z.shape[:-1]),
+    #         device=input_ids.device,
+    #         dtype=torch.long,
+    #     )
+
+    #     _, kl_uncond_kl = scan(
+    #         scan_fn,
+    #         t.clone().float(),
+    #         t.float(),
+    #     )

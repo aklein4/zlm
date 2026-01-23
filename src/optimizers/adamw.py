@@ -64,6 +64,9 @@ class AdamW(Optimizer):
         if closure is not None:
             loss = closure()
 
+        update_nan = torch.tensor([False], device=self.param_groups[0]['params'][0].device)
+        pre_param_nan = torch.tensor([False], device=self.param_groups[0]['params'][0].device)
+        post_param_nan = torch.tensor([False], device=self.param_groups[0]['params'][0].device)
         for group in self.param_groups:
             for p in group["params"]:
                 
@@ -121,6 +124,9 @@ class AdamW(Optimizer):
                 if group["update_clip"] is not None:
                     update = torch.clamp(update, -group["update_clip"], group["update_clip"])
 
+                update_nan = update_nan | (~torch.isfinite(update)).any()
+                pre_param_nan = pre_param_nan | (~torch.isfinite(p)).any()
+
                 p.add_(update, alpha=-step_size)
 
                 # Just adding the square of the weights to the loss function is *not*
@@ -134,4 +140,10 @@ class AdamW(Optimizer):
                 if group["weight_decay"] > 0.0:
                     p.add_(p, alpha=-group["lr"] * group["weight_decay"])
 
-        return loss
+                post_param_nan = post_param_nan | (~torch.isfinite(p)).any()
+
+        return {
+            "update_nan": update_nan.long(),
+            "pre_param_nan": pre_param_nan.long(),
+            "post_param_nan": post_param_nan.long(),
+        }

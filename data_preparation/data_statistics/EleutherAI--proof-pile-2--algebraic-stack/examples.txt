@@ -1,0 +1,754 @@
+
+
+ ========== Example 0 ==========
+
+ --- Input --- 
+
+[[[```c++
+/*=============================================================================
+Copyright 2020 Syed Ali Hasan <alihasan9922@gmail.com>
+
+Distributed under the Boost Software License, Version 1.0. (See accompanying
+file License.txt or copy at https://www.boost.org/LICENSE_1_0.txt)
+=============================================================================*/
+
+#ifndef BOOST_ASTRONOMY_ECLIPTIC_COORD_HPP
+#define BOOST_ASTRONOMY_ECLIPTIC_COORD_HPP
+
+#include <iostream>
+#include <boost/static_assert.hpp>
+#include <boost/geometry/core/cs.hpp>
+#include <boost/units/get_dimension.hpp>
+#include <boost/geometry/geometries/point.hpp>
+#include <boost/units/systems/si/plane_angle.hpp>
+#include <boost/units/systems/si/dimensionless.hpp>
+#include <boost/units/physical_dimensions/plane_angle.]]]
+
+ --- Output --- 
+
+[[[hpp>
+#include <boost/astronomy/coordinate/coord_sys/coord_sys.hpp>
+
+/**
+ * The plane containing the Earth’s orbit around the Sun is called
+ * the ecliptic and the other planets in our Solar System also move
+ * in orbits close to this plane.
+ *
+ * When making calculations on objects in the Solar System it is
+ * therefore often convenient to define positions with respect to
+ * the ecliptic, that is, to use the ecliptic coordinate system.
+ *
+ * Ecliptic Latitude
+ * The ecliptic plane is extended until it intersects the celestial
+ * sphere to create an “ecliptic equator” as the reference point from
+ * which Ecliptic Latitudes are measured. The Ecliptic Latitude, denoted
+ * by β, is the angular distance that an object P lies above or below the
+ * ecliptic plane and falls within the range ±90◦.
+ * Latitudes above the ecliptic plane are positive angles while latitudes
+ * below the ecliptic plane are negative angles. An object, such as the Sun,
+ * whose orbit lies entirely within the ecliptic plane has an ecliptic latitude
+ * of 0◦.
+ *
+ * Ecliptic Longitude
+ * The Ecliptic Longitude, designated by λ, measures how far away an object is
+ * from the First Point of Aries. The Ecliptic Longitude is in the range [0◦, 360◦]
+ * and measured along the ecliptic toward the First Point of Aries.
+ */
+
+namespace boost { namespace astronomy { namespace coordinate {
+
+namespace bu = boost::units;
+namespace bg = boost::geometry;
+
+template
+<
+    typename CoordinateType = double,
+    typename LatQuantity = bu::quantity<bu::si::plane_angle, CoordinateType>,
+    typename LonQuantity = bu::quantity<bu::si::plane_angle, CoordinateType>
+>
+struct ecliptic_coord : public coord_sys
+    <2, bg::cs::spherical<bg::radian>, CoordinateType>
+{
+  ///@cond INTERNAL
+  BOOST_STATIC_ASSERT_MSG(
+      ((std::is_same<typename bu::get_dimension<LatQuant]]]
+
+ ========== Example 1 ==========
+
+ --- Input --- 
+
+[[[```python
+import chainerrl
+import chainer
+import chainer.functions as F
+import chainer.links as L
+import numpy as np
+import os
+from os.path import expanduser
+
+class QFunction(chainer.Chain):
+	def __init__(self, n_history=3, n_action=4):
+		initializer = chainer.initializers.HeNormal()
+		super(QFunction, self).__init__(
+			conv1=L.Convolution2D(n_history, 32, ksize=8, stride=4, nobias=False, initialW=initializer),
+			conv2=L.Convolution2D(32, 64, ksize=3, stride=2, nobias=False, initialW=initializer),
+			conv3=L.Convolution2D(64, 64, ksize=3, stride=1, nobias=False, initialW=initializer),
+			conv4=L.Linear(960, 512, initialW=initializer),
+			fc5=L.Linear(512, n_action, initialW=]]]
+
+ --- Output --- 
+
+[[[np.zeros((n_action, 512), dtype=np.float32))
+		)
+
+	def __call__(self, x, test=False):
+		s = chainer.Variable(x)
+		h1 = F.relu(self.conv1(s))
+		h2 = F.relu(self.conv2(h1))
+		h3 = F.relu(self.conv3(h2))
+		h4 = F.relu(self.conv4(h3))
+		h5 = self.fc5(h4)
+		h = chainerrl.action_value.DiscreteActionValue(h5)
+		return h
+
+class reinforcement_learning:
+	def __init__(self, n_history=3, n_action=4):
+		self.q_func = QFunction(n_history, n_action)
+		try:
+			self.q_func.to_gpu()
+		except:
+			print("No GPU")
+		self.optimizer = chainer.optimizers.Adam(eps=1e-2)
+		self.optimizer.setup(self.q_func)
+		self.gamma = 0.95
+		self.n_action = n_action
+		self.explorer = chainerrl.explorers.ConstantEpsilonGreedy(
+			epsilon=0.1, random_action_func=self.action_space_sample)
+		self.replay_buffer = chainerrl.replay_buffer.ReplayBuffer(capacity=10 ** 4)
+		self.phi = lambda x: x.astype(np.float32, copy=False)
+		self.agent = chainerrl.agents.DoubleDQN(
+			self.q_func, self.optimizer, self.replay_buffer, self.gamma, self.explorer,
+			minibatch_size=4, replay_start_size=100, update_interval=1,
+			target_update_interval=100, phi=self.phi)
+
+		home = expanduser("~")
+		if os.path.isdir(home + '/agent'):
+			self.agent.load('agent')
+			print('agent LOADED!!]]]
+
+ ========== Example 2 ==========
+
+ --- Input --- 
+
+[[[```python
+from operator import le
+import cv2
+import numpy as np 
+from helpers.utils import getFirstFrame
+from helpers.pointdeletion import PointFilter
+
+def drawFeaturePoints(videoLeft, videoRight):
+
+    # detect all the matching points
+    points = detectMatchingPoints(videoLeft, videoRight)
+
+    # create the filter event handler object
+    pointFilter = PointFilter(points)
+
+    # create the window to show
+    winName = "Frame"
+    cv2.namedWindow(winName)
+
+    # register the mouse callback function
+    cv2.setMouseCallback(winName, pointFilter.deletePoints)
+
+    # read the first frame
+    cap = cv2.VideoCapture(videoLeft)
+    frame = cap.read()[1]
+    frameCopy = frame.copy()
+
+    # draw the keypoints on the first frame
+    for point in points:
+        cv2.circle(frame, tuple(point), 5, (0,255,0), -1)
+    
+    # delete all the unnecessary points
+    while True:
+        # update the points list
+        points = pointFilter._points
+
+        # draw the keypoints on the frame
+        for point in points:
+            cv2]]]
+
+ --- Output --- 
+
+[[[.circle(frame, tuple(point), 5, (0,255,0), -1)
+
+        # make titles for the commands
+        cv2.putText(frame, "(ESC) to continue.", (30,30), cv2.FONT_HERSHEY_SIMPLEX, 0.6, (0,0,255), 2)
+        cv2.putText(frame, "(Right mouse click) delete point", (30,60), cv2.FONT_HERSHEY_SIMPLEX, 0.6, (0,0,255), 2)
+
+        # show the picture
+        cv2.imshow(winName, frame)
+
+        # capture the inputs
+        key = cv2.waitKey(1)
+        if key == 27:
+            break
+
+        # refresh the image
+        frame = frameCopy.copy()
+
+    # destroy the windows
+    cap.release()
+    cv2.destroyWindow(winName)
+
+    # return the filtered list of points
+    return points
+
+def detectMatchingPoints(videoLeft, videoRight):
+
+    # grab the first frames
+    firstFrameLeft = getFirstFrame(videoLeft, "left")
+    firstFrameRight = getFirstFrame(videoRight, "right")
+
+    # read the frames as images
+    imageLeft = cv2.imread(firstFrameLeft, 0)
+    imageRight = cv2.imread(firstFrameRight, 0)
+
+    # Create the SIFT detector and descriptor
+    sift = cv2.SIFT_create()
+
+    # Find the keypoints and descriptors with SIFT
+    keyPointsLeft, descriptorLeft = sift.detectAndCompute(imageLeft,None)
+    keyPointsRight, descriptorRigth = sift.detectAndCompute(imageRight,None)
+
+    # FLANN matcher parameters
+    FLANN_INDEX_KDTREE = 1
+    INDEX_PARAMS = dict(algorithm = FLANN_INDEX_KDTREE, trees = 5)
+    SEARCH_PARAMS = dict(checks=50)
+
+    # Create the FLANN based matcher object, used to get all the matching keypoints of the two images
+    flann = cv2.FlannBasedMatcher(INDEX_PARAMS, SEARCH_PARAMS)
+    matches = flann.knnMatch(descriptorLeft, descriptorRig]]]
+
+ ========== Example 3 ==========
+
+ --- Input --- 
+
+[[[```julia
+using Flux
+
+struct MLP
+    layers
+end
+  
+@Flux.functor MLP
+
+"""
+    MLP(inopts::Int, layeropts::Union{Int,Pair{Int}}...; activation = relu, outactivation = nothing)
+
+Build a MultiLayer Perceptron.
+
+# Examples
+```jldoctest
+julia> model = MLP(3, 5, 10 => [:act => relu, :dropout => 0.2], 5 => [:act => relu, :batchnorm],  2; activation = σ, outactivation = identity)
+MLP(Chain(Dense(3, 5, σ), Dense(5, 10, relu), Dropout{Float64}(0.2, Colon(), true), Dense(10, 5, relu), BatchNorm(5), Dense(5, 2)))
+```
+"""
+function MLP(inopts::Int, layeropts::Union{Int,Pair{Int}}...; activation = relu, outactivation = nothing)
+    outactivation = outactivation === nothing ? activation :]]]
+
+ --- Output --- 
+
+[[[ outactivation
+    function extract_layeropts(l, i)
+        act = i < length(layeropts) ? activation : outactivation
+        drop = 0.0
+        bn = false
+        if l isa Pair{Int}
+            opts = last(l)
+            opts = opts isa Union{AbstractArray,Tuple} ? opts : [opts]
+            for o in opts
+                o = o isa Symbol ? o => true : o
+                if first(o) == :act
+                    act = last(o)
+                elseif first(o) == :dropout
+                    drop = last(o)
+                elseif first(o) == :batchnorm
+                    bn = true
+                else
+                    error("unknown layer option: $(first(o))")
+                end
+            end
+        end
+        (size = first(l), activation = act, batchnorm = bn, dropout = drop)
+    end
+    
+    layers = []
+    nprev = inopts
+    for (i, l) in enumerate(layeropts)
+        opts = extract_layeropts(l, i)
+        push!(layers, Dense(nprev, opts.size, opts.activation))
+        opts.batchnorm && push!(layers, BatchNorm(opts.size))
+        opts.dropout > 0.0 && push!(layers, Dropout(opts.dropout))
+        nprev = first(l)
+    end
+    MLP(Chain(layers...))
+end
+
+
+"""
+    (m::MLP)(x::AbstractArray)
+
+Evaluate MLP.
+
+# Examples
+```jldoctest
+julia> using Random; Random.seed!(1);
+
+julia> X = randn(Float32, 3, 4)
+3×4 Array{Float32,2}:
+  0.297288  -0.0104452   2.29509   0.431422
+  0.382396  -0.839027   -2.26709   0.583708
+ -0.597634   0.311111    0.529966  0.963272
+
+julia> model = MLP(3, ]]]
+
+ ========== Example 4 ==========
+
+ --- Input --- 
+
+[[[```fortran
+c
+c-----------------------------------------------------------------------
+c subroutine: iftaoh
+c compute idft for real, antisymmetric, odd harmonic, n-point sequence
+c using n/4-point fft
+c antisymmetric sequence means x(m)=-x(n-m), m=1,...,n/2-1
+c odd harmonic means x(2*k)=0, all k, where x(k) is the dft of x(m)
+c x(m)has the property x(m)=x(n/2-m), m=0,1,...,n/4-1,  x(0)=0
+c note: index m is sequence index--not fortran index
+c-----------------------------------------------------------------------
+c
+      subroutine iftaoh(x, n, y)
+      dimension x(1), y(1)
+c
+c  x = real array which on input contains the n/4 imaginary points
+c      of the odd harmonics of the transform of the original time
+c      sequence--i.e. the zero valued real parts are not input nor
+c      are the zero-valued even harmonics
+c      on output x contains the]]]
+
+ --- Output --- 
+
+[[[ first (n/4+1) points of the original
+c      time sequence (antisymmetrical)
+c  n = true size of input
+c  y = scratch array of size n/4+2
+c
+c
+c handle n = 2 and n = 4 cases separately
+c
+      if (n.gt.4) go to 20
+      if (n.eq.4) go to 10
+c
+c for n=2  assume x(1)=0, x(2)=0, compute idft directly
+c
+      x(1) = 0.
+      return
+c
+c for n=4, assume x(1)=x(3)=0, x(2)=-x(4)=x0, compute idft directly
+c
+  10  x(2) = -x(1)/2.
+      x(1) = 0.
+      return
+c
+c code for values of n which are multiples of 8
+c
+  20  twopi = 8.*atan(1.0)
+      no2 = n/2
+      no4 = n/4
+      no8 = n/8
+      tpn = twopi/float(n)
+c
+c scramble original dft (x(k)) to give y(k)
+c use recursion to give sin multipliers
+c
+      cosi = cos(tpn)
+      sini = sin(tpn)
+      cosd = cos(tpn*2.)
+      sind = sin(tpn*2.)
+      do 30 i=1,no8
+        ind = 2*i
+        ind1 = no4 + 1 - i
+        ak = (x(i)-x(ind1))/2.
+        bk = -(x(i)+x(ind1))
+        y(ind) = ak
+        y(ind-1) = bk*sini
+        temp = cosi*cosd - sini*sind
+        sini = cosi*sind + sini*cosd
+        cosi = temp
+  30  continue
+c
+c the sequence y(k) is an odd harmonic sequence
+c use subroutine iftohm to give y(m)
+c
+      call iftohm(y, no2)
+c
+c form x sequence from y sequence
+c
+      x(]]]
+
+ ========== Example 5 ==========
+
+ --- Input --- 
+
+[[[```python
+import sys
+sys.path.append(".")
+
+import py
+
+from sympy import *
+from sympy.core.basic import S # Use Singleton comparisons.
+Pi = pi
+
+## sympy/modules/polynomials/base.py
+
+def test_Polynomial():
+    x = Symbol("x")
+    y = Symbol("y")
+    z = Symbol('z')
+    f = Polynomial(x+2)
+    g = Polynomial(y**2-1)
+    h = f + g
+    assert f.var == [x]
+    assert f.coeffs == ((1, 1), (2, 0))
+    assert str(f) == "2 + x"
+    assert repr(f) == "Polynomial(2 + x, ((1, 1), (2, 0)), [x], 'grevlex')"
+    assert f == 2 + x
+    assert f == Polynomial(None, f.coeffs, f.var, f.order)
+    assert f.nth_coeff(0) == 2
+    assert f.nth_coeff(2) == 0
+    assert h.]]]
+
+ --- Output --- 
+
+[[[var == [x, y]
+    assert h.coeffs == ((1, 0, 2), (1, 1, 0), (1, 0, 0))
+    h = f*Polynomial(y, var=x)
+    assert h.var == [x]
+    assert h.coeffs == ((y, 1), (2*y, 0))
+    h = f*y
+    assert h == (x + 2)*y
+    assert not isinstance(h, Polynomial)
+    h = Polynomial(h, var=y)
+    assert h.var == [y]
+    assert h.coeffs == ((2+x, 1),)
+    assert Polynomial(1, var=x).diff(x) == Polynomial(0, var=x)
+    assert Polynomial(x**3*y).diff(x) == Polynomial(3*x**2*y)
+    assert Polynomial(coeffs=((Integer(1), Integer(1)),), var=x).diff(x) \
+           == Polynomial(1, var=x)
+    assert Polynomial(x**2 + y**2)(3,-4) == 25
+    assert Polynomial(y*x)(-z, z) == -z**2
+
+    #TODO better test that differs between all orders ?
+    from sympy import sin
+    assert Polynomial(1).coeffs == ((1,),)
+    assert Polynomial(x).coeffs == ((1, 1),)
+    assert Polynomial(x**2+y**3, order='lex').coeffs \
+                   == ((1, 2, 0), (1, 0, 3))
+    assert Polynomial(x**2+y**3, var=[y, x]).coeffs == ((1,3,0), (1,0,2))
+    assert Polynomial(x*y).coeffs == ((1, 1, 1),)
+    assert Polynomial(x**2*y**4 + sin(z)*x**3 + x*y**5,
+                      var=[x, y], order='lex').coeffs \
+           == ((sin(z), 3, 0), (1, 2, 4), (1, 1, 5))
+    assert Polynomial(x**2*y**4 + sin]]]
+
+ ========== Example 6 ==========
+
+ --- Input --- 
+
+[[[```tex
+              
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% Beamer Presentation
+% LaTeX Template
+% Version 1.0 (10/11/12)
+%
+% This template has been downloaded from:
+% http://www.LaTeXTemplates.com
+%
+% License:
+% CC BY-NC-SA 3.0 (http://creativecommons.org/licenses/by-nc-sa/3.0/)
+%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+%----------------------------------------------------------------------------------------
+%   PACKAGES AND THEMES
+%----------------------------------------------------------------------------------------
+
+\documentclass[xelatex]{beamer}
+
+\usetheme{UU}
+\framenumbering
+
+\usepackage{graphicx} % Allows including images
+\usepackage{booktabs} % Allows the use of \toprule, \midrule and \bottomrule in tables
+
+%----------------------------------------------------------------------------------------
+%   TITLE PAGE
+%----------------------------------------------------------------------------------------
+
+\title[Short title]{Main Topic } % The short title appears at the bottom of every slide, the full title is only on]]]
+
+ --- Output --- 
+
+[[[ the title page
+
+\author{John Smith} % Your name
+\institute[UCLA] % Your institution as it will appear on the bottom of every slide, may be shorthand to save space
+{
+University of California \\ % Your institution for the title page
+\medskip
+\textit{john@smith.com} % Your email address
+}
+\date{\today} % Date, can be changed to a custom date
+
+\begin{document}
+
+\begin{frame}
+\titlepage % Print the title page as the first slide
+\end{frame}
+
+\begin{frame}
+\frametitle{Overview} % Table of contents slide, comment this block out to remove it
+\tableofcontents % Throughout your presentation, if you choose to use \section{} and \subsection{} commands, these will automatically be printed on this slide as an overview of your presentation
+\end{frame}
+
+%----------------------------------------------------------------------------------------
+%   PRESENTATION SLIDES
+%----------------------------------------------------------------------------------------
+
+%------------------------------------------------
+\section{First Section} % Sections can be created in order to organize your presentation into discrete blocks, all sections and subsections are automatically printed in the table of contents as an overview of the talk
+%------------------------------------------------
+
+\subsection{Subsection Example} % A subsection can be created just before a set of slides with a common theme to further break down your presentation into chunks
+
+\begin{frame}
+\frametitle{Paragraphs of Text}
+Sed iaculis dapibus gravida. Morbi sed tortor erat, nec interdum arcu. Sed id lorem lectus. Quisque viverra augue id sem ornare non aliquam nibh tristique. Aenean in ligula nisl. Nulla sed tellus ipsum. Donec vestibulum ligula non lorem vulputate fermentum accumsan neque mollis.\\~\\
+
+Sed diam enim, sagittis nec condimentum sit amet, ullamcorper sit amet libero. Aliquam vel dui orci, a porta odio. Nullam id suscipit ipsum. Aenean lobortis commodo sem, ut commodo leo gravida vitae. Pellentesque vehicula ante iacul]]]
+
+ ========== Example 7 ==========
+
+ --- Input --- 
+
+[[[```python
+import argparse
+import json
+import os
+import os.path as osp
+import pickle
+import math
+from datetime import datetime
+from pdb import set_trace as st
+
+import numpy as np
+import torch
+from PIL import Image
+from torch.utils.data import Dataset
+from torch import optim
+from torchvision.datasets.folder import ImageFolder, IMG_EXTENSIONS, default_loader
+
+nninst_dir = "/home/zzq/nninst_tf"
+posonly_logic_dir = "result/resnet10cifar10/model_dropout/nninst_mu_posneg/posonly_logics_0.9/trace.point/unary/raw_logics"
+posneg_logic_dir = "result/resnet10cifar10/model_dropout/nninst_mu_posneg/posneg_full_logics_0.9/trace.point/unary/raw_logics"
+posneg_weight_dir = "result/resnet10cifar10/model_dropout/nninst_mu_posneg/posneg_edge_0]]]
+
+ --- Output --- 
+
+[[[.9/trace.weight/unary/raw_logics"
+posonly_weight_dir = "result/resnet10cifar10/model_dropout/nninst_mu_posneg/posonly_edge_0.5/trace.weight/unary/raw_logics"
+posonly_logic_dir = os.path.join(nninst_dir, posonly_logic_dir)
+posneg_logic_dir = os.path.join(nninst_dir, posneg_logic_dir)
+posneg_weight_dir = os.path.join(nninst_dir, posneg_weight_dir)
+posonly_weight_dir = os.path.join(nninst_dir, posonly_weight_dir)
+
+layer_tf_to_torch = {
+    "conv2d": lambda m: m.conv1,
+    "conv2d_1": lambda m: m.layer1[0].downsample[0],
+    "conv2d_2": lambda m: m.layer1[0].conv1,
+    "conv2d_3": lambda m: m.layer1[0].conv2,
+    "conv2d_4": lambda m: m.layer2[0].downsample[0],
+    "conv2d_5": lambda m: m.layer2[0].conv1,
+    "conv2d_6": lambda m: m.layer2[0].conv2,
+    "conv2d_7": lambda m: m.layer3[0].downsample[0],
+    "conv2d_8": lambda m: m.layer3[0].conv1,
+    "conv2d_9": lambda m: m.layer3[0].conv2,
+    "conv2d_10": lambda m: m.layer4[0].downsample[0],
+    "conv2d_11": lambda m: m.layer4[0].conv1,
+    "conv2d_12": lambda m: m.layer4[0].conv2,
+    "dense": lambda m: m.fc,
+}
+
+layer_to_feature_size = {
+    "conv2d": 16,
+    "conv2d_1": 16,
+    "]]]
+
+ ========== Example 8 ==========
+
+ --- Input --- 
+
+[[[```python
+#!/usr/bin/env python
+# ------------------------------------------------------------------------------------------------------%
+# Created by "Thieu Nguyen" at 11:59, 17/03/2020                                                        %
+#                                                                                                       %
+#       Email:      nguyenthieu2102@gmail.com                                                           %
+#       Homepage:   https://www.researchgate.net/profile/Thieu_Nguyen6                                  %
+#       Github:     https://github.com/thieu1995                                                        %
+#-------------------------------------------------------------------------------------------------------%
+
+from numpy import array, mean, sum, exp, argmin, argmax
+from numpy.random import uniform, randint, choice
+from copy import deepcopy
+from mealpy.optimizer import Root
+
+
+class BaseBSA(Root):
+    """
+    The original version of: Bird Swarm Algorithm (BSA)
+        (A new bio-inspired optimisation algorithm: Bird Swarm Algorithm)
+    Link:
+        http://doi.org/10.1080/0952813X.2015.1042530
+       ]]]
+
+ --- Output --- 
+
+[[[ https://www.mathworks.com/matlabcentral/fileexchange/51256-bird-swarm-algorithm-bsa
+    """
+    ID_POS = 0
+    ID_FIT = 1
+    ID_LBP = 2      # local best position
+    ID_LBF = 3      # local best fitness
+
+    def __init__(self, obj_func=None, lb=None, ub=None, verbose=True, epoch=750, pop_size=100,
+                 ff=10, p=0.8, c_couples=(1.5, 1.5), a_couples=(1.0, 1.0), fl=0.5, **kwargs):
+        super().__init__(obj_func, lb, ub, verbose, kwargs)
+        self.epoch = epoch
+        self.pop_size = pop_size
+        self.ff = ff                # flight frequency - default = 10
+        self.p = p                  # the probability of foraging for food - default = 0.8
+        self.c_minmax = c_couples   # [c1, c2]: Cognitive accelerated coefficient, Social accelerated coefficient same as PSO
+        self.a_minmax = a_couples   # [a1, a2]: The indirect and direct effect on the birds' vigilance behaviours.
+        self.fl = fl                # The followed coefficient- default = 0.5
+
+    def create_solution(self, minmax=0):
+        position = uniform(self.lb, self.ub)
+        x_fitness = self.get_fitness_position(position=position, minmax=minmax)
+        best_local = deepcopy(position)
+        l_fitness = x_fitness
+        return [position, x_fitness, best_local, l_fitness]
+
+    def _update_position__(self, pop, index, solution):
+        temp = self.amend_position_faster(solution)
+        fit = self.get_fitness_position(temp)
+        pop[index][self.ID_POS] = temp
+        pop[index][self.ID_FIT] = fit
+        return pop
+
+    def _update_population__(self, pop):
+        for i in range(0, self.pop_size):
+            if pop[i][self.ID]]]
+
+ ========== Example 9 ==========
+
+ --- Input --- 
+
+[[[```python
+import pandas as pd
+from scipy.stats import pearsonr
+import scipy
+import matplotlib.pyplot as plt
+import matplotlib
+from matplotlib.lines import Line2D
+import numpy as np
+import random
+
+# ensure plots are saved with correct font type
+matplotlib.rcParams['pdf.fonttype'] = 42
+matplotlib.rcParams['ps.fonttype'] = 42
+
+# replace with names of datasets. Can incorporate path structure if desired
+DATASETS = [
+    'fairfs_results_simulated_data.csv',
+    'fairfs_results_uci_adult.csv',
+    'fairfs_results_uci_student_academics.csv',
+    'fairfs_results_uci_student_performance_math.csv',
+    'fairfs_results_uci_student_performance_portuguese.csv',
+    'fairfs_results_simulated_data_reweighed.csv'
+]
+
+# Titles in same order as datasets
+TITLES = [
+    'Simulated Data',
+    'Adult',
+    'Student Academics',
+    'Student Performance (Math)',
+    'Student Performance (Portuguese)',
+   ]]]
+
+ --- Output --- 
+
+[[[ 'Simulated Data - Reweighed'
+
+]
+
+DATA_DICT = {}
+# create dictionary of titles and datasets to use for graph titles
+for i in range(len(DATASETS)):
+    DATA_DICT[TITLES[i]] = 'results/' + DATASETS[i]
+
+
+# read in data
+def create_data_arrays(sheet_name):
+    results = pd.read_csv(sheet_name, sep=',')
+    return results
+
+
+# create a plot with each unfairness metric.
+# Note this is hardcoded in the order they run in the experiment
+def create_plot(title, results, location):
+    x = list(range(0, 5))
+    title = title
+    plt.title(title)
+    plt.xlabel("Unfairness Weight")
+    plt.ylabel("Result (Mean Over 100 Trials)")
+
+    # overall accuracy
+    plt.plot(x, results[0:5], ':o', color="orange", label="Overall Accuracy")
+    overall = Line2D([0], [0], color='orange', linestyle=":", label="Overall Accuracy")
+
+    # statistical parity
+    plt.plot(x, results[5:10], '-o', color="black", label="Statistical Parity")
+    statistical = Line2D([0], [0], color='black', linestyle="-", label="Statistical Parity")
+
+    # conditional procedure
+    plt.plot(x, results[10:15], '--o', color='red', label="Conditional Procedure")
+    condition = Line2D([0], [0], color='red', linestyle="--", label="Conditional Procedure")
+
+    # conditional use accuracy equality
+    plt.plot(x, results[15:20], '-.o', color='green', label="Conditional Use Accuracy")
+    use_accuracy = Line2D([0], [0], color='green', linestyle="-.", label="Conditional Use Accuracy")
+
+    # treatment equality
+    plt.plot(x, results[20:25], '--o', color="cyan", label="Treatment Equality")
+    treatment = Line2D([0], [0], color='cyan', linestyle="--", label="Treatment Equality")
+
+    # all equality
+    plt.plot(x, results[25:30], '-o', color='blue',]]]

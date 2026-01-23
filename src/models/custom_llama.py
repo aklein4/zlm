@@ -24,6 +24,7 @@ from torch import nn
 import torch.nn.functional as F
 from transformers.activations import ACT2FN
 from transformers.utils import logging
+from transformers.cache_utils import Cache
 
 from torchprime.layers.sequential import HomogeneousSequential
 from torchprime.rope.rope import RopeScaling, llama3_rope_frequencies
@@ -40,20 +41,33 @@ logger = logging.get_logger(__name__)
 
 
 class LlamaRMSNorm(nn.Module):
-    def __init__(self, hidden_size, eps=1e-6):
+    def __init__(self, hidden_size, eps=1e-6, elementwise_affine: bool = True):
         """
         LlamaRMSNorm is equivalent to T5LayerNorm
         """
         super().__init__()
-        self.weight = nn.Parameter(torch.ones(hidden_size))
+        self.elementwise_affine = elementwise_affine
         self.variance_epsilon = eps
+        self.normalized_shape = (hidden_size,)
+
+        if self.elementwise_affine:
+            self.weight = nn.Parameter(torch.ones(hidden_size))
+        else:
+            self.register_parameter("weight", None)
+        
 
     def forward(self, hidden_states):
         input_dtype = hidden_states.dtype
         hidden_states = hidden_states.to(torch.float32)
-        variance = hidden_states.pow(2).mean(-1, keepdim=True)
-        hidden_states = hidden_states * torch.rsqrt(variance + self.variance_epsilon)
-        return self.weight * hidden_states.to(input_dtype)
+        
+        out = F.rms_norm(
+            hidden_states,
+            self.normalized_shape,
+            weight=self.weight,
+            eps=self.variance_epsilon,
+        )
+        
+        return out.to(input_dtype)
 
 
 class LlamaRotaryEmbedding(nn.Module):
@@ -127,17 +141,29 @@ def apply_rotary_pos_emb(q, k, cos, sin, position_ids=None, unsqueeze_dim=1):
 
 
 class LlamaMLP(nn.Module):
-    def __init__(self, config):
+    def __init__(
+        self,
+        config=None,
+        hidden_size=None,
+        intermediate_size=None,
+        hidden_act=None,
+    ):
         super().__init__()
+
+        if config is not None:
+            hidden_size = config.hidden_size
+            intermediate_size = config.intermediate_size
+            hidden_act = config.hidden_act
+
         self.config = config
-        self.hidden_size = config.hidden_size
-        self.intermediate_size = config.intermediate_size
+        self.hidden_size = hidden_size
+        self.intermediate_size = intermediate_size
         
         self.gate_proj = nn.Linear(self.hidden_size, self.intermediate_size, bias=False)
         self.up_proj = nn.Linear(self.hidden_size, self.intermediate_size, bias=False)
         
         self.down_proj = nn.Linear(self.intermediate_size, self.hidden_size, bias=False)
-        self.act_fn = ACT2FN[config.hidden_act]
+        self.act_fn = ACT2FN[hidden_act]
 
     # @xp.trace_me("LlamaMLP")
     def forward(self, x):
@@ -216,6 +242,7 @@ class LlamaAttention(nn.Module):
         attention_mask: torch.Tensor | None = None,
         position_ids: torch.LongTensor | None = None,
         elementwise_pad_mask=None,
+        past_key_values: Cache | None = None,
     ) -> torch.FloatTensor:
         bsz, q_len, _ = hidden_states.shape
 
@@ -235,6 +262,11 @@ class LlamaAttention(nn.Module):
 
         cos, sin = position_embeddings
         query_states, key_states = apply_rotary_pos_emb(query_states, key_states, cos, sin)
+
+        if past_key_values is not None and not constants.XLA_AVAILABLE:
+            key_states, value_states = past_key_values.update(
+                key_states, value_states, self.layer_idx
+            )
 
         # apply elementwise attention bias 
         if elementwise_pad_mask is not None:
@@ -289,6 +321,7 @@ class LlamaDecoderLayer(nn.Module):
         position_ids: torch.Tensor | None = None,
         position_embeddings: tuple[torch.Tensor, torch.Tensor] | None = None,    # necessary, but kept here for BC
         elementwise_pad_mask=None,
+        past_key_values: Cache | None = None,
     ) -> torch.Tensor:
         """
         Args:
@@ -315,14 +348,15 @@ class LlamaDecoderLayer(nn.Module):
             position_ids=position_ids,
             position_embeddings=position_embeddings,
             elementwise_pad_mask=elementwise_pad_mask,
+            past_key_values=past_key_values,
         )
-        hidden_states = residual + torch.nan_to_num(hidden_states, nan=0.0, posinf=0.0, neginf=0.0)
+        hidden_states = residual + hidden_states
 
         # Fully Connected
         residual = hidden_states
         hidden_states = self.post_attention_layernorm(hidden_states)
         hidden_states = self.mlp(hidden_states)
-        hidden_states = residual + torch.nan_to_num(hidden_states, nan=0.0, posinf=0.0, neginf=0.0)
+        hidden_states = residual + hidden_states
 
         return hidden_states
 
@@ -413,13 +447,24 @@ class CustomLlamaModel(nn.Module):
         self,
         seq_length: int,
         device: torch.device,
-        elementwise_pad_mask: torch.Tensor | None = None
+        elementwise_pad_mask: torch.Tensor | None = None,
+        past_key_values: Cache | None = None,
     ) -> torch.LongTensor:
-        if elementwise_pad_mask is None:
-            return torch.arange(seq_length, device=device).unsqueeze(0)
+        if past_key_values is not None and elementwise_pad_mask is not None:
+            raise NotImplementedError(
+                "Passing both `past_key_values` and `elementwise_pad_mask` is not supported."
+            )
+
+        if elementwise_pad_mask is not None:
+            mask = elementwise_pad_mask.long()
+            return torch.cumsum(mask, dim=1) - 1
+
+        position_ids = torch.arange(seq_length, device=device).unsqueeze(0)
         
-        mask = elementwise_pad_mask.long()
-        return torch.cumsum(mask, dim=1) - 1
+        if past_key_values is not None:
+            position_ids = position_ids + past_key_values.get_seq_length(0)
+
+        return position_ids
 
 
     # @xp.trace_me("LlamaModel")
@@ -430,6 +475,7 @@ class CustomLlamaModel(nn.Module):
         attention_mask: torch.FloatTensor | None = None, # only used in non-kernel attention
         position_ids: torch.LongTensor | None = None,
         elementwise_pad_mask: torch.BoolTensor | None = None,
+        past_key_values: Cache | None = None,
     ) -> torch.Tensor:
         assert (input_ids is not None) ^ (inputs_embeds is not None), (
             "You have to specify either input_ids or inputs_embeds, but not both."
@@ -439,14 +485,16 @@ class CustomLlamaModel(nn.Module):
         if inputs_embeds is None:
             inputs_embeds = self.embed_tokens(input_ids)
 
+        # get shapes
         seq_length = inputs_embeds.shape[1]
 
-        # TODO(https://github.com/pytorch/xla/issues/8783): Pass position_ids as `long()`
-        # when `scan` can take non-differentiable inputs.
+        # get position ids
+        # TODO(https://github.com/pytorch/xla/issues/8783): Pass position_ids as `long()` when `scan` can take non-differentiable inputs.
         if position_ids is None:
             position_ids = self.get_default_position_ids(
                 seq_length, inputs_embeds.device,
-                elementwise_pad_mask
+                elementwise_pad_mask,
+                past_key_values
             ).float()
 
         # Create a causal attention mask
@@ -455,33 +503,36 @@ class CustomLlamaModel(nn.Module):
             diagonal=1,
         )
         causal_mask = causal_mask.unsqueeze(0).unsqueeze(0)  # Add batch and head dimension
-
         if attention_mask is not None:
             causal_mask = causal_mask * attention_mask[:, None, None, :]
 
-        # get a mask for elementwise attention bias
         # currently cannot be None because scan needs differentiable inputs
-        if elementwise_pad_mask is None:
-            elementwise_pad_mask = torch.ones_like(input_ids, dtype=torch.bool)
+        if constants.XLA_AVAILABLE:
+            if elementwise_pad_mask is None:
+                elementwise_pad_mask = torch.ones_like(input_ids, dtype=torch.bool)
+            if past_key_values is None:
+                past_key_values = position_ids.clone() # this is fine as a dummy value
+
+        # convert the boolean pad mask to scale and offset masks
         elementwise_pad_mask = self.get_elementwise_pad_mask(elementwise_pad_mask)
 
-        hidden_states = inputs_embeds
-
         # create position embeddings to be shared across the decoder layers
-        position_embeddings = self.rotary_emb(hidden_states, position_ids)
+        position_embeddings = self.rotary_emb(inputs_embeds, position_ids)
 
         # decoder layers
+        hidden_states = inputs_embeds
         hidden_states = self.layers(
             hidden_states,
             attention_mask=causal_mask,
             position_ids=position_ids,
             position_embeddings=position_embeddings,
             elementwise_pad_mask=elementwise_pad_mask,
+            past_key_values=past_key_values,
         )
 
         if not self.skip_norm:
             hidden_states = self.norm(hidden_states)
-        return hidden_states.to(torch.float32)
+        return hidden_states
 
 
 class CustomLlamaForCausalLM(nn.Module):
@@ -530,22 +581,22 @@ class CustomLlamaForCausalLM(nn.Module):
         attention_mask: torch.FloatTensor | None = None, # only used in non-kernel attention
         shift_states: bool = False,
         elementwise_pad_mask: torch.BoolTensor | None = None,
+        past_key_values: Cache | None = None,
     ) -> tuple[torch.FloatTensor, torch.FloatTensor | None]:
         
         hidden_states = self.model(
             input_ids=input_ids,
             attention_mask=attention_mask,
             elementwise_pad_mask=elementwise_pad_mask,
+            past_key_values=past_key_values,
         )
 
         if shift_states:
             # Shift the hidden states to the right for causal language modeling
             hidden_states = hidden_states[..., :-1, :].contiguous()
 
-        hidden_states = torch.nan_to_num(hidden_states, nan=0.0, posinf=0.0, neginf=0.0)
         logits = self.lm_head(hidden_states)
         logits = logits.to(torch.float32)
-        logits = torch.nan_to_num(logits, nan=0.0, posinf=0.0, neginf=0.0)
 
         # logits = torch.nn.functional.log_softmax(logits, dim=-1)
         

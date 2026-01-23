@@ -17,6 +17,7 @@ from timeit import default_timer as timer
 import shutil
 import json
 import numpy as np
+import re
 
 import torch
 import torch.nn.utils as nn_utils
@@ -94,7 +95,7 @@ class BaseTrainer:
             self.repo_name = f"{constants.HF_ID}/{self.config.project}_{self.config.name}"
 
             hf.create_repo(
-                self.repo_name, private=True, exist_ok=True
+                self.repo_name, private=False, exist_ok=True
             )
 
             # create the wandb project
@@ -128,6 +129,20 @@ class BaseTrainer:
         # Add `xp.Trace` to linear layers in the module tree (just for profiling?).
         model = auto_trace(model)
 
+        # print model parameters that to not have sharding spec
+        config_names = set(self.config.model.sharding.keys())
+        param_names = set()
+        for name, p in model.named_parameters():
+            if p is not None:
+                param_names.add(re.sub("\.\d+\.", ".*.", name))
+        all_found = True
+        for name in param_names:
+            if name not in config_names:
+                logger.warning(f"Parameter {name} does not have sharding spec!")
+                all_found = False
+        if all_found:
+            logger.info("All model parameters have sharding spec.")
+
         # Setup SPMD mesh and shard the model.
         model, self.input_sharding_spec, self.minibatch = setup_sharding_and_mesh(
             model, config
@@ -154,8 +169,8 @@ class BaseTrainer:
         lr_scheduler = get_scheduler(
             name=config.trainer.lr_scheduler.type,
             optimizer=optimizer,
-            num_warmup_steps=config.trainer.lr_scheduler.warmup_steps,
-            num_training_steps=config.trainer.lr_scheduler.training_steps,
+            num_warmup_steps=config.trainer.lr_scheduler.num_warmup_steps,
+            scheduler_specific_kwargs=config.trainer.lr_scheduler.kwargs,
         )
 
         return optimizer, lr_scheduler
@@ -274,6 +289,7 @@ class BaseTrainer:
         # initialize counters
         epoch = 0
         self.atoms_seen = 0 # must be self. for step_closure
+        training_start_time = timer()
 
         # run the training loop
         for step in range(max_step):
@@ -314,8 +330,12 @@ class BaseTrainer:
 
             # post-step closure for logging
             def step_closure(
-                epoch, step, loss, grad_norm, aux, trace_start_time, trace_end_time, lr
+                start_time, epoch, step, loss, grad_norm, aux, trace_start_time, trace_end_time, lr
             ):
+                training_time_elapsed = (
+                    timer() - start_time  
+                ) / 3600 # in hours
+
                 if "atom_count" in aux.keys():
                     self.atoms_seen += aux["atom_count"].detach().item()
 
@@ -323,12 +343,12 @@ class BaseTrainer:
                 grad_norm = grad_norm.detach().item()
 
                 logger.info(
-                    "Epoch: %d, step: %d, loss: %.3f, grad_norm: %.3f, lr: %.2e, trace time: %.0f ms",
+                    "Hours elapsed: %.3f, epoch: %d, step: %d, loss: %.3f, grad_norm: %.3f, trace time: %.0f ms",
+                    training_time_elapsed,
                     epoch,
                     step,
                     loss,
                     grad_norm,
-                    lr,
                     (trace_end_time - trace_start_time) * 1000,
                 )
 
@@ -338,15 +358,22 @@ class BaseTrainer:
                         to_wandb[k] = v.detach().item()
                     else:
                         to_wandb[k] = v
+
                 to_wandb["loss"] = loss
                 to_wandb["grad_norm"] = grad_norm
                 to_wandb["trace_time_ms"] = (trace_end_time - trace_start_time) * 1000
                 to_wandb["lr"] = lr
                 to_wandb["epoch"] = epoch
+
                 to_wandb["examples_seen"] = (step + 1) * self.global_batch_size
                 if "atom_count" in aux.keys():
                     to_wandb["atoms_seen"] = self.atoms_seen
+
                 to_wandb["nan"] = 1 - int(math.isfinite(loss))
+
+                to_wandb["training_time_elapsed_hr"] = training_time_elapsed
+                to_wandb["avg_time_per_step_s"] = training_time_elapsed * 3600 / (step + 1)
+                to_wandb["avg_steps_per_hr"] = (step + 1) / training_time_elapsed
 
                 if not self.config.debug and constants.PROCESS_IS_MAIN():
                     wandb.log(to_wandb)
@@ -355,6 +382,7 @@ class BaseTrainer:
             xm.add_step_closure(
                 step_closure,
                 args=(
+                    training_start_time,
                     epoch,
                     step,
                     loss.detach().clone(),
@@ -384,10 +412,13 @@ class BaseTrainer:
         loss.backward()
         
         grad_norm = self.clip_gradients()
-        self.optimizer.step()
+
+        opt_aux = self.optimizer.step()
+        aux.update(opt_aux)
+        self.model.zero_grad(set_to_none=False)
+
         lr = self.lr_scheduler.get_last_lr()[0]
         self.lr_scheduler.step()
-        self.model.zero_grad()
 
         return loss, aux, grad_norm, lr
 

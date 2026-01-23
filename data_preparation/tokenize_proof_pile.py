@@ -3,29 +3,40 @@ import numpy as np
 from functools import partial
 
 import datasets
-from transformers import AutoTokenizer, GPT2TokenizerFast
+from transformers import GPT2TokenizerFast
 
-
-TOKENIZER = './tokenizer'
-
-DATASETS = [
-    # ("HuggingFaceFW/fineweb", "sample-10BT"),
-    # ("HuggingFaceFW/fineweb-edu", "sample-10BT"),
-    # ("HuggingFaceTB/finemath", "finemath-4plus"),
-    ("HuggingFaceTB/smollm-corpus", "cosmopedia-v2"),
-]
 
 INPUT_LENGTH = 256
 OUTPUT_LENGTH = 512
 TOTAL_LENGTH = INPUT_LENGTH + OUTPUT_LENGTH
 
+TOKENIZER = './tokenizer'
+
+INPUT_REPO = "aklein4/proof-pile-2-fixed"
+SUBSET = "algebraic-stack"
+
 OUTPUT_REPO = "aklein4/compilation-SmolLM2"
+OUTPUT_SUBSET = f"EleutherAI/proof-pile-2/{SUBSET}".replace("/", "--")
 
 
-def tokenize_batch(batch, tokenizer: GPT2TokenizerFast=None):
+def tokenize_batch(example, tokenizer: GPT2TokenizerFast=None):
+
+    text = []
+    formats = []
+    for t, meta in zip(example["text"], example["meta"]):
+
+        if "lang" in meta and meta["lang"] is not None:
+            lang = meta["lang"].lower()
+            t = f"```{lang}\n{t}\n```"
+            text.append(t)
+            formats.append("code_block")
+
+        else:
+            text.append(t)
+            formats.append("raw_code")
 
     input_tokens = tokenizer(
-        batch["text"],
+        text,
         add_special_tokens=True,
         return_tensors="np",
         padding=True,
@@ -38,10 +49,11 @@ def tokenize_batch(batch, tokenizer: GPT2TokenizerFast=None):
     return {
         "input_ids": [x for x in input_tokens],
         "keep": [x for x in keep],
+        "format": formats,
     }
 
 
-def split_example(example, source: str=None):
+def split_batch(example):
 
     input_ids = [
         x[:INPUT_LENGTH] for x in example["input_ids"]
@@ -61,9 +73,9 @@ def split_example(example, source: str=None):
     ]
 
     return {
-        "source": [source for _ in input_ids],
-        "kind": ["textbook" if "cosmopedia" in source else "web_text" for _ in input_ids],
-        "format": ["raw_text" for _ in input_ids],
+        "source": [f"{INPUT_REPO}/{SUBSET}" for _ in input_ids],
+        "kind": ["web_code" for _ in input_ids],
+        "format": example["format"],
         "input_ids": input_ids,
         "output_ids": output_ids,
         "num_input_tokens": num_input_tokens,
@@ -72,13 +84,13 @@ def split_example(example, source: str=None):
     }
 
 
-def tokenize_dataset(
-    data_path,
-    tokenizer
-):
+def main():
+
+    tokenizer = GPT2TokenizerFast.from_pretrained(TOKENIZER)
 
     data = datasets.load_dataset(
-        *data_path,
+        INPUT_REPO,
+        SUBSET,
         split="train",
         streaming=False,
     )
@@ -94,33 +106,22 @@ def tokenize_dataset(
     )
 
     data = data.map(
-        partial(split_example, source=f"{data_path[0]}/{data_path[1]}"),
+        split_batch,
         remove_columns=data.column_names,
         batched=True,
         batch_size=1024,
     )
 
-    return data
+    data = data.shuffle(seed=42)
 
+    data.push_to_hub(
+        OUTPUT_REPO,
+        OUTPUT_SUBSET,
+        private=False,
+        split="train",
+    )
 
-def main():
-
-    tokenizer = AutoTokenizer.from_pretrained(TOKENIZER)
-
-    for data_path in DATASETS:
-
-        data = tokenize_dataset(
-            data_path,
-            tokenizer,
-        )
-        
-        data = data.shuffle(seed=42)
-
-        data.push_to_hub(
-            OUTPUT_REPO,
-            config_name=f"{data_path[0]}/{data_path[1]}".replace("/", "--"),
-            private=False,
-        )
+    print(f"\nTokenized dataset has {len(data)} examples.\n")
 
 
 if __name__ == "__main__":

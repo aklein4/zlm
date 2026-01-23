@@ -5,7 +5,7 @@ import torch.nn.functional as F
 import math
 from omegaconf import DictConfig
 
-from transformers.activations import ACT2FN
+from torchprime.layers.sequential import HomogeneousSequential
 
 from utils.torch_utils import (
     safe_copy_state,
@@ -19,7 +19,7 @@ from utils.torch_utils import (
 from models.llama import LlamaForCausalLM
 from models.custom_llama import LlamaMLP, LlamaRMSNorm, LlamaDecoderLayer, CustomLlamaModel
 from models import load_checkpoint_state
-from utils.torch_modules import ContinuousEmbedding
+from utils.torch_modules import ScaledEmbedding
 import utils.constants as constants
 
 
@@ -179,6 +179,92 @@ class DiffusionScheduler(nn.Module):
         )
 
 
+class AdaScale(nn.Module):
+
+    def __init__(
+        self,
+        hidden_size: int,
+        num_embeddings: int,
+        do_norm: bool=False,
+        rms_norm_eps: float=None,
+    ):
+        super().__init__()
+
+        self.embed = ScaledEmbedding(
+            num_embeddings=num_embeddings,
+            embedding_dim=hidden_size,
+        )
+
+        self.do_norm = do_norm
+        if do_norm:
+            assert rms_norm_eps is not None
+            self.norm = LlamaRMSNorm(
+                hidden_size,
+                eps=rms_norm_eps,
+                elementwise_affine=False,
+            )
+        else:
+            assert rms_norm_eps is None
+    
+
+    def forward(
+        self,
+        x: torch.FloatTensor,
+        condition: torch.LongTensor,
+    ) -> torch.FloatTensor:
+
+        if self.do_norm:
+            x = self.norm(x)
+
+        return x * self.embed(condition)
+
+
+class DiffusionHeadLayer(nn.Module):
+
+    def __init__(
+        self,
+        config: DictConfig
+    ):
+        super().__init__()
+
+        self.norm = AdaScale(
+            config.hidden_size,
+            config.num_diffusion_timesteps-1,
+            do_norm=True,
+            rms_norm_eps=config.rms_norm_eps,
+        )
+
+        self.mlp = LlamaMLP(
+            hidden_size=config.hidden_size,
+            intermediate_size=config.diffusion_mlp_size,
+            hidden_act=config.hidden_act,
+        )
+
+        self.out_scale = AdaScale(
+            config.hidden_size,
+            config.num_diffusion_timesteps-1,
+            do_norm=False,
+        )
+    
+
+    def forward(
+        self,
+        hidden_states: torch.FloatTensor,
+        timestep: torch.FloatTensor=None,
+    ) -> torch.FloatTensor:
+        timestep = timestep.long()
+
+        residual = hidden_states
+
+        hidden_states = self.norm(hidden_states, timestep)
+        hidden_states = self.mlp(hidden_states)
+        hidden_states = self.out_scale(hidden_states, timestep)
+
+        hidden_states = residual + hidden_states
+
+        return hidden_states
+
+
 class DiffusionHead(nn.Module):
 
     def __init__(
@@ -187,56 +273,50 @@ class DiffusionHead(nn.Module):
     ):
         super().__init__()
 
-        # modules
-        self.t_embed = ContinuousEmbedding(
-            num_frequencies=config.num_t_embed_frequencies,
-            embedding_dim=config.t_mlp_size,
-            input_min=config.minimum_diffusion_timestep,
-            input_max=1.0,
-            bias=True,
-        )
-        self.t_act = ACT2FN[config.hidden_act]
-        self.t_mlp_proj = nn.Linear(config.t_mlp_size, config.hidden_size, bias=False)
+        self.x_t_in_proj = nn.Linear(config.latent_size, config.hidden_size, bias=False)
 
-        self.x_in_proj = nn.Linear(config.latent_size, config.hidden_size, bias=False)
-
-        self.hidden_states_norm = LlamaRMSNorm(config.hidden_size, eps=config.rms_norm_eps)
-        self.hidden_states_in_proj = (
+        self.input_states_norm = LlamaRMSNorm(config.hidden_size, eps=config.rms_norm_eps, elementwise_affine=False)
+        self.input_states_in_proj = (
             nn.Linear(config.hidden_size, config.hidden_size, bias=False) if config.diffusion_in_proj else nn.Identity()
         )
 
-        self.layer_norms = nn.ModuleList(
-            [LlamaRMSNorm(config.hidden_size, eps=config.rms_norm_eps) for _ in range(config.num_diffusion_head_layers)]
-        )
-        self.layers = nn.ModuleList(
-            [LlamaMLP(config) for _ in range(config.num_diffusion_head_layers)]
+        self.layers = HomogeneousSequential(
+            *[
+                DiffusionHeadLayer(config)
+                for _ in range(config.num_diffusion_head_layers)
+            ]
         )
 
-        self.out_norm = LlamaRMSNorm(config.hidden_size, eps=config.rms_norm_eps)
+        self.out_norm = AdaScale(
+            config.hidden_size,
+            config.num_diffusion_timesteps-1,
+            do_norm=True,
+            rms_norm_eps=config.rms_norm_eps,
+        )
         self.out_proj = nn.Linear(config.hidden_size, config.latent_size, bias=False)
 
     
     def forward(
         self,
         x_t: torch.FloatTensor,
-        timestep: torch.FloatTensor,
-        hidden_states: torch.FloatTensor,
-        scheduler: DiffusionScheduler,
+        timestep: torch.LongTensor,
+        input_states: torch.FloatTensor,
     ) -> torch.FloatTensor:
 
-        t = scheduler.timesteps[timestep]
-
-        # process the hidden inputs
+        # process the inputs
         hidden_states = (
-            self.t_mlp_proj(self.t_act(self.t_embed(t))) +
-            self.hidden_states_in_proj(self.hidden_states_norm(hidden_states)) +
-            self.x_in_proj(x_t)
+            self.input_states_in_proj(self.input_states_norm(input_states)) +
+            self.x_t_in_proj(x_t)
         )
 
-        for layer_norm, layer in zip(self.layer_norms, self.layers):
-            hidden_states = hidden_states + layer(layer_norm(hidden_states))
+        # pass through the layers
+        hidden_states = self.layers(
+            hidden_states,
+            timestep=(timestep - 1).float(), # xla scan only supports differentiable dtypes
+        )
 
-        hidden_states = self.out_norm(hidden_states)
+        # remove 1 from timestep since 0 is never used (unused embedding entries can cause issues with xla)
+        hidden_states = self.out_norm(hidden_states, (timestep - 1))
         pred = self.out_proj(hidden_states)
 
         return pred
@@ -283,7 +363,7 @@ class ZLMModel(nn.Module):
                 llama,
                 config.pretrained_llama,
                 step=0,
-                strict=False,
+                strict=True,
             )
 
             safe_copy_state(llama.model, self.encoder_model, strict=False)
@@ -353,10 +433,15 @@ class ZLMModel(nn.Module):
 
         # scale input layers by embedding stats
         self.encoder_noise_proj_in.weight.data *= embed_std[:, None]
+        # self.encoder_noise_proj_in.weight.data.zero_()
         self.decoder_z_proj_in.weight.data *= embed_std[:, None]
 
         # create the output linear
         self.encoder_mu_proj_out = nn.Linear(self.hidden_size, self.latent_size, bias=False)
+
+        # create the norms
+        self.mu_out_norm = LlamaRMSNorm(self.latent_size, eps=config.rms_norm_eps, elementwise_affine=False)
+        self.z_in_norm = LlamaRMSNorm(self.latent_size, eps=config.rms_norm_eps, elementwise_affine=False)
 
         # create the diffusion components
         self.diffusion_head = DiffusionHead(config)
@@ -378,22 +463,35 @@ class ZLMModel(nn.Module):
             gaussian_init(self.decoder_z_proj_in)
             gaussian_init(self.encoder_mu_proj_out)
 
+        self.apply(self.scaled_embed_init)
+
+
+    def scaled_embed_init(self, module):
+        if isinstance(module, ScaledEmbedding):
+            module.ones_init()
+
     
     def sample_noise(
         self, 
-        input_ids: torch.LongTensor
+        input_ids: torch.LongTensor,
+        noise_scale: torch.FloatTensor = None,
     ) -> torch.FloatTensor:
 
         input_tokens = self.embed_tokens(input_ids)
         
         # generate the noise
-        return torch.randn(
+        noise = torch.randn(
             *input_ids.shape[:-1],
             self.z_length,
             self.latent_size,
             device=input_tokens.device,
             dtype=input_tokens.dtype,
         )
+
+        if noise_scale is not None:
+            noise = noise * noise_scale
+
+        return noise
 
 
     def encode(
@@ -403,10 +501,14 @@ class ZLMModel(nn.Module):
         noise: torch.FloatTensor=None,
         input_mask: torch.BoolTensor=None,
         output_mask: torch.BoolTensor=None,
+        noise_scale: torch.FloatTensor=None,
     ):
 
         if noise is None:
-            noise = self.sample_noise(input_ids)
+            noise = self.sample_noise(
+                input_ids,
+                noise_scale=noise_scale,
+            ) 
 
         input_tokens = self.embed_tokens(input_ids) + unsqueeze_to_batch(
             self.encoder_input_embeddings, input_ids
@@ -457,7 +559,7 @@ class ZLMModel(nn.Module):
         )
 
         # TODO: leave, remove, or scale?
-        mu = F.rms_norm(mu, [mu.shape[-1]], eps=self.config.rms_norm_eps)
+        mu = self.mu_out_norm(mu)
 
         z = self.scheduler.add_noise(
             mu, torch.zeros(1, dtype=torch.long, device=mu.device), noise
@@ -475,7 +577,8 @@ class ZLMModel(nn.Module):
         input_mask: torch.BoolTensor=None,
         output_mask: torch.BoolTensor=None,
     ):
-        z = F.rms_norm(z, [z.shape[-1]], eps=self.config.rms_norm_eps)
+        
+        z = self.z_in_norm(z)
 
         input_tokens = self.embed_tokens(input_ids) + unsqueeze_to_batch(
             self.decoder_input_embeddings, input_ids
@@ -553,7 +656,6 @@ class ZLMModel(nn.Module):
         )
         self.decoder_model(
             inputs_embeds=input_tokens,
-            use_cache=True,
             past_key_values=cache,
         )
 
@@ -561,7 +663,7 @@ class ZLMModel(nn.Module):
         all_z = []
         prev_normed_z = torch.zeros_like(noise[:, 0, :]) # [B, latent_size]
         t_iter = torch.arange(1, self.scheduler.num_timesteps).to(noise.device).flip(0)
-        for i in tqdm(range(self.z_length), desc="sampling z"):
+        for i in tqdm(range(self.z_length + 1), desc="sampling z"):
             
             # pass the previous z token through the decoder
             z_token = (
@@ -570,46 +672,48 @@ class ZLMModel(nn.Module):
             ) # [B, hidden_size]
             z_states = self.decoder_model(
                 inputs_embeds=z_token[:, None, :],
-                use_cache=True,
                 past_key_values=cache,
             )[:, -1, :] # [B, hidden_size]
 
-            # diffusion loop to sample the next z
-            z_t = noise[:, i, :] # [B, latent_size]
-            for t in t_iter:
+            # we do an extra pass to put the last z in the cache
+            if i >= self.z_length:
+                break
 
-                pred_z_0 = self.diffusion_head(
-                    z_t,
-                    t,
-                    z_states,
-                    self.scheduler,
-                ) # [B, latent_size]
-                z_t = self.scheduler.ddim_step(
-                    z_t,
-                    t,
-                    pred_z_0,
-                ) # [B, latent_size]
+            if encoded_z is None:
+                # diffusion loop to sample the next z
+                z_t = noise[:, i, :] # [B, latent_size]
+                for t in t_iter:
 
-            if encoded_z is not None:
-                z_t = encoded_z[:, i, :]
+                    pred_z_0 = self.diffusion_head(
+                        z_t,
+                        t,
+                        z_states,
+                    ) # [B, latent_size]
+                    z_t = self.scheduler.ddim_step(
+                        z_t,
+                        t,
+                        pred_z_0,
+                    ) # [B, latent_size]
+
+            else:
+                z_t = encoded_z[:, i, :] # [B, latent_size]
 
             # handle the sampled z
             all_z.append(z_t)
-            prev_normed_z = F.rms_norm(z_t, [pred_z_0.shape[-1]], eps=self.config.rms_norm_eps)
+            prev_normed_z = self.z_in_norm(z_t)
 
+        # save the z
         all_z = torch.stack(all_z, dim=1) # [B, z_length, latent_size]
 
         # sample the output tokens
         output_ids = []
-        prev_logit_token = (
-            unsqueeze_to_batch(self.decoder_z_tokens[-1], prev_normed_z) +
-            self.decoder_z_proj_in(prev_normed_z)
-        ) # [B, hidden_size]
+        prev_logit_token = expand_to_batch(
+            self.decoder_start_output_token, prev_normed_z[:, None, :]
+        )[:, 0, :] # [B, hidden_size]
         for i in tqdm(range(self.output_length), desc="sampling output"):
 
             logit_states = self.decoder_model(
                 inputs_embeds=prev_logit_token[:, None, :],
-                use_cache=True,
                 past_key_values=cache,
             )[:, -1, :] # [B, hidden_size]
 
@@ -622,6 +726,7 @@ class ZLMModel(nn.Module):
                 self.embed_tokens(next_token)
             ) # [B, hidden_size]
 
+        # stack output ids [B, output_length]
         output_ids = torch.stack(output_ids, dim=-1)
 
         return output_ids, all_z

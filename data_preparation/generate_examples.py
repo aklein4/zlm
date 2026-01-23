@@ -21,7 +21,10 @@ def main():
     subsets = list(datasets.get_dataset_config_names(URL))
     for subset in tqdm(subsets):
 
-        with open(os.path.join(OUTPUT_DIR, subset, "examples.txt"), "w", encoding="utf-8") as f:
+        subset_dir = os.path.join(OUTPUT_DIR, subset)
+        os.makedirs(subset_dir, exist_ok=True)
+
+        with open(os.path.join(subset_dir, "examples.txt"), "w", encoding="utf-8") as f:
 
             dataset = datasets.load_dataset(URL, subset, split="train", streaming=True)
 
@@ -40,3 +43,4 @@ def main():
 
 if __name__ == "__main__":
     main()
+    
