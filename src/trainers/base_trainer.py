@@ -376,7 +376,7 @@ class BaseTrainer:
                 to_wandb["avg_steps_per_hr"] = (step + 1) / training_time_elapsed
 
                 if not self.config.debug and constants.PROCESS_IS_MAIN():
-                    wandb.log(to_wandb)
+                    wandb.log(to_wandb, step=step)
             
             # execute
             xm.add_step_closure(

@@ -40,6 +40,31 @@ def scale_gradient(
     return _ScaleGradient.apply(x, scale)
 
 
+class _AttachGradient(torch.autograd.Function):
+
+    @staticmethod
+    def forward(ctx, real, ghost):
+        return real.clone()
+    
+    @staticmethod
+    def backward(ctx, grad_output):
+        return grad_output, grad_output
+
+
+def attach_gradient(
+    real: torch.Tensor,
+    ghost: torch.Tensor,
+) -> torch.Tensor:
+    """
+    Attaches the gradient of `ghost` to `real` during backpropagation.
+
+    Args:
+        real (torch.Tensor): The tensor whose value is used in the forward pass.
+        ghost (torch.Tensor): The tensor who also recieves the gradient during backpropagation.
+    """
+    return _AttachGradient.apply(real, ghost)
+
+
 class _PrintGradient(torch.autograd.Function):
 
     @staticmethod
