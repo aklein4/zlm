@@ -4,13 +4,13 @@ type: asym_zlm_trainer.AsymZLMTrainer  # Used to import the trainer from this cl
 
 
 # total batch size across all devices
-global_batch_size: 512
+global_batch_size: 256
 
 # run for N steps
 max_steps: 1000000
 
 # Save a checkpoint every N steps
-checkpoint_interval: 2500 
+checkpoint_interval: 5000 
 
 
 # optimizer configuration
