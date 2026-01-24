@@ -11,6 +11,28 @@ def batch_shard_spec(x):
     return (("data", "fsdp"),) + (None,) * (x.dim() - 1)
 
 
+def shard_no_gradients(
+    x: torch.Tensor,
+    mesh = None,
+    spec = None,
+) -> torch.Tensor:
+    if not constants.XLA_AVAILABLE:
+        raise RuntimeError(
+            "XLA is not available, cannot shard tensor."
+        )
+
+    if mesh is None:
+        mesh = xs.get_global_mesh()
+        assert mesh is not None, "No sharding mesh found."
+
+    if spec is None:
+        spec = batch_shard_spec(x)
+
+    return xs.mark_sharding(
+        x, mesh, spec
+    )
+
+
 def shard_with_gradients(
     x: torch.Tensor,
     mesh = None,

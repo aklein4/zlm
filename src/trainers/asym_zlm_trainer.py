@@ -8,8 +8,10 @@ import numpy as np
 from trainers.base_trainer import BaseTrainer
 from models.zlm import ZLMModel
 from utils.scheduling_utils import linear_warmup
-from utils.torch_utils import scale_gradient
+from utils.torch_utils import scale_gradient, safe_repeat
 from utils.loss_utils import lm_loss_fn, lm_acc_fn
+from utils.sharding_utils import shard_no_gradients, shard_with_gradients
+from utils.logging_utils import visualize_sharding_info
 
 
 class AsymZLMTrainer(BaseTrainer):
@@ -97,17 +99,39 @@ class AsymZLMTrainer(BaseTrainer):
         )
 
         # we pass z through the decoder TWICE in this version
-        logits, _ = self.model.decode(
-            input_for_model, output_for_model,
-            scale_gradient(z, enc_lm_grad_scale),
-            input_mask=input_mask,
-            output_mask=output_mask,
+        # [:bs] for lm loss, [bs:] for kl loss
+        input_for_model_2 = shard_no_gradients(
+            safe_repeat(input_for_model, 2, dim=0)
         )
-        _, z_states = self.model.decode(
-            input_for_model, output_for_model,
-            scale_gradient(z, enc_kl_grad_scale),
-            input_mask=input_mask,
-            output_mask=output_mask,
+        output_for_model_2 = shard_no_gradients(
+            safe_repeat(output_for_model, 2, dim=0)
+        )
+        input_mask_2 = shard_no_gradients(
+            safe_repeat(input_mask, 2, dim=0)
+        )
+        output_mask_2 = shard_no_gradients(
+            safe_repeat(output_mask, 2, dim=0)
+        )
+        z_2 = shard_with_gradients(
+            torch.cat(
+                [
+                    scale_gradient(z, enc_lm_grad_scale),
+                    scale_gradient(z, enc_kl_grad_scale)
+                ],
+                dim=0
+            )
+        )
+        visualize_sharding_info(z_2)
+        logits, z_states = self.model.decode(
+            input_for_model_2, output_for_model_2, z_2,
+            input_mask=input_mask_2,
+            output_mask=output_mask_2,
+        )
+        logits = shard_with_gradients(
+            logits[:bs]
+        )
+        z_states = shard_with_gradients(
+            z_states[bs:]
         )
 
         # get the lm loss metrics

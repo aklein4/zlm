@@ -179,4 +179,12 @@ def gaussian_init(module: nn.Module):
 
     elif isinstance(module, nn.Embedding):
         module.weight.data.normal_(mean=0.0, std=1)
-        
+
+
+def safe_repeat(
+    x: torch.Tensor, n_repeats: int, dim: int=0
+) -> torch.Tensor:
+    return torch.cat(
+        [x] * n_repeats,
+        dim=dim
+    )
