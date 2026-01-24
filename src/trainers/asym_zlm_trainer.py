@@ -8,9 +8,8 @@ import numpy as np
 from trainers.base_trainer import BaseTrainer
 from models.zlm import ZLMModel
 from utils.scheduling_utils import linear_warmup
-from utils.torch_utils import scale_gradient, safe_repeat
+from utils.torch_utils import scale_gradient
 from utils.loss_utils import lm_loss_fn, lm_acc_fn
-from utils.sharding_utils import shard_with_gradients, shard_with_gradients
 
 
 class AsymZLMTrainer(BaseTrainer):
