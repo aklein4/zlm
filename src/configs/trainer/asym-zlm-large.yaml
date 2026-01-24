@@ -1,6 +1,6 @@
 
 # vvvvvvvvvv Don't forget to change this for new experiments vvvvvvvvvv
-type: zlm_trainer.ZLMTrainer  # Used to import the trainer from this class
+type: asym_zlm_trainer.AsymZLMTrainer  # Used to import the trainer from this class
 
 
 # total batch size across all devices
