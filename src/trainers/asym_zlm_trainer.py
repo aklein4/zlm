@@ -11,7 +11,6 @@ from utils.scheduling_utils import linear_warmup
 from utils.torch_utils import scale_gradient, safe_repeat
 from utils.loss_utils import lm_loss_fn, lm_acc_fn
 from utils.sharding_utils import shard_no_gradients, shard_with_gradients
-from utils.logging_utils import visualize_sharding_info
 
 
 class AsymZLMTrainer(BaseTrainer):
@@ -121,7 +120,6 @@ class AsymZLMTrainer(BaseTrainer):
                 dim=0
             )
         )
-        visualize_sharding_info(z_2)
         logits, z_states = self.model.decode(
             input_for_model_2, output_for_model_2, z_2,
             input_mask=input_mask_2,
