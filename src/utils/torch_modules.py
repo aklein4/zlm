@@ -95,10 +95,20 @@ class UnbiasedEMA(nn.Module):
     @torch.no_grad()
     def update(self, x: torch.Tensor) -> None:
         assert x.shape == self.shape, f"Input shape {x.shape} does not match EMA shape {self.shape}"
-       
-        self.num_updates += 1
-        self.weight.mul_(self.beta).add_(
-            x.detach().to(self.weight.dtype), alpha=1 - self.beta
+
+        x = x.detach().to(self.weight.dtype)
+
+        all_finite = torch.isfinite(x).all()
+
+        self.num_updates += all_finite.to(self.num_updates.dtype)
+
+        # only update the ema if all values are finite
+        new_weight = (
+            self.beta * self.weight +
+            (1 - self.beta) * x
+        )
+        self.weight.copy_(
+            torch.where(all_finite, new_weight, self.weight)
         )
 
 
@@ -155,7 +165,7 @@ class CustomBatchNorm(nn.Module):
             mean = attach_gradient(mean, x_mean)
             var = attach_gradient(var, x_var)
 
-        y = (x - mean[None]) / torch.sqrt(var + self.eps)[None]
+        y = (x - mean[None]) * torch.rsqrt(var + self.eps)[None]
 
         return y.to(og_dtype)
     
