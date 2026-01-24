@@ -19,7 +19,7 @@ from utils.torch_utils import (
 from models.llama import LlamaForCausalLM
 from models.custom_llama import LlamaMLP, LlamaRMSNorm, LlamaDecoderLayer, CustomLlamaModel
 from models import load_checkpoint_state
-from utils.torch_modules import ScaledEmbedding
+from utils.torch_modules import ScaledEmbedding, CustomBatchNorm
 import utils.constants as constants
 
 
@@ -431,17 +431,23 @@ class ZLMModel(nn.Module):
         self.encoder_noise_proj_in = nn.Linear(self.latent_size, self.hidden_size, bias=False)
         self.decoder_z_proj_in = nn.Linear(self.latent_size, self.hidden_size, bias=False)
 
-        # scale input layers by embedding stats
-        self.encoder_noise_proj_in.weight.data *= embed_std[:, None]
-        # self.encoder_noise_proj_in.weight.data.zero_()
-        self.decoder_z_proj_in.weight.data *= embed_std[:, None]
-
         # create the output linear
         self.encoder_mu_proj_out = nn.Linear(self.hidden_size, self.latent_size, bias=False)
 
         # create the norms
         self.mu_out_norm = LlamaRMSNorm(self.latent_size, eps=config.rms_norm_eps, elementwise_affine=False)
         self.z_in_norm = LlamaRMSNorm(self.latent_size, eps=config.rms_norm_eps, elementwise_affine=False)
+
+        # create a batch norm for the mu output
+        self.mu_batch_norm = CustomBatchNorm(
+            [self.z_length, self.latent_size],
+            beta=config.mu_batch_norm_beta,
+            eps=config.rms_norm_eps,
+            attach_gradients=config.mu_batch_norm_attach_gradients,
+        )
+        self.register_buffer(
+            'mu_alpha', torch.ones(1) * config.mu_alpha, persistent=True
+        )
 
         # create the diffusion components
         self.diffusion_head = DiffusionHead(config)
@@ -463,7 +469,16 @@ class ZLMModel(nn.Module):
             gaussian_init(self.decoder_z_proj_in)
             gaussian_init(self.encoder_mu_proj_out)
 
+        # set the diffusion head conditioning embeddings to ones
         self.apply(self.scaled_embed_init)
+
+        # scale input layers by embedding stats
+        self.encoder_noise_proj_in.weight.data.zero_()
+        self.decoder_z_proj_in.weight.data *= embed_std[:, None]
+
+        # initialize the diffusion heads with small values
+        self.diffusion_head.out_proj.weight.data.mul_(config.diffusion_output_init_scale)
+        self.uncond_diffusion_head.out_proj.weight.data.mul_(config.diffusion_output_init_scale)
 
 
     def scaled_embed_init(self, module):
@@ -553,13 +568,14 @@ class ZLMModel(nn.Module):
             inputs_embeds=tokens,
             elementwise_pad_mask=mask,
         )
-
         mu = self.encoder_mu_proj_out(
             hidden_states[..., -self.z_length:, :]
         )
 
-        # TODO: leave, remove, or scale?
-        mu = self.mu_out_norm(mu)
+        # apply batch norm, rmsnorm, and scaling
+        mu = self.mu_alpha * self.mu_out_norm(
+            self.mu_batch_norm(mu)
+        )
 
         z = self.scheduler.add_noise(
             mu, torch.zeros(1, dtype=torch.long, device=mu.device), noise

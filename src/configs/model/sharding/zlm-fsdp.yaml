@@ -37,9 +37,9 @@ decoder_model.norm.weight: [fsdp]
 
 
 # scheduler
-scheduler.timesteps: [fsdp]
-scheduler.a: [fsdp]
-scheduler.b: [fsdp]
+scheduler.timesteps: [null]
+scheduler.a: [null]
+scheduler.b: [null]
 
 
 # diffusion head
@@ -68,6 +68,15 @@ uncond_diffusion_head.layers.*.out_scale.embed.weight: [null, fsdp]
 
 uncond_diffusion_head.out_norm.embed.weight: [null, fsdp]
 uncond_diffusion_head.out_proj.weight: [null, fsdp]
+
+# batch norm
+mu_batch_norm.mean_tracker.weight: [fsdp, null]
+mu_batch_norm.num_updates: [null]
+
+mu_batch_norm.var_tracker.weight: [fsdp, null]
+mu_batch_norm.var_tracker.num_updates: [null]
+
+mu_alpha: [null]
 
 
 # external

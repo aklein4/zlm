@@ -97,22 +97,18 @@ class AsymZLMTrainer(BaseTrainer):
         )
 
         # we pass z through the decoder TWICE in this version
-        z_for_decoder = torch.cat(
-            [
-                scale_gradient(z, enc_lm_grad_scale),
-                scale_gradient(z, enc_kl_grad_scale),
-            ],
-            dim=0
+        logits, _ = self.model.decode(
+            input_for_model, output_for_model,
+            scale_gradient(z, enc_lm_grad_scale),
+            input_mask=input_mask,
+            output_mask=output_mask,
         )
-        logits, z_states = self.model.decode(
-            input_for_model.repeat(2, 1),
-            output_for_model.repeat(2, 1),
-            z_for_decoder,
-            input_mask=input_mask.repeat(2, 1),
-            output_mask=output_mask.repeat(2, 1),
+        _, z_states = self.model.decode(
+            input_for_model, output_for_model,
+            scale_gradient(z, enc_kl_grad_scale),
+            input_mask=input_mask,
+            output_mask=output_mask,
         )
-        logits = logits[:bs]
-        z_states = z_states[bs:]
 
         # get the lm loss metrics
         lm_loss = lm_loss_fn(

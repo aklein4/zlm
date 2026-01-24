@@ -4,6 +4,8 @@ import torch.nn.functional as F
 
 import numpy as np
 
+from utils.torch_utils import attach_gradient
+
 
 class ScaledEmbedding(nn.Embedding):
 
@@ -83,7 +85,7 @@ class UnbiasedEMA(nn.Module):
         self.eps = eps
 
         self.register_buffer(
-            'num_updates', torch.zeros(1), persistent=True
+            'num_updates', torch.zeros(1, dtype=torch.long), persistent=True
         )
         self.register_buffer(
             'weight', torch.zeros(shape), persistent=True
@@ -102,7 +104,7 @@ class UnbiasedEMA(nn.Module):
 
     @torch.no_grad()
     def retrieve(self) -> torch.Tensor:
-        bias_correction = 1 - self.beta ** self.num_updates
+        bias_correction = 1 - self.beta ** self.num_updates.to(self.weight.dtype)
         return self.weight / (bias_correction + self.eps)
 
 
@@ -113,12 +115,14 @@ class CustomBatchNorm(nn.Module):
         shape: torch.Size,
         beta: float,
         eps: float=1e-5,
+        attach_gradients: bool=False,
     ):
         super().__init__()
 
         self.shape = shape
         self.beta = beta
         self.eps = eps
+        self.attach_gradients = attach_gradients
 
         self.mean_tracker = UnbiasedEMA(
             shape, beta, eps
@@ -134,20 +138,24 @@ class CustomBatchNorm(nn.Module):
         og_dtype = x.dtype
         x = x.to(torch.float32)
 
+        x_mean = x.mean(dim=0)
+        x_var = x.var(dim=0, unbiased=False)
+
         if self.training:
-            self.mean_tracker.update(
-                x.mean(dim=0)
-            )
-            self.var_tracker.update(
-                x.var(dim=0, unbiased=False)
-            )
+            self.mean_tracker.update(x_mean)
+            self.var_tracker.update(x_var)
 
         mean = self.mean_tracker.retrieve()
-        std = torch.sqrt(
-            self.var_tracker.retrieve() + self.eps
-        )
+        var = self.var_tracker.retrieve()
 
-        y = (x - mean[None]) / std[None]
+        if self.attach_gradients:
+            mean.requires_grad_(True)
+            var.requires_grad_(True)
+
+            mean = attach_gradient(mean, x_mean)
+            var = attach_gradient(var, x_var)
+
+        y = (x - mean[None]) / torch.sqrt(var + self.eps)[None]
 
         return y.to(og_dtype)
     
