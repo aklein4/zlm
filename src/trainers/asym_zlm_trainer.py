@@ -10,7 +10,7 @@ from models.zlm import ZLMModel
 from utils.scheduling_utils import linear_warmup
 from utils.torch_utils import scale_gradient, safe_repeat
 from utils.loss_utils import lm_loss_fn, lm_acc_fn
-from utils.sharding_utils import shard_no_gradients, shard_with_gradients
+from utils.sharding_utils import shard_with_gradients, shard_with_gradients
 
 
 class AsymZLMTrainer(BaseTrainer):
@@ -99,16 +99,16 @@ class AsymZLMTrainer(BaseTrainer):
 
         # we pass z through the decoder TWICE in this version
         # [:bs] for lm loss, [bs:] for kl loss
-        input_for_model_2 = shard_no_gradients(
+        input_for_model_2 = shard_with_gradients(
             safe_repeat(input_for_model, 2, dim=0)
         )
-        output_for_model_2 = shard_no_gradients(
+        output_for_model_2 = shard_with_gradients(
             safe_repeat(output_for_model, 2, dim=0)
         )
-        input_mask_2 = shard_no_gradients(
+        input_mask_2 = shard_with_gradients(
             safe_repeat(input_mask, 2, dim=0)
         )
-        output_mask_2 = shard_no_gradients(
+        output_mask_2 = shard_with_gradients(
             safe_repeat(output_mask, 2, dim=0)
         )
         z_2 = shard_with_gradients(
