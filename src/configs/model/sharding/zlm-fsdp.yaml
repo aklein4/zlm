@@ -71,7 +71,7 @@ uncond_diffusion_head.out_proj.weight: [null, fsdp]
 
 # batch norm
 mu_batch_norm.mean_tracker.weight: [fsdp, null]
-mu_batch_norm.num_updates: [null]
+mu_batch_norm.mean_tracker.num_updates: [null]
 
 mu_batch_norm.var_tracker.weight: [fsdp, null]
 mu_batch_norm.var_tracker.num_updates: [null]
