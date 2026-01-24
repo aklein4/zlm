@@ -80,7 +80,7 @@ class UnbiasedEMA(nn.Module):
     ):
         super().__init__()
 
-        self.shape = shape
+        self.shape = tuple(shape)
         self.beta = beta
         self.eps = eps
 
@@ -119,7 +119,7 @@ class CustomBatchNorm(nn.Module):
     ):
         super().__init__()
 
-        self.shape = shape
+        self.shape = tuple(shape)
         self.beta = beta
         self.eps = eps
         self.attach_gradients = attach_gradients
