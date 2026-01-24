@@ -115,7 +115,7 @@ class AsymZLMTrainer(BaseTrainer):
             input_mask=input_mask_2,
             output_mask=output_mask_2,
         )
-        logits[:bs]
+        logits = logits[:bs]
         z_states = z_states[bs:]
 
         # get the lm loss metrics
