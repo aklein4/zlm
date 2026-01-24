@@ -573,9 +573,10 @@ class ZLMModel(nn.Module):
         )
 
         # apply batch norm, rmsnorm, and scaling
-        mu = self.mu_alpha * self.mu_out_norm(
-            self.mu_batch_norm(mu)
-        )
+        # mu = self.mu_alpha * self.mu_out_norm(
+        #     self.mu_batch_norm(mu)
+        # )
+        mu = self.mu_out_norm(mu)
 
         z = self.scheduler.add_noise(
             mu, torch.zeros(1, dtype=torch.long, device=mu.device), noise
