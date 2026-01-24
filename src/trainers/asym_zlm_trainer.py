@@ -33,11 +33,12 @@ class AsymZLMTrainer(BaseTrainer):
 
         if self.config.trainer.init_hook:
             if self.config.trainer.init_hook_step is not None:
-                self.hook_step.fill_(self.config.trainer.init_hook_step)
+                self.hook_step.fill_(
+                    self.config.trainer.init_hook_step
+                )
             else:
                 self.hook_step.fill_(
-                    self.config.trainer.hook_warmup_steps +
-                    self.config.trainer.hook_wait_steps
+                    self.config.trainer.hook_warmup_steps
                 )
     
 
