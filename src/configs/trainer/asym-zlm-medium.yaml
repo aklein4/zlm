@@ -58,8 +58,9 @@ max_grad_norm: 1.0
 max_grad_value: null
 
 # hook configuration
-init_hook: true
-init_hook_step: 1000
+init_hook: false
+init_hook_step: null
+hook_warmup_steps: 1000
 
 # threshold configuration
 upper_loss_threshold: 0.75

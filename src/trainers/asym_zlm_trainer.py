@@ -240,6 +240,10 @@ class AsymZLMTrainer(BaseTrainer):
             uncond_kl_per_token
         )
 
+        repeats = (
+            output_ids[:, None, :] == output_ids[None, :, :]
+        ).all(-1).long().sum()
+
         aux = {
             "lm_loss": lm_loss,
             "lm_acc": lm_acc,
@@ -257,6 +261,7 @@ class AsymZLMTrainer(BaseTrainer):
             "hooked": self.hooked,
             "hook_step": self.hook_step,
             "atom_count": (output_ids != pad_token_id).long().sum(),
+            "all_unique": (repeats == bs).long()
         }
 
         return loss, aux
