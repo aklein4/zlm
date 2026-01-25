@@ -68,10 +68,11 @@ class AsymZLMTrainer(BaseTrainer):
         bs = input_ids.shape[0]
 
         # prepare gradient scales for the encoder
-        enc_kl_grad_scale = self.config.trainer.beta * linear_warmup(
+        base_kl_grad_scale = linear_warmup(
             self.hook_step.float(),
             self.config.trainer.hook_warmup_steps
         )
+        enc_kl_grad_scale = self.config.trainer.beta
         enc_kl_head_grad_weights = {}
         enc_lm_grad_scale = {}
 
@@ -109,6 +110,7 @@ class AsymZLMTrainer(BaseTrainer):
             input_mask=input_mask,
             output_mask=output_mask,
         )
+        z_states = scale_gradient(z_states, base_kl_grad_scale)
 
         # get the lm loss metrics
         lm_loss = lm_loss_fn(
@@ -189,7 +191,7 @@ class AsymZLMTrainer(BaseTrainer):
         uncond_kl = uncond_kls.sum(0) * (self.model.config.num_diffusion_timesteps - 1) / self.config.trainer.num_uncond_diffusion_samples
 
         # update the head kl grad weights with hindsight
-        head_kl_weights = enc_kl_grad_scale * self.get_kl_weights(kl)
+        head_kl_weights = enc_kl_grad_scale * base_kl_grad_scale * self.get_kl_weights(kl)
         enc_kl_head_grad_weights["value"] = head_kl_weights[None, :, None]
 
         # calculate kls per token
@@ -216,14 +218,10 @@ class AsymZLMTrainer(BaseTrainer):
             uncond_kl_per_token
         )
 
-        num_repeats = (
-            output_ids[:, None, :] == output_ids[None, :, :]
-        ).all(-1).long().sum() - bs
-
         aux = {
             "lm_loss": lm_loss,
             "lm_acc": lm_acc,
-            "kl_grad_scale": enc_kl_grad_scale,
+            "kl_grad_scale": base_kl_grad_scale,
             "lm_loss_scale": enc_lm_grad_scale["value"],
             "kl_per_token": kl_per_token,
             "effective_parties": effective_parties,
@@ -237,7 +235,6 @@ class AsymZLMTrainer(BaseTrainer):
             "hooked": self.hooked,
             "hook_step": self.hook_step,
             "atom_count": (output_ids != pad_token_id).long().sum(),
-            "all_unique": (num_repeats == 0).long(),
         }
 
         return loss, aux
