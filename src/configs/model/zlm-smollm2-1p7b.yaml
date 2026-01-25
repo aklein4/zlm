@@ -61,6 +61,11 @@ z_length: 384
 # latent configuration
 latent_size: 64
 
+# batch norm configurations
+mu_batch_norm_beta: 0.95
+mu_batch_norm_attach_gradients: true
+mu_alpha: 0.75
+
 # diffusion configuration
 minimum_diffusion_timestep: 0.5
 num_diffusion_timesteps: 16
@@ -69,3 +74,4 @@ num_diffusion_timesteps: 16
 diffusion_in_proj: false
 num_diffusion_head_layers: 2
 diffusion_mlp_size: 3072
+diffusion_output_init_scale: 0.1

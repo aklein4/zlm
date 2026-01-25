@@ -61,7 +61,7 @@ max_grad_value: null
 init_hook: false
 init_hook_step: null
 hook_warmup_steps: 1000
-hook_wait_steps: 0
+hook_wait_steps: 1000
 
 # threshold configuration
 upper_loss_threshold: 0.6
