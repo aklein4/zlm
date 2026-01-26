@@ -19,7 +19,7 @@ from utils.torch_utils import (
 from models.llama import LlamaForCausalLM
 from models.custom_llama import LlamaMLP, LlamaRMSNorm, LlamaDecoderLayer, CustomLlamaModel
 from models import load_checkpoint_state
-from utils.torch_modules import ScaledEmbedding, CustomBatchNorm
+from utils.torch_modules import ScaledEmbedding, InitialBatchNorm
 import utils.constants as constants
 
 
@@ -438,15 +438,10 @@ class ZLMModel(nn.Module):
         self.mu_out_norm = LlamaRMSNorm(self.latent_size, eps=config.rms_norm_eps, elementwise_affine=False)
         self.z_in_norm = LlamaRMSNorm(self.latent_size, eps=config.rms_norm_eps, elementwise_affine=False)
 
-        # create a batch norm for the mu output
-        self.mu_batch_norm = CustomBatchNorm(
+        # create an initializing batch norm for the mu output
+        self.mu_initial_batch_norm = InitialBatchNorm(
             [self.z_length, self.latent_size],
-            beta=config.mu_batch_norm_beta,
             eps=config.rms_norm_eps,
-            attach_gradients=config.mu_batch_norm_attach_gradients,
-        )
-        self.register_buffer(
-            'mu_alpha', torch.ones(1) * config.mu_alpha, persistent=True
         )
 
         # create the diffusion components
@@ -572,9 +567,9 @@ class ZLMModel(nn.Module):
             hidden_states[..., -self.z_length:, :]
         )
 
-        # apply batch norm, rmsnorm, and scaling
-        mu = self.mu_alpha * self.mu_out_norm(
-            self.mu_batch_norm(mu)
+        # apply batch norm then rms norm
+        mu = self.mu_out_norm(
+            self.mu_initial_batch_norm(mu)
         )
         # mu = self.mu_out_norm(mu)
 

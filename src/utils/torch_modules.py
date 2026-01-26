@@ -168,4 +168,59 @@ class CustomBatchNorm(nn.Module):
         y = (x - mean[None]) * torch.rsqrt(var + self.eps)[None]
 
         return y.to(og_dtype)
+
+
+class InitialBatchNorm(nn.Module):
+
+    def __init__(
+        self,
+        shape: torch.Size,
+        eps: float=1e-5,
+    ):
+        super().__init__()
+
+        self.shape = tuple(shape)
+        self.eps = eps
+
+        self.register_buffer(
+            "initialized", torch.zeros(1, dtype=torch.bool), persistent=True
+        )
+        self.register_buffer(
+            "shift", torch.zeros(shape), persistent=True
+        )
+        self.register_buffer(
+            "scale", torch.ones(shape), persistent=True
+        )
+
+    
+    def forward(self, x: torch.Tensor) -> torch.Tensor:
+        assert x.shape[1:] == self.shape, f"Input shape {x.shape} does not match BatchNorm shape {self.shape}"
+
+        og_dtype = x.dtype
+        x = x.to(torch.float32)
+
+        if self.training:
+
+            all_finite = torch.isfinite(x).all()
+            do_update = (~self.initialized) & all_finite
+
+            self.initialized |= do_update
+            self.shift.copy_(
+                torch.where(
+                    do_update,
+                    -x.mean(dim=0).detach(),
+                    self.shift
+                )
+            )
+            self.scale.copy_(
+                torch.where(
+                    do_update,
+                    torch.rsqrt(x.var(dim=0, unbiased=False).detach() + self.eps),
+                    self.scale
+                )
+            )
+
+        y = (x + self.shift[None]) * self.scale[None]
+
+        return y.to(og_dtype)
     
