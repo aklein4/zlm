@@ -435,7 +435,7 @@ class ZLMModel(nn.Module):
         self.encoder_mu_proj_out = nn.Linear(self.hidden_size, self.latent_size, bias=False)
 
         # create the norms
-        self.mu_out_norm = LlamaRMSNorm(self.latent_size, eps=config.rms_norm_eps, elementwise_affine=False)
+        # self.mu_out_norm = LlamaRMSNorm(self.latent_size, eps=config.rms_norm_eps, elementwise_affine=False)
         self.z_in_norm = LlamaRMSNorm(self.latent_size, eps=config.rms_norm_eps, elementwise_affine=False)
 
         # create an initializing batch norm for the mu output
@@ -568,9 +568,7 @@ class ZLMModel(nn.Module):
         )
 
         # apply batch norm then rms norm
-        mu = self.mu_out_norm(
-            self.mu_initial_batch_norm(mu)
-        )
+        mu = self.mu_initial_batch_norm(mu)
         # mu = self.mu_out_norm(mu)
 
         z = self.scheduler.add_noise(
