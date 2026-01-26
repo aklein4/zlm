@@ -61,6 +61,9 @@ z_length: 384
 # latent configuration
 latent_size: 64
 
+# batch norm configurations
+batch_norm_beta: 0.95
+
 # diffusion configuration
 minimum_diffusion_timestep: 0.5
 num_diffusion_timesteps: 16

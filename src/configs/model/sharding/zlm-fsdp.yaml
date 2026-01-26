@@ -70,10 +70,8 @@ uncond_diffusion_head.out_norm.embed.weight: [null, fsdp]
 uncond_diffusion_head.out_proj.weight: [null, fsdp]
 
 # batch norm
-mu_initial_batch_norm.initialized: [null]
-
-mu_initial_batch_norm.shift: [null, null]
-mu_initial_batch_norm.scale: [null, null]
+mu_mean_batch_norm.mean_tracker.num_updates: [null]
+mu_mean_batch_norm.mean_tracker.weight: [null, null]
 
 
 # external

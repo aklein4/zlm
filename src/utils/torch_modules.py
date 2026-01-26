@@ -170,6 +170,49 @@ class CustomBatchNorm(nn.Module):
         return y.to(og_dtype)
 
 
+class MeanNorm(nn.Module):
+
+    def __init__(
+        self,
+        shape: torch.Size,
+        beta: float,
+        eps: float=1e-5,
+        attach_gradients: bool=False,
+    ):
+        super().__init__()
+
+        self.shape = tuple(shape)
+        self.beta = beta
+        self.eps = eps
+        self.attach_gradients = attach_gradients
+
+        self.mean_tracker = UnbiasedEMA(
+            shape, beta, eps
+        )
+
+    
+    def forward(self, x: torch.Tensor) -> torch.Tensor:
+        assert x.shape[1:] == self.shape, f"Input shape {x.shape} does not match BatchNorm shape {self.shape}"
+
+        og_dtype = x.dtype
+        x = x.to(torch.float32)
+
+        x_mean = x.mean(dim=0)
+
+        if self.training:
+            self.mean_tracker.update(x_mean)
+        mean = self.mean_tracker.retrieve()
+
+        if self.attach_gradients:
+            mean.requires_grad_(True)
+
+            mean = attach_gradient(mean, x_mean)
+
+        y = x - mean[None]
+
+        return y.to(og_dtype)
+
+
 class InitialBatchNorm(nn.Module):
 
     def __init__(

@@ -3,6 +3,7 @@ import torch
 import os
 import matplotlib.pyplot as plt
 from tqdm import tqdm
+import numpy as np
 
 import datasets
 
@@ -13,17 +14,20 @@ from collators.seq_to_seq import SeqToSeqCollator
 
 DEVICE = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
-MODEL_URL = "aklein4/ZLM-v2_zlm-med-bn-Sym"
-STEP = 5000
+# MODEL_URL = "aklein4/ZLM-v2_zlm-large-wait"
+# STEP = 1000
+
+MODEL_URL = "aklein4/ZLM-v2_zlm-med-ada"
+STEP = 10000
 
 DATA_URL = ("aklein4/seq2seq-mixed-pretraining-SmolLM2", "all")
 
 MU_PATH = os.path.join(
-    constants.LOCAL_DATA_PATH, "mu_values.pt"
+    constants.LOCAL_DATA_PATH, "mu_values_ada.pt"
 )
 
 BS = 128
-NUM_STEPS = (1024 * 8) // BS
+NUM_STEPS = (1024 * 4) // BS
 
 
 @torch.no_grad()
@@ -82,7 +86,7 @@ def get_data():
             input_for_model, output_for_model,
             input_mask=input_mask, output_mask=output_mask,
         )
-        all_mu.append(mu.cpu() / model.config.mu_alpha)
+        all_mu.append(mu.cpu())
 
     pbar.close()
 
@@ -90,13 +94,11 @@ def get_data():
     torch.save(all_mu, MU_PATH)
 
 
+@torch.no_grad()
 def main():
 
     mu = torch.load(MU_PATH)
-    # x = mu[:, 50] # [batch, dim]
-    x = torch.cat(
-        [mu[:, 0], mu[:, 1]], dim=-1
-    )
+    x = mu[:, 50] # [batch, dim]
 
     cov = torch.cov(x.T) # [dim, dim]
     max_abs = cov.abs().max().item()
@@ -110,26 +112,17 @@ def main():
     plt.savefig("mu_cov.png")
     plt.clf()
 
-    pc = torch.linalg.eigvalsh(cov).flip(0).cpu().numpy()
-    plt.plot(pc[:10])
-    plt.yscale("log")
+    val, vec = torch.linalg.eigh(cov)
+    plt.plot(val.flip(0).cpu().numpy())
+    plt.grid()
     plt.savefig("mu_cov_eigenvalues.png")
+    plt.clf()
 
-    L = torch.linalg.cholesky(cov)
-    whitened = torch.linalg.solve_triangular(
-        L, x.T, upper=False
-    ).T  # [batch, dim]
-
-    cov_whitened = torch.cov(whitened.T)
-    max_abs_whitened = cov_whitened.abs().max().item()
-
-    plt.matshow(
-        cov_whitened.cpu().numpy(),
-        cmap="bwr",
-        vmin=-max_abs_whitened, vmax=max_abs_whitened
-    )
-    plt.colorbar()
-    plt.savefig("mu_cov_whitened.png")
+    mean = (vec @ x.T).T.mean(dim=0).cpu().numpy()
+    mean = np.sort(mean)[::-1]
+    plt.plot(mean)
+    plt.grid()
+    plt.savefig("mu_mean.png")
 
 
 if __name__ == "__main__":
