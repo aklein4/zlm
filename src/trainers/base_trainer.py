@@ -18,6 +18,7 @@ import shutil
 import json
 import numpy as np
 import re
+import time
 
 import torch
 import torch.nn.utils as nn_utils
@@ -287,8 +288,9 @@ class BaseTrainer:
         logger.info(f"    Model dtype: {list(self.model.parameters())[0].dtype}")
 
         # initialize counters
-        epoch = 0
+        epoch = 0 # TODO: currently hangs on new epoch
         step = 0
+        error_count = 0
         self.atoms_seen = 0 # must be self. for step_closure
         training_start_time = timer()
 
@@ -296,25 +298,26 @@ class BaseTrainer:
         while step < max_step:
             try:
                 batch = next(train_iterator)
-            except StopIteration:
-                logger.warning("DataLoader exhausted at step %d, reset iterator", step)
-                epoch += 1
-                step += 1
-                train_iterator = iter(train_loader)
-                batch = next(train_iterator)
             except:
                 logger.warning("Unexpected error when fetching data at step %d, retrying", step)
+                error_count += 1
+                if error_count > 1000:
+                    logger.error("Too many errors when fetching data, saving checkpoint and exiting")
+                    self.save_checkpoint(step)
+                    raise RuntimeError("Too many errors when fetching data")
+                time.sleep(1)
                 continue
+            error_count = 0
             
-            # can be reached by forward
-            self.step = step
-
             # skip steps for pretrained model
             if self.config.model.pretrained_step is not None and step < self.config.model.pretrained_step:
                 if step % 10 == 0:
                     logger.info(f"Skipping step {step} as it is before the pretrained step {self.config.model.pretrained_step}")
                 step += 1
                 continue
+
+            # can be reached by forward
+            self.step = step
 
             # when context parallel and load balance context parallel is enabled,
             # we will reorder the sequence here for each batch
