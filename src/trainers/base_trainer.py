@@ -288,18 +288,23 @@ class BaseTrainer:
 
         # initialize counters
         epoch = 0
+        step = 0
         self.atoms_seen = 0 # must be self. for step_closure
         training_start_time = timer()
 
         # run the training loop
-        for step in range(max_step):
+        while step < max_step:
             try:
                 batch = next(train_iterator)
             except StopIteration:
                 logger.warning("DataLoader exhausted at step %d, reset iterator", step)
                 epoch += 1
+                step += 1
                 train_iterator = iter(train_loader)
                 batch = next(train_iterator)
+            except:
+                logger.warning("Unexpected error when fetching data at step %d, retrying", step)
+                continue
             
             # can be reached by forward
             self.step = step
@@ -308,6 +313,7 @@ class BaseTrainer:
             if self.config.model.pretrained_step is not None and step < self.config.model.pretrained_step:
                 if step % 10 == 0:
                     logger.info(f"Skipping step {step} as it is before the pretrained step {self.config.model.pretrained_step}")
+                step += 1
                 continue
 
             # when context parallel and load balance context parallel is enabled,
@@ -399,6 +405,8 @@ class BaseTrainer:
             # save checkpoint
             if (step+1) % self.config.trainer.checkpoint_interval == 0:    
                 self.save_checkpoint(step+1)
+
+            step += 1
 
         xm.wait_device_ops()
         logger.info("Finished training run")
