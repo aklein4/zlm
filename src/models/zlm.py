@@ -468,12 +468,13 @@ class ZLMModel(nn.Module):
         self.apply(self.scaled_embed_init)
 
         # scale input layers by embedding stats
-        self.encoder_noise_proj_in.weight.data.zero_()
+        # self.encoder_noise_proj_in.weight.data.zero_()
+        self.encoder_noise_proj_in.weight.data *= embed_std[:, None]
         self.decoder_z_proj_in.weight.data *= embed_std[:, None]
 
         # initialize the diffusion heads with small values
-        self.diffusion_head.out_proj.weight.data.mul_(config.diffusion_output_init_scale)
-        self.uncond_diffusion_head.out_proj.weight.data.mul_(config.diffusion_output_init_scale)
+        # self.diffusion_head.out_proj.weight.data.mul_(config.diffusion_output_init_scale)
+        # self.uncond_diffusion_head.out_proj.weight.data.mul_(config.diffusion_output_init_scale)
 
 
     def scaled_embed_init(self, module):
