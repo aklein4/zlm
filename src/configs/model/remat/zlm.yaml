@@ -13,10 +13,8 @@ advanced:
     settings:
         activation_checkpoint_layers:
          - DiffusionHead
-         - SpectralBatchNorm
         activation_barrier_layers:
          - DiffusionHead
-         - SpectralBatchNorm
 
  -  name: encoder_model
     settings:

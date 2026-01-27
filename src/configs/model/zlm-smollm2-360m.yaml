@@ -63,6 +63,7 @@ latent_size: 64
 
 # batch norm configurations
 batch_norm_beta: 0.95
+mu_alpha: 0.75
 
 # diffusion configuration
 minimum_diffusion_timestep: 0.5

@@ -444,6 +444,9 @@ class ZLMModel(nn.Module):
             beta=config.batch_norm_beta,
             eps=config.rms_norm_eps,
         ) 
+        self.register_buffer(
+            "mu_alpha", torch.ones(1)*config.mu_alpha, persistent=True
+        )
 
         # create the diffusion components
         self.diffusion_head = DiffusionHead(config)
@@ -570,7 +573,7 @@ class ZLMModel(nn.Module):
 
         # apply batch norm then rms norm
         mu = self.mu_batch_norm(mu)
-        mu = self.mu_out_norm(mu)
+        mu = self.mu_alpha * self.mu_out_norm(mu)
 
         z = self.scheduler.add_noise(
             mu, torch.zeros(1, dtype=torch.long, device=mu.device), noise
