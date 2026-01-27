@@ -14,11 +14,13 @@ from collators.seq_to_seq import SeqToSeqCollator
 
 DEVICE = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
-# MODEL_URL = "aklein4/ZLM-v2_zlm-large-wait"
-# STEP = 1000
+MODEL_URL = "aklein4/ZLM-v2_zlm-large-center"
+STEP = 4000
+MODEL_TYPE = "zlm_center.ZLMModel"
 
-MODEL_URL = "aklein4/ZLM-v2_zlm-med-ada"
-STEP = 10000
+# MODEL_URL = "aklein4/ZLM-v2_zlm-med-ada"
+# STEP = 10000
+# MODEL_TYPE = None
 
 DATA_URL = ("aklein4/seq2seq-mixed-pretraining-SmolLM2", "all")
 
@@ -36,6 +38,7 @@ def get_data():
     model = load_checkpoint(
         MODEL_URL, STEP,
         attention_kernel="gpu_flash_attention",
+        model_type=MODEL_TYPE,
     ).to(DEVICE)
     model.eval()
     pad_token_id = model.config.pad_token_id
@@ -98,7 +101,7 @@ def get_data():
 def main():
 
     mu = torch.load(MU_PATH)
-    x = mu[:, 50] # [batch, dim]
+    x = mu[:, -13] # [batch, dim]
 
     cov = torch.cov(x.T) # [dim, dim]
     max_abs = cov.abs().max().item()

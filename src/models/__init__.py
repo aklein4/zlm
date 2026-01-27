@@ -18,6 +18,7 @@ def load_checkpoint(
     strict: bool = True,
     ignore_cache: bool = False,
     remove_folder: bool = False,
+    model_type: str = None,
 ):
     
     name = url.replace("/", "--")
@@ -41,7 +42,9 @@ def load_checkpoint(
     config = omegaconf.OmegaConf.load(config_path)
     config.attention_kernel = attention_kernel
 
-    model = import_model(config.type)(config)
+    if model_type is None:
+        model_type = config.type
+    model = import_model(model_type)(config)
 
     # load the weights
     state_path = os.path.join(subfolder_path, "model.pt")
