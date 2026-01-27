@@ -284,7 +284,7 @@ class SpectralBatchNorm(nn.Module):
         self.eps = eps
 
         self.cov_tracker = UnbiasedEMA(
-            shape + (shape[-1],),
+            self.shape + (shape[-1],),
             beta=beta, eps=eps
         )
         self.mean_tracker = UnbiasedEMA(
