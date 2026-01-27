@@ -70,9 +70,11 @@ uncond_diffusion_head.out_norm.embed.weight: [null, fsdp]
 uncond_diffusion_head.out_proj.weight: [null, fsdp]
 
 # batch norm
-mu_mean_batch_norm.mean_tracker.num_updates: [null]
-mu_mean_batch_norm.mean_tracker.weight: [null, null]
+mu_batch_norm.cov_tracker.num_updates: [null]
+mu_batch_norm.cov_tracker.weight: [null, null]
 
+mu_batch_norm.mean_tracker.num_updates: [null]
+mu_batch_norm.mean_tracker.weight: [null, null]
 
 # external
 encoder_sep_token: [null, fsdp]

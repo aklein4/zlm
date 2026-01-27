@@ -61,11 +61,11 @@ max_grad_value: null
 init_hook: false
 init_hook_step: null
 hook_warmup_steps: 1000
-hook_wait_steps: 500
+hook_wait_steps: 0
 
 # threshold configuration
-upper_loss_threshold: 0.6
-lower_loss_threshold: 0.4
+upper_loss_threshold: 0.75
+lower_loss_threshold: 0.5
 min_lm_loss_scale: 0.01
 
 # diffusion sampling configuration

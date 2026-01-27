@@ -5,6 +5,7 @@ import torch.nn.functional as F
 import numpy as np
 
 from utils.torch_utils import attach_gradient
+from utils.sharding_utils import maybe_shard_with_gradients
 
 
 class ScaledEmbedding(nn.Embedding):
@@ -264,6 +265,83 @@ class InitialBatchNorm(nn.Module):
             )
 
         y = (x + self.shift[None]) * self.scale[None]
+
+        return y.to(og_dtype)
+    
+
+class SpectralBatchNorm(nn.Module):
+
+    def __init__(
+        self,
+        shape: torch.Size,
+        beta: float,
+        eps: float=1e-5,
+    ):
+        super().__init__()
+    
+        self.shape = tuple(shape)
+        assert len(self.shape) == 2, "SpectralBatchNorm only supports 2D inputs"
+        self.eps = eps
+
+        self.cov_tracker = UnbiasedEMA(
+            shape + (shape[-1],),
+            beta=beta, eps=eps
+        )
+        self.mean_tracker = UnbiasedEMA(
+            shape,
+            beta=beta, eps=eps
+        )
+
+    
+    def forward(self, x: torch.Tensor) -> torch.Tensor:
+        """
+        Spectral normalize x along the last dimension. Assume that the second
+        axis of x in the sequence dimension, each of which should be handled independently.
+        
+        Args:
+            x: (batch_size, sequence_length, hidden_size).
+        """
+        assert x.shape[1:] == self.shape, f"Input shape {x.shape} does not match BatchNorm shape {self.shape}"
+
+        x = x.transpose(0, 1) # [S, B, H]
+        x = maybe_shard_with_gradients(x)
+
+        og_dtype = x.dtype
+        x = x.to(torch.float32)
+
+        x_mean = x.mean(dim=1)  # [S, H]
+        x_cov = torch.einsum(
+            'sbi,sbj->sij',
+            (x - x_mean[:, None]),
+            (x - x_mean[:, None]),
+        ) / x.shape[1] # [S, H, H]
+
+        if self.training:
+            self.mean_tracker.update(x_mean)
+            self.cov_tracker.update(x_cov)
+        else:
+            x_mean = self.mean_tracker.retrieve()
+            x_cov = self.cov_tracker.retrieve()
+
+        eig_vals, eig_vecs = torch.linalg.eigh(
+            x_cov + self.eps * torch.eye(self.shape[-1], device=x.device, dtype=x_cov.dtype)[None]
+        )
+
+        eig_vals = torch.clamp(eig_vals, min=self.eps) # [S, H]
+        inv_sqrt_cov = (
+            eig_vecs @
+            torch.diag_embed(eig_vals.rsqrt()) @
+            eig_vecs.transpose(-1, -2)  
+        ) # [S, H, H]
+
+        y = torch.einsum(
+            'shl,sbh->sbl',
+            inv_sqrt_cov,
+            (x - x_mean[:, None]),
+        ) # [S, B, H]
+
+        y = y.transpose(0, 1) # [B, S, H]
+        y = maybe_shard_with_gradients(y)
 
         return y.to(og_dtype)
     
