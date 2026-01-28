@@ -80,13 +80,14 @@ class AdamW(Optimizer):
                     raise RuntimeError("AdamW does not support sparse gradients.")
 
                 # handle nan gradients
+                is_finite = torch.isfinite(grad).all()
                 grad = torch.nan_to_num(grad, nan=0.0, posinf=0.0, neginf=0.0)
 
                 state = self.state[p]
 
                 # State initialization
                 if len(state) == 0:
-                    state["step"] = 0
+                    state["step"] = torch.zeros(1, dtype=torch.long, device=grad.device)
                     # Exponential moving average of gradient values
                     state["exp_avg"] = torch.zeros_like(grad, dtype=torch.bfloat16)
                     # Exponential moving average of squared gradient values
@@ -98,17 +99,19 @@ class AdamW(Optimizer):
                 exp_avg, exp_avg_sq = state["exp_avg"], state["exp_avg_sq"]
                 beta1, beta2 = group["betas"]
 
-                state["step"] += 1
+                state["step"] += is_finite.to(torch.long)
 
                 # Decay the first and second moment running average coefficient
                 # In-place operations to update the averages at the same time
-                exp_avg.mul_(beta1).add_(
+                b_1 = (beta1 ** is_finite.to(torch.float32)).to(exp_avg.dtype)
+                b_2 = (beta2 ** is_finite.to(torch.float32)).to(exp_avg_sq.dtype)
+                exp_avg.mul_(b_1).add_(
                     grad.to(exp_avg.dtype),
-                    alpha=1.0 - beta1
+                    alpha=1.0 - b_1
                 )
-                exp_avg_sq.mul_(beta2).add_(
+                exp_avg_sq.mul_(b_2).add_(
                     grad.pow(2).to(exp_avg_sq.dtype),
-                    alpha=1.0 - beta2
+                    alpha=1.0 - b_2
                 )
                 exp_avg_sq.clamp_(min=group["eps"]**2)
 
@@ -116,9 +119,9 @@ class AdamW(Optimizer):
 
                 step_size = group["lr"]
                 if group["correct_bias"]:  # No bias correction for Bert
-                    bias_correction1 = 1.0 - beta1 ** state["step"]
-                    bias_correction2 = 1.0 - beta2 ** state["step"]
-                    step_size = step_size * math.sqrt(bias_correction2) / bias_correction1
+                    bias_correction1 = 1.0 - beta1 ** state["step"].to(torch.float32)
+                    bias_correction2 = 1.0 - beta2 ** state["step"].to(torch.float32)
+                    step_size = step_size * torch.sqrt(bias_correction2) / bias_correction1
 
                 update = exp_avg.to(p.dtype) / denom
                 if group["update_clip"] is not None:
@@ -127,7 +130,7 @@ class AdamW(Optimizer):
                 update_nan = update_nan | (~torch.isfinite(update)).any()
                 pre_param_nan = pre_param_nan | (~torch.isfinite(p)).any()
 
-                p.add_(update, alpha=-step_size)
+                p.add_(update, alpha=-step_size.to(p.dtype))
 
                 # Just adding the square of the weights to the loss function is *not*
                 # the correct way of using L2 regularization/weight decay with Adam,
