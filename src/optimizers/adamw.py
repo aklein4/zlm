@@ -103,13 +103,13 @@ class AdamW(Optimizer):
 
                 # Decay the first and second moment running average coefficient
                 # In-place operations to update the averages at the same time
-                b_1 = (beta1 ** is_finite.to(torch.float32)).to(exp_avg.dtype)
-                b_2 = (beta2 ** is_finite.to(torch.float32)).to(exp_avg_sq.dtype)
-                exp_avg.mul_(b_1).add_(
-                    grad.to(exp_avg.dtype) * (1.0 - b_1)
+                b_1 = beta1 ** is_finite.to(torch.float32)
+                b_2 = beta2 ** is_finite.to(torch.float32)
+                exp_avg.mul_(b_1.to(exp_avg.dtype)).add_(
+                    (grad * (1.0 - b_1)).to(exp_avg.dtype)
                 )
-                exp_avg_sq.mul_(b_2).add_(
-                    grad.pow(2).to(exp_avg_sq.dtype) * (1.0 - b_2),
+                exp_avg_sq.mul_(b_2.to(exp_avg_sq.dtype)).add_(
+                    (grad.pow(2) * (1.0 - b_2)).to(exp_avg_sq.dtype)
                 )
 
                 denom = torch.clamp(
