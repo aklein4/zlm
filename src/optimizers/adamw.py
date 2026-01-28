@@ -106,12 +106,10 @@ class AdamW(Optimizer):
                 b_1 = (beta1 ** is_finite.to(torch.float32)).to(exp_avg.dtype)
                 b_2 = (beta2 ** is_finite.to(torch.float32)).to(exp_avg_sq.dtype)
                 exp_avg.mul_(b_1).add_(
-                    grad.to(exp_avg.dtype),
-                    alpha=1.0 - b_1
+                    grad.to(exp_avg.dtype) * (1.0 - b_1)
                 )
                 exp_avg_sq.mul_(b_2).add_(
-                    grad.pow(2).to(exp_avg_sq.dtype),
-                    alpha=1.0 - b_2
+                    grad.pow(2).to(exp_avg_sq.dtype) * (1.0 - b_2),
                 )
 
                 denom = torch.clamp(
@@ -131,7 +129,7 @@ class AdamW(Optimizer):
                 update_nan = update_nan | (~torch.isfinite(update)).any()
                 pre_param_nan = pre_param_nan | (~torch.isfinite(p)).any()
 
-                p.add_(update, alpha=-step_size.to(p.dtype))
+                p.add_(update * (-step_size.to(p.dtype)))
 
                 # Just adding the square of the weights to the loss function is *not*
                 # the correct way of using L2 regularization/weight decay with Adam,
