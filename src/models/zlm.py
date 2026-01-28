@@ -439,10 +439,10 @@ class ZLMModel(nn.Module):
         self.z_in_norm = LlamaRMSNorm(self.latent_size, eps=config.rms_norm_eps, elementwise_affine=False)
 
         # create an initializing batch norm for the mu output
-        self.mu_initial_batch_norm = InitialBatchNorm(
-            [self.z_length, self.latent_size],
-            eps=config.rms_norm_eps,
-        )
+        # self.mu_initial_batch_norm = InitialBatchNorm(
+        #     [self.z_length, self.latent_size],
+        #     eps=config.rms_norm_eps,
+        # )
 
         # create the diffusion components
         self.diffusion_head = DiffusionHead(config)
@@ -569,7 +569,7 @@ class ZLMModel(nn.Module):
         )
 
         # apply batch norm then rms norm
-        mu = self.mu_initial_batch_norm(mu)
+        # mu = self.mu_initial_batch_norm(mu)
         # mu = self.mu_out_norm(mu)
 
         z = self.scheduler.add_noise(

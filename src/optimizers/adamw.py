@@ -113,9 +113,10 @@ class AdamW(Optimizer):
                     grad.pow(2).to(exp_avg_sq.dtype),
                     alpha=1.0 - b_2
                 )
-                exp_avg_sq.clamp_(min=group["eps"]**2)
 
-                denom = exp_avg_sq.to(p.dtype).sqrt()
+                denom = torch.clamp(
+                    exp_avg_sq.to(p.dtype), min=group["eps"]**2
+                ).sqrt()
 
                 step_size = group["lr"]
                 if group["correct_bias"]:  # No bias correction for Bert
