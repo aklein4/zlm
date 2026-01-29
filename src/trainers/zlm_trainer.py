@@ -65,6 +65,16 @@ class ZLMTrainer(BaseTrainer):
     def forward(self, input_ids, output_ids):
         pad_token_id = self.model.config.pad_token_id
 
+        # handle the warmups
+        hook_progress = linear_warmup(
+            self.hook_step.float(),
+            self.config.trainer.hook_warmup_steps
+        )
+        wait_hook_progress = linear_warmup(
+            self.hook_step.float() - self.config.trainer.hook_wait_steps,
+            self.config.trainer.hook_warmup_steps
+        )
+
         # prepare inputs
         input_mask = (input_ids != pad_token_id)
         output_mask = (output_ids != pad_token_id)
@@ -81,9 +91,11 @@ class ZLMTrainer(BaseTrainer):
         )
 
         # encode and decode
+        noise_scale = hook_progress
         z, mu = self.model.encode(
             input_for_model, output_for_model,
             input_mask=input_mask, output_mask=output_mask,
+            noise_scale=noise_scale,
         )
 
         logit_grad_scale = {}
@@ -117,19 +129,9 @@ class ZLMTrainer(BaseTrainer):
         ).reshape(1)
         logit_grad_scale["value"] = lm_loss_scale
 
-        # update hooking status
-        self.hooked = self.hooked | (lm_loss < self.config.trainer.upper_loss_threshold).reshape(1)
-        self.hook_step += self.hooked.long()
-
         # gradient scales
-        kl_grad_scale = linear_warmup(
-            self.hook_step.float(),
-            self.config.trainer.hook_warmup_steps
-        ) # only used in kl_grad_weights
-        full_grad_scale = linear_warmup(
-            self.hook_step.float() - self.config.trainer.hook_wait_steps,
-            self.config.trainer.hook_warmup_steps
-        )
+        kl_grad_scale = hook_progress
+        full_grad_scale = wait_hook_progress
         kl_grad_weights = {}
 
         # get the kls by diffusion sampling
@@ -212,9 +214,15 @@ class ZLMTrainer(BaseTrainer):
             uncond_kl_per_token
         )
 
+        # update hooking status
+        self.hooked = self.hooked | (lm_loss < self.config.trainer.upper_loss_threshold).reshape(1)
+        self.hook_step += self.hooked.long()
+
+
         aux = {
             "lm_loss": lm_loss,
             "lm_acc": lm_acc,
+            "noise_scale": noise_scale,
             "lm_loss_scale": lm_loss_scale,
             "kl_grad_scale": kl_grad_scale,
             "full_grad_scale": full_grad_scale,

@@ -19,7 +19,7 @@ from utils.torch_utils import (
 from models.llama import LlamaForCausalLM
 from models.custom_llama import LlamaMLP, LlamaRMSNorm, LlamaDecoderLayer, CustomLlamaModel
 from models import load_checkpoint_state
-from utils.torch_modules import ScaledEmbedding, InitialBatchNorm
+from utils.torch_modules import ScaledEmbedding
 import utils.constants as constants
 
 
@@ -435,13 +435,8 @@ class ZLMModel(nn.Module):
         self.encoder_mu_proj_out = nn.Linear(self.hidden_size, self.latent_size, bias=False)
 
         # create the norms
+        self.mu_out_norm = LlamaRMSNorm(self.latent_size, eps=config.rms_norm_eps, elementwise_affine=False)
         self.z_in_norm = LlamaRMSNorm(self.latent_size, eps=config.rms_norm_eps, elementwise_affine=False)
-
-        # create an initializing batch norm for the mu output
-        self.mu_initial_batch_norm = InitialBatchNorm(
-            [self.z_length, self.latent_size],
-            eps=config.rms_norm_eps,
-        )
 
         # create the diffusion components
         self.diffusion_head = DiffusionHead(config)
@@ -562,8 +557,8 @@ class ZLMModel(nn.Module):
             hidden_states[..., -self.z_length:, :]
         )
 
-        # apply batch norm then rms norm
-        mu = self.mu_initial_batch_norm(mu)
+        # apply rms norm to mu
+        mu = self.mu_out_norm(mu)
 
         z = self.scheduler.add_noise(
             mu, torch.zeros(1, dtype=torch.long, device=mu.device), noise
