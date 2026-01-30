@@ -20,7 +20,6 @@ def spectral_gradient_transform(
     grad: torch.Tensor, # [B, L, D]
     eps: float=1e-5,
 ):
-    return grad
     x = x.transpose(0, 1) # [L, B, D]
     x = shard_no_gradients(x)
 
@@ -45,7 +44,7 @@ def spectral_gradient_transform(
 
     new_grad = new_grad.to(og_dtype)
     new_grad = new_grad.transpose(0, 1) # [B, L, D]
-    new_grad = shard_no_gradients(new_grad)
+    new_grad = shard_no_gradients(new_grad) + 0.0
     
     return new_grad
 
