@@ -21,10 +21,10 @@ def spectral_gradient_transform(
     eps: float=1e-5,
 ):
     x = x.transpose(0, 1) # [L, B, D]
-    x = shard_no_gradients(x)
+    # x = shard_no_gradients(x)
 
     grad = grad.transpose(0, 1) # [L, B, D]
-    grad = shard_no_gradients(grad)
+    # grad = shard_no_gradients(grad)
 
     og_dtype = grad.dtype
     x = x.to(torch.float32)
@@ -44,7 +44,7 @@ def spectral_gradient_transform(
 
     new_grad = new_grad.to(og_dtype)
     new_grad = new_grad.transpose(0, 1) # [B, L, D]
-    new_grad = shard_no_gradients(new_grad) + 0.0
+    # new_grad = shard_no_gradients(new_grad) + 0.0
     
     return new_grad
 
@@ -162,7 +162,7 @@ class SpectralZLMTrainer(BaseTrainer):
         kl_grad_weights = {}
 
         kl_mu = scale_gradient(mu, kl_grad_weights)
-        kl_mu = shard_with_gradients(kl_mu)
+        # kl_mu = shard_with_gradients(kl_mu)
         kl_mu = transform_gradient(
             kl_mu,
             spectral_gradient_transform,
