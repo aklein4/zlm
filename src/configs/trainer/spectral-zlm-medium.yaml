@@ -62,6 +62,9 @@ init_hook: false
 init_hook_step: null
 hook_warmup_steps: 1000
 
+# gradient configuration
+warmup_z_states_grad: false
+
 # threshold configuration
 upper_loss_threshold: 0.75
 lower_loss_threshold: 0.5

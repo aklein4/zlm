@@ -169,6 +169,12 @@ class SpectralZLMTrainer(BaseTrainer):
             {"eps": self.model.config.rms_norm_eps},
         )
 
+        kl_z_states = z_states
+        if self.config.trainer.warmup_z_states_grad:
+            kl_z_states = scale_gradient(
+                z_states, kl_grad_scale
+            )
+
         # get the kls by diffusion sampling
         kls = 0.0
         uncond_kls = 0.0
@@ -190,7 +196,7 @@ class SpectralZLMTrainer(BaseTrainer):
 
             # conditional kl
             pred_z_0 = self.model.diffusion_head(
-                z_t, t, z_states, 
+                z_t, t, kl_z_states
             )
             kl = self.model.scheduler.kl(
                 kl_mu, t, pred_z_0, dim=-1
