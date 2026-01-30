@@ -87,6 +87,41 @@ def print_gradient(x, name=None):
     return _PrintGradient.apply(x, name)
 
 
+class _TransformGradient(torch.autograd.Function):
+
+    @staticmethod
+    def forward(ctx, x, fn, fn_kwargs):
+        ctx.save_for_backward(x)
+        ctx.fn = fn
+        ctx.fn_kwargs = fn_kwargs
+        return x.clone()
+    
+    @staticmethod
+    def backward(ctx, grad_output):
+        x = ctx.saved_tensors[0]
+
+        grad_output = ctx.fn(
+            x, grad_output, **ctx.fn_kwargs
+        )
+
+        return grad_output, None, None
+
+def transform_gradient(
+    x: torch.Tensor,
+    fn: callable,
+    fn_kwargs: dict={},
+) -> torch.Tensor:
+    """
+    Applies a transformation function to the gradient flowing through x.
+
+    Args:
+        x (torch.Tensor): Input tensor.
+        fn (callable): Function to transform the gradient.
+        fn_kwargs (dict): Additional keyword arguments for the function.
+    """
+    return _TransformGradient.apply(x, fn, fn_kwargs)
+
+
 def unsqueeze_to_batch(x, target):
     while x.dim() < target.dim():
         x = x[None]
