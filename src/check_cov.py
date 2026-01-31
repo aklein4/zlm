@@ -14,9 +14,13 @@ from collators.seq_to_seq import SeqToSeqCollator
 
 DEVICE = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
-MODEL_URL = "aklein4/ZLM-v2_zlm-large-center"
-STEP = 4000
-MODEL_TYPE = "zlm_center.ZLMModel"
+# MODEL_URL = "aklein4/ZLM-v2_zlm-med-spectral-grad"
+# STEP = 5000
+# MODEL_TYPE = None
+
+MODEL_URL = "aklein4/ZLM-v2_zlm-med-spectral-warmup"
+STEP = 5000
+MODEL_TYPE = None
 
 # MODEL_URL = "aklein4/ZLM-v2_zlm-med-ada"
 # STEP = 10000
@@ -30,6 +34,10 @@ MU_PATH = os.path.join(
 
 BS = 128
 NUM_STEPS = (1024 * 4) // BS
+
+
+def local_dir(path):
+    return os.path.join(constants.LOCAL_DATA_PATH, path)
 
 
 @torch.no_grad()
@@ -101,7 +109,7 @@ def get_data():
 def main():
 
     mu = torch.load(MU_PATH)
-    x = mu[:, -13] # [batch, dim]
+    x = mu[:, 200] # [batch, dim]
 
     cov = torch.cov(x.T) # [dim, dim]
     max_abs = cov.abs().max().item()
@@ -112,20 +120,20 @@ def main():
         vmin=-max_abs, vmax=max_abs
     )
     plt.colorbar()
-    plt.savefig("mu_cov.png")
+    plt.savefig(local_dir("mu_cov.png"))
     plt.clf()
 
     val, vec = torch.linalg.eigh(cov)
     plt.plot(val.flip(0).cpu().numpy())
     plt.grid()
-    plt.savefig("mu_cov_eigenvalues.png")
+    plt.savefig(local_dir("mu_cov_eigenvalues.png"))
     plt.clf()
 
     mean = (vec @ x.T).T.mean(dim=0).cpu().numpy()
     mean = np.sort(mean)[::-1]
     plt.plot(mean)
     plt.grid()
-    plt.savefig("mu_mean.png")
+    plt.savefig(local_dir("mu_mean.png"))
 
 
 if __name__ == "__main__":
