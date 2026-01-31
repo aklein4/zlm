@@ -344,4 +344,66 @@ class SpectralBatchNorm(nn.Module):
         y = maybe_shard_with_gradients(y)
 
         return y.to(og_dtype)
+
+
+class AdaPool(nn.Module):
+
+    def __init__(
+        self,
+        input_size: int,
+        hidden_size: int,
+        output_size: int,
+        pool_dim: int=-2,
+        normalize: bool=False,
+        eps: float=1e-8,
+    ):
+        super().__init__()
+
+        self.input_size = input_size
+        self.hidden_size = hidden_size
+        self.output_size = output_size
+        self.pool_dim = pool_dim
+        self.normalize = normalize
+
+        self.k_proj = nn.Linear(
+            input_size, hidden_size,
+            bias=False
+        )
+        self.v_proj = nn.Linear(
+            input_size, hidden_size,
+            bias=False
+        )
+        self.out_proj = nn.Linear(
+            hidden_size, output_size,
+            bias=False
+        )
+
+        if self.normalize:
+            self.norm = nn.RMSNorm(
+                [output_size], eps=eps, elementwise_affine=False
+            )
+        else:
+            self.register_parameter('norm', None)
+
+    
+    def forward(
+        self,
+        hidden_states: torch.Tensor,
+        v_states: torch.Tensor|None = None,
+    ) -> torch.Tensor:
+
+        if v_states is None:
+            v_states = hidden_states
+
+        keys = self.k_proj(hidden_states)
+        values = self.v_proj(v_states)
+
+        weights = torch.softmax(keys, dim=self.pool_dim)
+        h = (values * weights).sum(dim=self.pool_dim)
+
+        output = self.out_proj(h)
+        if self.normalize:
+            output = self.norm(output)
+        
+        return output
     

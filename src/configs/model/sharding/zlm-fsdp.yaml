@@ -36,6 +36,14 @@ decoder_model.layers.*.post_attention_layernorm.weight: [fsdp]
 decoder_model.norm.weight: [fsdp]
 
 
+# pooling 
+pool_z_tokens: [null, fsdp]
+
+pooler.k_proj.weight: [null, fsdp]
+pooler.v_proj.weight: [null, fsdp]
+pooler.out_proj.weight: [fsdp, null]
+
+
 # scheduler
 scheduler.timesteps: [null]
 scheduler.a: [null]
@@ -69,6 +77,8 @@ uncond_diffusion_head.layers.*.out_scale.embed.weight: [null, fsdp]
 uncond_diffusion_head.out_norm.embed.weight: [null, fsdp]
 uncond_diffusion_head.out_proj.weight: [null, fsdp]
 
+uncond_tokens: [null, fsdp]
+
 
 # external
 encoder_sep_token: [null, fsdp]
@@ -87,8 +97,6 @@ encoder_noise_proj_in.weight: [fsdp, null]
 decoder_z_proj_in.weight: [fsdp, null]
 
 encoder_mu_proj_out.weight: [null, fsdp]
-
-uncond_tokens: [null, fsdp]
 
 
 # === Activations ===

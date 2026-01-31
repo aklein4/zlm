@@ -19,7 +19,7 @@ from utils.torch_utils import (
 from models.llama import LlamaForCausalLM
 from models.custom_llama import LlamaMLP, LlamaRMSNorm, LlamaDecoderLayer, CustomLlamaModel
 from models import load_checkpoint_state
-from utils.torch_modules import ScaledEmbedding
+from utils.torch_modules import ScaledEmbedding, AdaPool
 import utils.constants as constants
 
 
@@ -438,6 +438,18 @@ class ZLMModel(nn.Module):
         # self.mu_out_norm = LlamaRMSNorm(self.latent_size, eps=config.rms_norm_eps, elementwise_affine=False)
         self.z_in_norm = LlamaRMSNorm(self.latent_size, eps=config.rms_norm_eps, elementwise_affine=False)
 
+        # create the pooler
+        self.pool_z_tokens = nn.Parameter(
+            torch.randn(self.z_length, self.hidden_size)
+        )
+        self.pooler = AdaPool(
+            self.latent_size + self.hidden_size,
+            self.hidden_size,
+            self.hidden_size,
+            pool_dim=-2,
+            normalize=False,
+        )
+
         # create the diffusion components
         self.diffusion_head = DiffusionHead(config)
         self.scheduler = DiffusionScheduler(config)
@@ -457,14 +469,16 @@ class ZLMModel(nn.Module):
             gaussian_init(self.encoder_noise_proj_in)
             gaussian_init(self.decoder_z_proj_in)
             gaussian_init(self.encoder_mu_proj_out)
+            self.pooler.apply(gaussian_init)
 
         # set the diffusion head conditioning embeddings to ones
         self.apply(self.scaled_embed_init)
 
         # scale input layers by embedding stats
-        self.encoder_noise_proj_in.weight.data *= embed_std[:, None]
-        # self.encoder_noise_proj_in.weight.data.zero_()
-        self.decoder_z_proj_in.weight.data *= embed_std[:, None]
+        proj_std = self.embed_tokens.weight.data.std().detach()
+        self.encoder_noise_proj_in.weight.data *= proj_std
+        self.decoder_z_proj_in.weight.data *= proj_std
+        self.pooler.out_proj.weight.data *= proj_std
 
 
     def scaled_embed_init(self, module):
@@ -568,6 +582,17 @@ class ZLMModel(nn.Module):
         return z, mu
 
 
+    def pool(self, z):
+        tokens = torch.cat(
+            [
+                expand_to_batch(self.pool_z_tokens, z),
+                z,
+            ],
+            dim=-1
+        )
+        return self.pooler(tokens)
+
+
     def decode(
         self,
         input_ids: torch.LongTensor,
@@ -579,13 +604,14 @@ class ZLMModel(nn.Module):
     ):
         
         z = self.z_in_norm(z)
+        pooled = self.pool(z)[:, None, :]
 
         input_tokens = self.embed_tokens(input_ids) + unsqueeze_to_batch(
             self.decoder_input_embeddings, input_ids
         )
         output_tokens = self.embed_tokens(output_ids) + unsqueeze_to_batch(
             self.decoder_output_embeddings, output_ids
-        )
+        ) + pooled
 
         z_tokens = (
             unsqueeze_to_batch(self.decoder_z_tokens, z) +
@@ -596,7 +622,7 @@ class ZLMModel(nn.Module):
         )
         start_output_token = expand_to_batch(
             self.decoder_start_output_token, output_tokens
-        )
+        ) + pooled
 
         tokens = torch.cat(
             [input_tokens, z_tokens, start_output_token, output_tokens], dim=-2
@@ -640,6 +666,8 @@ class ZLMModel(nn.Module):
         encoded_z: torch.FloatTensor=None,
         temperature: float | str = "greedy",
     ):
+        # TODO: update with correct normalization and pooling
+
         from transformers.cache_utils import DynamicCache
         from tqdm import tqdm
 

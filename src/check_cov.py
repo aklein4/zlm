@@ -18,8 +18,8 @@ DEVICE = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 # STEP = 5000
 # MODEL_TYPE = None
 
-MODEL_URL = "aklein4/ZLM-v2_zlm-med-spectral-warmup"
-STEP = 5000
+MODEL_URL = "aklein4/ZLM-v2_zlm-med-no-norm"
+STEP = 1000
 MODEL_TYPE = None
 
 # MODEL_URL = "aklein4/ZLM-v2_zlm-med-ada"
@@ -109,7 +109,7 @@ def get_data():
 def main():
 
     mu = torch.load(MU_PATH)
-    x = mu[:, 200] # [batch, dim]
+    x = mu[:, -1] # [batch, dim]
 
     cov = torch.cov(x.T) # [dim, dim]
     max_abs = cov.abs().max().item()
@@ -137,5 +137,5 @@ def main():
 
 
 if __name__ == "__main__":
-    # get_data()
+    get_data()
     main()
