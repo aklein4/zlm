@@ -19,7 +19,7 @@ from utils.torch_utils import (
 from models.llama import LlamaForCausalLM
 from models.custom_llama import LlamaMLP, LlamaRMSNorm, LlamaDecoderLayer, CustomLlamaModel
 from models import load_checkpoint_state
-from utils.torch_modules import ScaledEmbedding, InitialBatchNorm
+from utils.torch_modules import ScaledEmbedding
 import utils.constants as constants
 
 
@@ -435,17 +435,8 @@ class ZLMModel(nn.Module):
         self.encoder_mu_proj_out = nn.Linear(self.hidden_size, self.latent_size, bias=False)
 
         # create the norms
-        self.mu_out_norm = LlamaRMSNorm(self.latent_size, eps=config.rms_norm_eps, elementwise_affine=False)
+        # self.mu_out_norm = LlamaRMSNorm(self.latent_size, eps=config.rms_norm_eps, elementwise_affine=False)
         self.z_in_norm = LlamaRMSNorm(self.latent_size, eps=config.rms_norm_eps, elementwise_affine=False)
-
-        # create an initializing batch norm for the mu output
-        self.mu_initial_batch_norm = InitialBatchNorm(
-            [self.z_length, self.latent_size],
-            eps=config.rms_norm_eps,
-        )
-        self.register_buffer(
-            "mu_alpha", torch.ones(1) * config.mu_alpha, persistent=True
-        )
 
         # create the diffusion components
         self.diffusion_head = DiffusionHead(config)
@@ -471,7 +462,8 @@ class ZLMModel(nn.Module):
         self.apply(self.scaled_embed_init)
 
         # scale input layers by embedding stats
-        self.encoder_noise_proj_in.weight.data.zero_()
+        self.encoder_noise_proj_in.weight.data *= embed_std[:, None]
+        # self.encoder_noise_proj_in.weight.data.zero_()
         self.decoder_z_proj_in.weight.data *= embed_std[:, None]
 
 
@@ -567,8 +559,7 @@ class ZLMModel(nn.Module):
         )
 
         # apply batch norm then rms norm
-        mu = self.mu_initial_batch_norm(mu)
-        mu = self.mu_alpha * self.mu_out_norm(mu)
+        # mu = self.mu_out_norm(mu)
 
         z = self.scheduler.add_noise(
             mu, torch.zeros(1, dtype=torch.long, device=mu.device), noise
@@ -699,17 +690,17 @@ class ZLMModel(nn.Module):
                         t,
                         z_states,
                     ) # [B, latent_size]
-                    # z_t = self.scheduler.ddim_step(
-                    #     z_t,
-                    #     t,
-                    #     pred_z_0,
-                    # ) # [B, latent_size]
-                    z_t = self.scheduler.step(
+                    z_t = self.scheduler.ddim_step(
                         z_t,
                         t,
                         pred_z_0,
-                        torch.randn_like(z_t),
                     ) # [B, latent_size]
+                    # z_t = self.scheduler.step(
+                    #     z_t,
+                    #     t,
+                    #     pred_z_0,
+                    #     torch.randn_like(z_t),
+                    # ) # [B, latent_size]
 
             else:
                 z_t = encoded_z[:, i, :] # [B, latent_size]

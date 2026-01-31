@@ -10,7 +10,7 @@ global_batch_size: 512
 max_steps: 1000000
 
 # Save a checkpoint every N steps
-checkpoint_interval: 5000
+checkpoint_interval: 1000
 
 
 # optimizer configuration
