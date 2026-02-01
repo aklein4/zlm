@@ -19,7 +19,7 @@ from utils.torch_utils import (
 from models.llama import LlamaForCausalLM
 from models.custom_llama import LlamaMLP, LlamaRMSNorm, LlamaDecoderLayer, CustomLlamaModel
 from models import load_checkpoint_state
-from utils.torch_modules import ScaledEmbedding, AdaPool
+from utils.torch_modules import ScaledEmbedding, SeqPool, InitialSpectralNorm
 import utils.constants as constants
 
 
@@ -389,26 +389,28 @@ class ZLMModel(nn.Module):
         self.encoder_model.embed_tokens = None
         self.decoder_model.embed_tokens = None
 
-        # calculate embedding stats TODO: what if llama_pretrained is None?
-        embed_std = self.embed_tokens.weight.data.std(0).detach()
+        # calculate embedding distribution TODO: what if llama_pretrained is None?
         embed_mean = self.embed_tokens.weight.data.mean(0).detach()
-        def embed_prep(x): 
-            return embed_mean[None] + x * embed_std[None]
+        embed_cov = torch.cov(self.embed_tokens.weight.data.T).detach()        
+        embed_dist = torch.distributions.MultivariateNormal(
+            loc=embed_mean,
+            covariance_matrix=(embed_cov + config.rms_norm_eps * torch.eye(self.hidden_size, device=embed_cov.device))
+        )
 
         # create encoder special tokens
         self.encoder_sep_token = nn.Parameter(
-            embed_prep(torch.randn(1, self.hidden_size))
+            embed_dist.sample((1,))
         )
         self.encoder_z_tokens = nn.Parameter(
-            embed_prep(torch.randn(self.z_length, self.hidden_size))
+            embed_dist.sample((self.z_length,))
         )
 
         # create decoder special tokens
         self.decoder_z_tokens = nn.Parameter(
-            embed_prep(torch.randn(1 + self.z_length, self.hidden_size))
+            embed_dist.sample((1 + self.z_length,))
         )
         self.decoder_start_output_token = nn.Parameter(
-            embed_prep(torch.randn(1, self.hidden_size))
+            embed_dist.sample((1,))
         )
 
         # create the encoder embeddings
@@ -435,19 +437,19 @@ class ZLMModel(nn.Module):
         self.encoder_mu_proj_out = nn.Linear(self.hidden_size, self.latent_size, bias=False)
 
         # create the norms
-        # self.mu_out_norm = LlamaRMSNorm(self.latent_size, eps=config.rms_norm_eps, elementwise_affine=False)
+        self.mu_out_norm = InitialSpectralNorm(
+            [self.z_length, self.latent_size],
+            eps=config.rms_norm_eps,
+        )
         self.z_in_norm = LlamaRMSNorm(self.latent_size, eps=config.rms_norm_eps, elementwise_affine=False)
 
         # create the pooler
-        self.pool_z_tokens = nn.Parameter(
-            torch.randn(self.z_length, self.hidden_size)
-        )
-        self.pooler = AdaPool(
-            self.latent_size + self.hidden_size,
+        self.pooler = SeqPool(
+            self.latent_size,
             self.hidden_size,
             self.hidden_size,
-            pool_dim=-2,
-            normalize=False,
+            self.z_length,
+            normalize=False
         )
 
         # create the diffusion components
@@ -572,25 +574,14 @@ class ZLMModel(nn.Module):
             hidden_states[..., -self.z_length:, :]
         )
 
-        # apply batch norm then rms norm
-        # mu = self.mu_out_norm(mu)
+        # apply initial spectral normalization
+        mu = self.mu_out_norm(mu)
 
         z = self.scheduler.add_noise(
             mu, torch.zeros(1, dtype=torch.long, device=mu.device), noise
         )
 
         return z, mu
-
-
-    def pool(self, z):
-        tokens = torch.cat(
-            [
-                expand_to_batch(self.pool_z_tokens, z),
-                z,
-            ],
-            dim=-1
-        )
-        return self.pooler(tokens)
 
 
     def decode(
@@ -604,7 +595,7 @@ class ZLMModel(nn.Module):
     ):
         
         z = self.z_in_norm(z)
-        pooled = self.pool(z)[:, None, :]
+        pooled = self.pooler(z)[:, None, :]
 
         input_tokens = self.embed_tokens(input_ids) + unsqueeze_to_batch(
             self.decoder_input_embeddings, input_ids

@@ -18,8 +18,8 @@ DEVICE = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 # STEP = 5000
 # MODEL_TYPE = None
 
-MODEL_URL = "aklein4/ZLM-v2_zlm-med-no-norm"
-STEP = 1000
+MODEL_URL = "aklein4/ZLM-v2_zlm-med-pool"
+STEP = 2000
 MODEL_TYPE = None
 
 # MODEL_URL = "aklein4/ZLM-v2_zlm-med-ada"
@@ -47,6 +47,8 @@ def get_data():
         MODEL_URL, STEP,
         attention_kernel="gpu_flash_attention",
         model_type=MODEL_TYPE,
+        skip_state_dict=False,
+        strict=True,
     ).to(DEVICE)
     model.eval()
     pad_token_id = model.config.pad_token_id
@@ -70,7 +72,6 @@ def get_data():
     all_mu = []
     pbar = tqdm(total=NUM_STEPS)
     for i, batch in enumerate(loader):
-        pbar.update(1)
         if i >= NUM_STEPS:
             break
 
@@ -99,6 +100,8 @@ def get_data():
         )
         all_mu.append(mu.cpu())
 
+        pbar.update(1)
+
     pbar.close()
 
     all_mu = torch.cat(all_mu, dim=0)
@@ -109,7 +112,7 @@ def get_data():
 def main():
 
     mu = torch.load(MU_PATH)
-    x = mu[:, -1] # [batch, dim]
+    x = mu[:, 100] # [batch, dim]
 
     cov = torch.cov(x.T) # [dim, dim]
     max_abs = cov.abs().max().item()
@@ -129,7 +132,7 @@ def main():
     plt.savefig(local_dir("mu_cov_eigenvalues.png"))
     plt.clf()
 
-    mean = (vec @ x.T).T.mean(dim=0).cpu().numpy()
+    mean = x.mean(0).cpu().numpy()
     mean = np.sort(mean)[::-1]
     plt.plot(mean)
     plt.grid()

@@ -19,6 +19,7 @@ def load_checkpoint(
     ignore_cache: bool = False,
     remove_folder: bool = False,
     model_type: str = None,
+    skip_state_dict: bool = False,
 ):
     
     name = url.replace("/", "--")
@@ -47,16 +48,17 @@ def load_checkpoint(
     model = import_model(model_type)(config)
 
     # load the weights
-    state_path = os.path.join(subfolder_path, "model.pt")
-    state_dict = torch.load(state_path, map_location="cpu")
+    if not skip_state_dict:
+        state_path = os.path.join(subfolder_path, "model.pt")
+        state_dict = torch.load(state_path, map_location="cpu")
 
-    # remove and xla specific keys
-    cleaned_state_dict = {
-        k.replace("_orig_mod.", ""): v
-        for k, v in state_dict.items()
-    }
+        # remove and xla specific keys
+        cleaned_state_dict = {
+            k.replace("_orig_mod.", ""): v
+            for k, v in state_dict.items()
+        }
 
-    model.load_state_dict(cleaned_state_dict, strict=strict)
+        model.load_state_dict(cleaned_state_dict, strict=strict)
 
     if remove_folder:
         shutil.rmtree(subfolder_path, ignore_errors=True)

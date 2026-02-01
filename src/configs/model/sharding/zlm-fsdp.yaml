@@ -36,11 +36,17 @@ decoder_model.layers.*.post_attention_layernorm.weight: [fsdp]
 decoder_model.norm.weight: [fsdp]
 
 
-# pooling 
-pool_z_tokens: [null, fsdp]
+# normalization
+mu_out_norm.initialized: [null]
 
-pooler.k_proj.weight: [null, fsdp]
-pooler.v_proj.weight: [null, fsdp]
+mu_out_norm.shift: [null, null]
+mu_out_norm.mat: [null, null, null]
+
+
+# pooling 
+pooler.sequence_logits: [null, fsdp]
+
+pooler.in_proj.weight: [fsdp, null]
 pooler.out_proj.weight: [fsdp, null]
 
 
