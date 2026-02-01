@@ -28,7 +28,7 @@ pip install torch_xla[tpu]==2.8.0
 
 # install extras
 pip install setuptools==67.7.2
-pip install transformers==4.52.1 datasets==4.0.0 hydra-core==1.3.0 optax==0.2.4 wandb
+pip install transformers==4.52.1 datasets==4.0.0 hydra-core==1.3.0 optax==0.2.4 wandb gitpython
 
 # login to huggingface
 hf auth login --token $1

@@ -52,6 +52,7 @@ from models.xla import BaseXLAModel
 from utils.import_utils import import_optimizer, import_collator
 from utils import constants
 from utils.remat_utils import advanced_remat
+from utils.git_utils import get_current_commit_hash
 
 
 logger = logging.getLogger(__name__)
@@ -100,10 +101,13 @@ class BaseTrainer:
             )
 
             # create the wandb project
+            notes = f"GIT HASH: {get_current_commit_hash()}"
+            if self.config.notes is not None:
+                notes += f"\n\n{self.config.notes}"
             wandb.init(
                 project=self.config.project,
                 name=self.config.name,
-                notes=self.config.notes,
+                notes=notes,
                 config=OmegaConf.to_container(self.config, resolve=True),
             )
 
