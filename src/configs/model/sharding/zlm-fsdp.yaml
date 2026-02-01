@@ -37,10 +37,11 @@ decoder_model.norm.weight: [fsdp]
 
 
 # normalization
-mu_out_norm.initialized: [null]
+mu_out_norm.cov_tracker.num_updates: [null]
+mu_out_norm.cov_tracker.weight: [null, null, null]
 
-mu_out_norm.shift: [null, null]
-mu_out_norm.mat: [null, null, null]
+mu_out_norm.mean_tracker.num_updates: [null]
+mu_out_norm.mean_tracker.weight: [null, null]
 
 
 # pooling 

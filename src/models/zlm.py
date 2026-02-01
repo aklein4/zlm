@@ -19,7 +19,7 @@ from utils.torch_utils import (
 from models.llama import LlamaForCausalLM
 from models.custom_llama import LlamaMLP, LlamaRMSNorm, LlamaDecoderLayer, CustomLlamaModel
 from models import load_checkpoint_state
-from utils.torch_modules import ScaledEmbedding, SeqPool, InitialSpectralNorm
+from utils.torch_modules import ScaledEmbedding, SeqPool, SpectralBatchNorm
 import utils.constants as constants
 
 
@@ -437,8 +437,9 @@ class ZLMModel(nn.Module):
         self.encoder_mu_proj_out = nn.Linear(self.hidden_size, self.latent_size, bias=False)
 
         # create the norms
-        self.mu_out_norm = InitialSpectralNorm(
+        self.mu_out_norm = SpectralBatchNorm(
             [self.z_length, self.latent_size],
+            config.batch_norm_beta,
             eps=config.rms_norm_eps,
         )
         self.z_in_norm = LlamaRMSNorm(self.latent_size, eps=config.rms_norm_eps, elementwise_affine=False)
@@ -478,7 +479,7 @@ class ZLMModel(nn.Module):
 
         # scale input layers by embedding stats
         proj_std = self.embed_tokens.weight.data.std().detach()
-        self.encoder_noise_proj_in.weight.data *= proj_std
+        self.encoder_noise_proj_in.weight.data.zero_()
         self.decoder_z_proj_in.weight.data *= proj_std
         self.pooler.out_proj.weight.data *= proj_std
 
@@ -574,7 +575,7 @@ class ZLMModel(nn.Module):
             hidden_states[..., -self.z_length:, :]
         )
 
-        # apply initial spectral normalization
+        # apply spectral normalization
         mu = self.mu_out_norm(mu)
 
         z = self.scheduler.add_noise(

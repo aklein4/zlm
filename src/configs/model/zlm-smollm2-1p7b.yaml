@@ -59,7 +59,10 @@ output_length: 512
 z_length: 384
 
 # latent configuration
-latent_size: 64
+latent_size: 32
+
+# batch norm configuration
+batch_norm_beta: 0.95
 
 # diffusion configuration
 minimum_diffusion_timestep: 0.5
