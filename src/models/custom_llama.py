@@ -319,17 +319,16 @@ class LlamaAttention(nn.Module):
         )
         if attention_output_scales is not None:
             scales = attention_output_scales.transpose(1, 2).unsqueeze(-1).to(attn_output.dtype)
-            attn_output_new = attn_output * scales
+            attn_output = attn_output * scales
 
-            from utils.logging_utils import master_print
-            master_print("\n", attention_output_scales.shape, scales.shape)
-            master_print(attn_output.shape, attn_output_new.shape, "\n")
-
-            attn_output = attn_output_new
+        from utils.logging_utils import master_print
 
         attn_output = attn_output.transpose(1, 2).contiguous()
+        master_print("\n", attn_output.shape)
         attn_output = attn_output.reshape(bsz, q_len, self.num_heads * self.head_dim)
+        master_print(attn_output.shape)
         attn_output = self.o_proj(attn_output)
+        master_print(attn_output.shape, "\n")
         return attn_output
 
 
