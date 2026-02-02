@@ -63,6 +63,7 @@ latent_size: 32
 
 # batch norm configuration
 batch_norm_beta: 0.95
+spectral_batch_norm_eps: 1e-7
 
 # extra attention configuration
 num_z_only_kv_heads: 8
