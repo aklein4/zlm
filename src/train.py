@@ -2,10 +2,8 @@
 
 import os
 os.environ['PJRT_DEVICE'] = 'TPU'
-os.environ['XLA_IR_DEBUG'] = '1'
-os.environ['XLA_HLO_DEBUG'] = '1'
-os.environ['XLA_SAVE_TENSORS_FILE'] = 'xla_debugging/xla_ir_dump.txt'
-os.environ['XLA_SAVE_TENSORS_FMT'] = 'hlo'
+# os.environ['XLA_IR_DEBUG'] = '1'
+# os.environ['XLA_HLO_DEBUG'] = '1'
 
 import logging
 import sys
