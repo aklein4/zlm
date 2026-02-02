@@ -728,6 +728,9 @@ class ZLM2Model(nn.Module):
             [regular_scales, z_scales], dim=-1
         )
 
+        from utils.logging_utils import master_print
+        master_print("\n", padding_mask.shape, attention_scales.shape, "\n")
+
         hidden_states = self.decoder_model(
             inputs_embeds=tokens,
             padding_mask=padding_mask,
