@@ -301,10 +301,6 @@ class LlamaAttention(nn.Module):
                 query_scale = repeat_kv(query_scale, self.num_key_value_groups)
                 query_offset = repeat_kv(query_offset, self.num_key_value_groups)
 
-                from utils.logging_utils import master_print
-                master_print("\nkey:", key_scale.shape, key_offset.shape)
-                master_print("\nquery:", query_scale.shape, query_offset.shape, "\n")
-
             query_states = (
                 query_states * query_scale.to(query_states.dtype)
                 + query_offset.to(query_states.dtype)
@@ -322,7 +318,14 @@ class LlamaAttention(nn.Module):
             attention_mask
         )
         if attention_output_scales is not None:
-            attn_output = attn_output * attention_output_scales.transpose(1, 2).unsqueeze(-1).to(attn_output.dtype)
+            scales = attention_output_scales.transpose(1, 2).unsqueeze(-1).to(attn_output.dtype)
+            attn_output_new = attn_output * scales
+
+            from utils.logging_utils import master_print
+            master_print("\n", attention_output_scales.shape, scales.shape)
+            master_print(attn_output.shape, attn_output_new.shape, "\n")
+
+            attn_output = attn_output_new
 
         attn_output = attn_output.transpose(1, 2).contiguous()
         attn_output = attn_output.reshape(bsz, q_len, self.num_heads * self.head_dim)
