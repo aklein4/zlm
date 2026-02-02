@@ -301,6 +301,10 @@ class LlamaAttention(nn.Module):
                 query_scale = repeat_kv(query_scale, self.num_key_value_groups)
                 query_offset = repeat_kv(query_offset, self.num_key_value_groups)
 
+                from utils.logging_utils import master_print
+                master_print("\nkey:", key_scale.shape, key_offset.shape)
+                master_print("\nquery:", query_scale.shape, query_offset.shape, "\n")
+
             query_states = (
                 query_states * query_scale.to(query_states.dtype)
                 + query_offset.to(query_states.dtype)
