@@ -4,7 +4,7 @@ import os
 os.environ['PJRT_DEVICE'] = 'TPU'
 os.environ['XLA_IR_DEBUG'] = '1'
 os.environ['XLA_HLO_DEBUG'] = '1'
-os.environ['XLA_FLAGS']=  "--xla_dump_to=~/xla_dump --xla_dump_hlo_snapshots"
+os.environ['XLA_FLAGS']=  "--xla_dump_to=xla_dump --xla_dump_hlo_snapshots"
 
 import logging
 import sys
