@@ -234,7 +234,7 @@ class ZLMTrainer(BaseTrainer):
             self.config.trainer.beta * uncond_kl_per_token
         )
 
-        spectral_parties = self.get_spectral_parties(mu.detach())
+        spectral_parties = 1.0 # self.get_spectral_parties(mu.detach())
 
         aux = {
             "lm_loss": lm_loss,
