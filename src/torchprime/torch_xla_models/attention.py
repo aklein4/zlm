@@ -85,7 +85,7 @@ class AttentionModule(nn.Module):
   ):
     if self.config.attention_kernel != "splash_attention":
       num_key_value_groups = (
-        self.config.num_attention_heads // self.config.num_key_value_heads
+        query_states.shape[1] // key_states.shape[1]
       )
       key_states = repeat_kv(key_states, num_key_value_groups)
       value_states = repeat_kv(value_states, num_key_value_groups)
