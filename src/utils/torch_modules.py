@@ -285,7 +285,7 @@ class SpectralBatchNorm(nn.Module):
         )
 
         min_val = torch.min(eig_vals)
-        eig_vals = eig_vals + self.eps
+        eig_vals = torch.clamp(eig_vals, min=self.eps) # [S, H]
 
         inv_sqrt_cov = (
             eig_vecs @
