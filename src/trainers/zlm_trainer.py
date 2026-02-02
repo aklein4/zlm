@@ -177,7 +177,7 @@ class ZLMTrainer(BaseTrainer):
             pred_z_0 = self.model.diffusion_head(
                 scale_gradient(z_t, kl_grad_weights),
                 t,
-                scale_gradient(z_states, full_grad_scale),
+                z_states,
             )
             kl = self.model.scheduler.kl(
                 scale_gradient(mu, kl_grad_weights),
