@@ -642,14 +642,14 @@ class ZLM2Model(nn.Module):
         )
 
         # apply spectral normalization
-        mu = self.mu_out_norm(mu)
+        mu, min_eig_val = self.mu_out_norm(mu)
 
         # sample z
         z = self.scheduler.add_noise(
             mu, torch.zeros(1, dtype=torch.long, device=mu.device), noise
         )
 
-        return z, mu
+        return z, mu, min_eig_val
 
 
     def decode(

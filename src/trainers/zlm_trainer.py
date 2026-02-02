@@ -103,7 +103,7 @@ class ZLMTrainer(BaseTrainer):
         )
 
         # encode and decode
-        z, mu = self.model.encode(
+        z, mu, min_eig_val = self.model.encode(
             input_for_model, output_for_model,
             input_mask=input_mask, output_mask=output_mask,
         )
@@ -254,6 +254,7 @@ class ZLMTrainer(BaseTrainer):
             "elbo": elbo,
             "hooked": self.hooked,
             "hook_step": self.hook_step,
+            "min_eig_val": min_eig_val,
             "spectral_parties": spectral_parties,
             "atom_count": (output_ids != pad_token_id).long().sum(),
         }
