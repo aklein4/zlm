@@ -234,6 +234,47 @@ class LlamaAttention(nn.Module):
             self.hidden_size, self.hidden_size, bias=config.attention_bias
         )
 
+        self.init_padding_buffers(config)
+
+    
+    def init_padding_buffers(self, config):
+        head_dim = config.hidden_size // config.num_attention_heads
+
+        first_ind = (head_dim // 2) - 1
+        sec_ind = -1
+
+        query_scales = torch.ones(2, head_dim)
+        query_scales[:, first_ind] = 0.0
+        query_scales[:, sec_ind] = 0.0
+        self.register_buffer("query_scales", query_scales, persistent=True)
+
+        query_offsets = torch.zeros(2, head_dim)
+        query_offsets[:, first_ind] = 0.5
+        query_offsets[:, sec_ind] = 0.5
+        self.register_buffer("query_offsets", query_offsets, persistent=True)
+
+        key_scales = query_scales.clone()
+        self.register_buffer("key_scales", key_scales, persistent=True)
+
+        key_offsets = torch.zeros(2, head_dim)
+        key_offsets[0, first_ind] = config.pad_attention_bias_value
+        key_offsets[0, sec_ind] = config.pad_attention_bias_value
+        self.register_buffer("key_offsets", key_offsets, persistent=True)
+
+
+    def format_padding_mask(self, padding_mask: torch.Tensor):
+        padding_mask = padding_mask.long()
+        return (
+            (
+                F.embedding(padding_mask, self.query_scales),
+                F.embedding(padding_mask, self.query_offsets),
+            ),
+            (
+                F.embedding(padding_mask, self.key_scales),
+                F.embedding(padding_mask, self.key_offsets),
+            ),
+        )
+
     # @xp.trace_me("LlamaAttention")
     def forward(
         self,
@@ -273,7 +314,7 @@ class LlamaAttention(nn.Module):
         if padding_mask is not None:
 
             # unpack
-            query_pad, key_pad = padding_mask
+            query_pad, key_pad = self.format_padding_mask(padding_mask)
             query_scale, query_offset = query_pad
             key_scale, key_offset = key_pad
 
@@ -318,17 +359,11 @@ class LlamaAttention(nn.Module):
             attention_mask
         )
         if attention_output_scales is not None:
-            scales = attention_output_scales.transpose(1, 2).unsqueeze(-1).to(attn_output.dtype)
-            attn_output = attn_output * scales
-
-        from utils.logging_utils import master_print
+            attn_output = attn_output * attention_output_scales.transpose(1, 2).unsqueeze(-1).to(attn_output.dtype)
 
         attn_output = attn_output.transpose(1, 2).contiguous()
-        master_print("\n", attn_output.shape)
         attn_output = attn_output.reshape(bsz, q_len, self.num_heads * self.head_dim)
-        master_print(attn_output.shape)
         attn_output = self.o_proj(attn_output)
-        master_print(attn_output.shape, "\n")
         return attn_output
 
 
@@ -436,50 +471,6 @@ class CustomLlamaModel(nn.Module):
             head_dim=head_dim, rope_theta=config.rope_theta, scaling=rope_scaling
         )
 
-        self.init_padding_buffers(config)
-
-    
-    def init_padding_buffers(self, config):
-        head_dim = config.hidden_size // config.num_attention_heads
-
-        first_ind = (head_dim // 2) - 1
-        sec_ind = -1
-
-        query_scales = torch.ones(2, head_dim)
-        query_scales[:, first_ind] = 0.0
-        query_scales[:, sec_ind] = 0.0
-        self.register_buffer("query_scales", query_scales, persistent=True)
-
-        query_offsets = torch.zeros(2, head_dim)
-        query_offsets[:, first_ind] = 0.5
-        query_offsets[:, sec_ind] = 0.5
-        self.register_buffer("query_offsets", query_offsets, persistent=True)
-
-        key_scales = query_scales.clone()
-        self.register_buffer("key_scales", key_scales, persistent=True)
-
-        key_offsets = torch.zeros(2, head_dim)
-        key_offsets[0, first_ind] = config.pad_attention_bias_value
-        key_offsets[0, sec_ind] = config.pad_attention_bias_value
-        self.register_buffer("key_offsets", key_offsets, persistent=True)
-
-
-    def format_padding_mask(self, padding_mask: torch.Tensor | None):
-        if padding_mask is None:
-            return None
-
-        padding_mask = padding_mask.long()
-        return (
-            (
-                F.embedding(padding_mask, self.query_scales),
-                F.embedding(padding_mask, self.query_offsets),
-            ),
-            (
-                F.embedding(padding_mask, self.key_scales),
-                F.embedding(padding_mask, self.key_offsets),
-            ),
-        )
-
     
     def get_default_position_ids(
         self,
@@ -540,6 +531,9 @@ class CustomLlamaModel(nn.Module):
                 past_key_values
             ).float()
 
+        # create position embeddings to be shared across the decoder layers
+        position_embeddings = self.rotary_emb(inputs_embeds, position_ids)
+
         # Create a causal attention mask
         causal_mask = torch.triu(
             torch.full((seq_length, seq_length), float("-inf"), device=inputs_embeds.device),
@@ -560,11 +554,7 @@ class CustomLlamaModel(nn.Module):
                     1, seq_length, 1, device=inputs_embeds.device, dtype=inputs_embeds.dtype
                 )
 
-        # convert the boolean pad mask to scale and offset masks
-        formatted_padding_mask = self.format_padding_mask(padding_mask)
-
-        # create position embeddings to be shared across the decoder layers
-        position_embeddings = self.rotary_emb(inputs_embeds, position_ids)
+            padding_mask = padding_mask.float()
 
         # decoder layers
         hidden_states = inputs_embeds
@@ -573,7 +563,7 @@ class CustomLlamaModel(nn.Module):
             attention_mask=causal_mask,
             position_ids=position_ids,
             position_embeddings=position_embeddings,
-            padding_mask=formatted_padding_mask,
+            padding_mask=padding_mask,
             attention_output_scales=attention_output_scales,
             past_key_values=past_key_values,
         )

@@ -1,8 +1,4 @@
 
-[24,            16,       1154,       40,             64       ]
-[unk (384/16?), batch/16, in+z+2+out, q and kv heads, head dim?]
-
-
 # Changes versus reference
 
 ### removed

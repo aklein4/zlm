@@ -2,8 +2,6 @@
 
 import os
 os.environ['PJRT_DEVICE'] = 'TPU'
-# os.environ['XLA_IR_DEBUG'] = '1'
-# os.environ['XLA_HLO_DEBUG'] = '1'
 
 import logging
 import sys
