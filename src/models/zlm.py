@@ -358,6 +358,7 @@ class ZLMModel(nn.Module):
         # Load the pretrained Llama model
         if config.pretrained_llama is not None:
             
+            # load the reference model
             llama = LlamaForCausalLM(config)
             load_checkpoint_state(
                 llama,
@@ -366,17 +367,15 @@ class ZLMModel(nn.Module):
                 strict=True,
             )
 
+            # copy the weights
             safe_copy_state(llama.model, self.encoder_model, strict=False)
             safe_copy_state(llama.model, self.decoder_model, strict=False)
-
-            safe_copy_state(llama.lm_head, self.lm_head)
+            safe_copy_state(llama.lm_head, self.lm_head, strict=True)
         
+            # TinyLlama has broken start (1) and unk (0) tokens
             if "TinyLlama" in config.pretrained_llama:
-                # For some reason TinyLlama seems to have a broken start token embedding (?)
                 self.encoder_model.embed_tokens.weight.data[1] = self.encoder_model.embed_tokens.weight.data[2].clone().detach()
                 self.decoder_model.embed_tokens.weight.data[1] = self.decoder_model.embed_tokens.weight.data[2].clone().detach()
-
-                # also fix the unk token
                 self.encoder_model.embed_tokens.weight.data[0] = self.encoder_model.embed_tokens.weight.data[2].clone().detach()
                 self.decoder_model.embed_tokens.weight.data[0] = self.decoder_model.embed_tokens.weight.data[2].clone().detach()
 
@@ -384,7 +383,7 @@ class ZLMModel(nn.Module):
         self.encoder_model.norm.weight.data.fill_(1.0)
         self.decoder_model.skip_norm = True
 
-        # remove the embeddings from the transformers
+        # use a single input embedding
         self.embed_tokens = self.encoder_model.embed_tokens
         self.encoder_model.embed_tokens = None
         self.decoder_model.embed_tokens = None
@@ -448,12 +447,13 @@ class ZLMModel(nn.Module):
         self.diffusion_head = DiffusionHead(config)
         self.scheduler = DiffusionScheduler(config)
 
-        # unconditional diffusion modules
+        # unconditional diffusion components
         self.uncond_diffusion_head = DiffusionHead(config)
         self.uncond_tokens = nn.Parameter(
             torch.randn(self.z_length, self.hidden_size)
         )
 
+        # apply initialization
         if config.pretrained_llama is None:
             self.apply(gaussian_init)
 
@@ -511,14 +511,17 @@ class ZLMModel(nn.Module):
         input_mask: torch.BoolTensor=None,
         output_mask: torch.BoolTensor=None,
         noise_scale: torch.FloatTensor=None,
+        return_extra: bool=False,
     ):
 
+        # handle the noise
         if noise is None:
             noise = self.sample_noise(
                 input_ids,
                 noise_scale=noise_scale,
             ) 
 
+        # create the tokens
         input_tokens = self.embed_tokens(input_ids) + unsqueeze_to_batch(
             self.encoder_input_embeddings, input_ids
         )
@@ -544,6 +547,7 @@ class ZLMModel(nn.Module):
             dim=-2
         )
 
+        # create the padding mask
         mask = None
         if input_mask is not None or output_mask is not None:
             assert input_mask is not None and output_mask is not None
@@ -558,6 +562,7 @@ class ZLMModel(nn.Module):
                 dim=-1
             )
 
+        # pass through the encoder
         hidden_states = self.encoder_model(
             inputs_embeds=tokens,
             padding_mask=mask,
@@ -569,11 +574,14 @@ class ZLMModel(nn.Module):
         # apply spectral normalization
         mu, min_eig_val = self.mu_out_norm(mu)
 
+        # sample z
         z = self.scheduler.add_noise(
             mu, torch.zeros(1, dtype=torch.long, device=mu.device), noise
         )
 
-        return z, mu, min_eig_val
+        if return_extra:
+            return z, mu, min_eig_val
+        return z, mu
 
 
     def decode(
@@ -585,9 +593,12 @@ class ZLMModel(nn.Module):
         input_mask: torch.BoolTensor=None,
         output_mask: torch.BoolTensor=None,
     ):
+        bs = input_ids.shape[0]
         
+        # normalize z
         z = self.z_in_norm(z)
 
+        # create the tokens
         input_tokens = self.embed_tokens(input_ids) + unsqueeze_to_batch(
             self.decoder_input_embeddings, input_ids
         )
@@ -610,6 +621,7 @@ class ZLMModel(nn.Module):
             [input_tokens, z_tokens, start_output_token, output_tokens], dim=-2
         )
 
+        # create the padding mask
         mask = None
         if input_mask is not None or output_mask is not None:
             assert input_mask is not None and output_mask is not None
@@ -617,7 +629,7 @@ class ZLMModel(nn.Module):
             mask = torch.cat(
                 [
                     input_mask,
-                    torch.ones(input_ids.shape[0], self.z_length + 2, dtype=torch.bool, device=input_ids.device),
+                    torch.ones(bs, self.z_length + 2, dtype=torch.bool, device=input_ids.device),
                     output_mask,
                 ],
                 dim=-1
@@ -648,7 +660,7 @@ class ZLMModel(nn.Module):
         encoded_z: torch.FloatTensor=None,
         temperature: float | str = "greedy",
     ):
-        # TODO: update with correct normalization and pooling
+        # TODO: update with correct normalization
 
         from transformers.cache_utils import DynamicCache
         from tqdm import tqdm

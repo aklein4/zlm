@@ -87,6 +87,16 @@ class ZLMTrainer(BaseTrainer):
     def forward(self, input_ids, output_ids):
         pad_token_id = self.model.config.pad_token_id
 
+        # get the hook progress
+        hook_progess = linear_warmup(
+            self.hook_step.float(),
+            self.config.trainer.hook_warmup_steps
+        )
+        wait_hook_progress = linear_warmup(
+            self.hook_step.float() - self.config.trainer.hook_wait_steps,
+            self.config.trainer.hook_warmup_steps
+        )
+
         # prepare inputs
         input_mask = (input_ids != pad_token_id)
         output_mask = (output_ids != pad_token_id)
@@ -103,9 +113,12 @@ class ZLMTrainer(BaseTrainer):
         )
 
         # encode and decode
+        noise_scale = hook_progess
         z, mu, min_eig_val = self.model.encode(
             input_for_model, output_for_model,
             input_mask=input_mask, output_mask=output_mask,
+            return_extra=True,
+            noise_scale=noise_scale,
         )
 
         logit_grad_scale = {}
@@ -144,15 +157,13 @@ class ZLMTrainer(BaseTrainer):
         self.hook_step += self.hooked.long()
 
         # gradient scales
-        kl_grad_scale = linear_warmup(
-            self.hook_step.float(),
-            self.config.trainer.hook_warmup_steps
-        ) # only used in kl_grad_weights
-        full_grad_scale = linear_warmup(
-            self.hook_step.float() - self.config.trainer.hook_wait_steps,
-            self.config.trainer.hook_warmup_steps
-        )
-        kl_grad_weights = {}
+        mu_kl_grad_scale = hook_progess
+        z_states_kl_grad_scale = wait_hook_progress
+        weighted_mu_kl_grad_scale = {}
+
+        # scaled gradients
+        mu_for_kl = scale_gradient(mu, weighted_mu_kl_grad_scale)
+        z_states_for_kl = scale_gradient(z_states, z_states_kl_grad_scale)
 
         # get the kls by diffusion sampling
         kls = 0.0
@@ -170,17 +181,19 @@ class ZLMTrainer(BaseTrainer):
             noise = torch.randn_like(z)
 
             z_t = self.model.scheduler.add_noise(
-                mu, t, noise
+                mu_for_kl,
+                t,
+                noise
             )
 
             # conditional kl
             pred_z_0 = self.model.diffusion_head(
-                scale_gradient(z_t, kl_grad_weights),
+                z_t,
                 t,
-                z_states,
+                z_states_for_kl,
             )
             kl = self.model.scheduler.kl(
-                scale_gradient(mu, kl_grad_weights),
+                mu_for_kl,
                 t,
                 pred_z_0,
                 dim=-1
@@ -195,7 +208,7 @@ class ZLMTrainer(BaseTrainer):
                     self.model.uncond_tokens[None, :, :],
                 )
                 uncond_kl = self.model.scheduler.kl(
-                    mu.detach(),
+                    mu_for_kl.detach(),
                     t,
                     uncond_pred_z_0,
                     dim=-1
@@ -208,9 +221,11 @@ class ZLMTrainer(BaseTrainer):
 
         denom = (output_ids != pad_token_id).float().sum() + self.model.config.rms_norm_eps
 
-        kl_weights = self.get_kl_weights(kl)
-        kl_grad_weights["value"] = kl_grad_scale * kl_weights[None, :, None]
-        weighted_kl_per_token = (kl * kl_weights).sum() / denom
+        # set the weights for the kl grad scaling
+        weighted_mu_kl_grad_scale["value"] = (
+            mu_kl_grad_scale *
+            self.get_kl_weights(kl)[None, :, None]
+        )
 
         # calculate kls per token
         kl_per_token = kl.sum() / denom
@@ -237,12 +252,12 @@ class ZLMTrainer(BaseTrainer):
         spectral_parties = self.get_spectral_parties(mu.detach())
 
         aux = {
+            "noise_scale": noise_scale,
             "lm_loss": lm_loss,
             "lm_acc": lm_acc,
             "lm_loss_scale": lm_loss_scale,
-            "kl_grad_scale": kl_grad_scale,
-            "full_grad_scale": full_grad_scale,
-            "weighted_kl_per_token": weighted_kl_per_token,
+            "kl_grad_scale": mu_kl_grad_scale,
+            "full_grad_scale": z_states_kl_grad_scale,
             "kl_per_token": kl_per_token,
             "effective_parties": effective_parties,
             "uncond_kl_per_token": uncond_kl_per_token,
