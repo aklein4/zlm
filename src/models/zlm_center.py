@@ -19,7 +19,7 @@ from utils.torch_utils import (
 from models.llama import LlamaForCausalLM
 from models.custom_llama import LlamaMLP, LlamaRMSNorm, LlamaDecoderLayer, CustomLlamaModel
 from models import load_checkpoint_state
-from utils.torch_modules import ScaledEmbedding, SeqPool, SpectralBatchNorm
+from utils.torch_modules import ScaledEmbedding, MeanNorm
 import utils.constants as constants
 
 
@@ -389,28 +389,26 @@ class ZLMModel(nn.Module):
         self.encoder_model.embed_tokens = None
         self.decoder_model.embed_tokens = None
 
-        # calculate embedding distribution TODO: what if llama_pretrained is None?
+        # calculate embedding stats TODO: what if llama_pretrained is None?
+        embed_std = self.embed_tokens.weight.data.std(0).detach()
         embed_mean = self.embed_tokens.weight.data.mean(0).detach()
-        embed_cov = torch.cov(self.embed_tokens.weight.data.T).detach()        
-        embed_dist = torch.distributions.MultivariateNormal(
-            loc=embed_mean,
-            covariance_matrix=(embed_cov + config.rms_norm_eps * torch.eye(self.hidden_size, device=embed_cov.device))
-        )
+        def embed_prep(x): 
+            return embed_mean[None] + x * embed_std[None]
 
         # create encoder special tokens
         self.encoder_sep_token = nn.Parameter(
-            embed_dist.sample((1,))
+            embed_prep(torch.randn(1, self.hidden_size))
         )
         self.encoder_z_tokens = nn.Parameter(
-            embed_dist.sample((self.z_length,))
+            embed_prep(torch.randn(self.z_length, self.hidden_size))
         )
 
         # create decoder special tokens
         self.decoder_z_tokens = nn.Parameter(
-            embed_dist.sample((1 + self.z_length,))
+            embed_prep(torch.randn(1 + self.z_length, self.hidden_size))
         )
         self.decoder_start_output_token = nn.Parameter(
-            embed_dist.sample((1,))
+            embed_prep(torch.randn(1, self.hidden_size))
         )
 
         # create the encoder embeddings
@@ -437,20 +435,15 @@ class ZLMModel(nn.Module):
         self.encoder_mu_proj_out = nn.Linear(self.hidden_size, self.latent_size, bias=False)
 
         # create the norms
-        self.mu_out_norm = SpectralBatchNorm(
-            [self.z_length, self.latent_size],
-            config.batch_norm_beta,
-            eps=config.rms_norm_eps,
-        )
+        # self.mu_out_norm = LlamaRMSNorm(self.latent_size, eps=config.rms_norm_eps, elementwise_affine=False)
         self.z_in_norm = LlamaRMSNorm(self.latent_size, eps=config.rms_norm_eps, elementwise_affine=False)
 
-        # create the pooler
-        self.pooler = SeqPool(
-            self.latent_size,
-            self.hidden_size,
-            self.hidden_size,
-            self.z_length,
-            normalize=False
+        # create a mean norm for the mu output
+        self.mu_mean_batch_norm = MeanNorm(
+            [self.z_length, self.latent_size],
+            beta=config.batch_norm_beta,
+            eps=config.rms_norm_eps,
+            attach_gradients=True,
         )
 
         # create the diffusion components
@@ -472,16 +465,17 @@ class ZLMModel(nn.Module):
             gaussian_init(self.encoder_noise_proj_in)
             gaussian_init(self.decoder_z_proj_in)
             gaussian_init(self.encoder_mu_proj_out)
-            self.pooler.apply(gaussian_init)
 
         # set the diffusion head conditioning embeddings to ones
         self.apply(self.scaled_embed_init)
 
         # scale input layers by embedding stats
-        proj_std = self.embed_tokens.weight.data.std().detach()
         self.encoder_noise_proj_in.weight.data.zero_()
-        self.decoder_z_proj_in.weight.data *= proj_std
-        self.pooler.out_proj.weight.data *= proj_std
+        self.decoder_z_proj_in.weight.data *= embed_std[:, None]
+
+        # initialize the diffusion heads with small values
+        self.diffusion_head.out_proj.weight.data.mul_(config.diffusion_output_init_scale)
+        self.uncond_diffusion_head.out_proj.weight.data.mul_(config.diffusion_output_init_scale)
 
 
     def scaled_embed_init(self, module):
@@ -575,8 +569,9 @@ class ZLMModel(nn.Module):
             hidden_states[..., -self.z_length:, :]
         )
 
-        # apply spectral normalization
-        mu = self.mu_out_norm(mu)
+        # apply batch norm then rms norm
+        mu = self.mu_mean_batch_norm(mu)
+        # mu = self.mu_out_norm(mu)
 
         z = self.scheduler.add_noise(
             mu, torch.zeros(1, dtype=torch.long, device=mu.device), noise
@@ -596,14 +591,13 @@ class ZLMModel(nn.Module):
     ):
         
         z = self.z_in_norm(z)
-        pooled = self.pooler(z)[:, None, :]
 
         input_tokens = self.embed_tokens(input_ids) + unsqueeze_to_batch(
             self.decoder_input_embeddings, input_ids
         )
         output_tokens = self.embed_tokens(output_ids) + unsqueeze_to_batch(
             self.decoder_output_embeddings, output_ids
-        ) + pooled
+        )
 
         z_tokens = (
             unsqueeze_to_batch(self.decoder_z_tokens, z) +
@@ -614,7 +608,7 @@ class ZLMModel(nn.Module):
         )
         start_output_token = expand_to_batch(
             self.decoder_start_output_token, output_tokens
-        ) + pooled
+        )
 
         tokens = torch.cat(
             [input_tokens, z_tokens, start_output_token, output_tokens], dim=-2
@@ -658,8 +652,6 @@ class ZLMModel(nn.Module):
         encoded_z: torch.FloatTensor=None,
         temperature: float | str = "greedy",
     ):
-        # TODO: update with correct normalization and pooling
-
         from transformers.cache_utils import DynamicCache
         from tqdm import tqdm
 
@@ -710,17 +702,17 @@ class ZLMModel(nn.Module):
                         t,
                         z_states,
                     ) # [B, latent_size]
-                    z_t = self.scheduler.ddim_step(
-                        z_t,
-                        t,
-                        pred_z_0,
-                    ) # [B, latent_size]
-                    # z_t = self.scheduler.step(
+                    # z_t = self.scheduler.ddim_step(
                     #     z_t,
                     #     t,
                     #     pred_z_0,
-                    #     torch.randn_like(z_t),
                     # ) # [B, latent_size]
+                    z_t = self.scheduler.step(
+                        z_t,
+                        t,
+                        pred_z_0,
+                        torch.randn_like(z_t),
+                    ) # [B, latent_size]
 
             else:
                 z_t = encoded_z[:, i, :] # [B, latent_size]
