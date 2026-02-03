@@ -17,7 +17,7 @@ from utils.torch_utils import (
 )
 
 from models.llama import LlamaForCausalLM
-from models.custom_llama import LlamaMLP, LlamaRMSNorm, LlamaDecoderLayer, CustomLlamaModel
+from models.old_custom_llama import LlamaMLP, LlamaRMSNorm, LlamaDecoderLayer, CustomLlamaModel
 from models import load_checkpoint_state
 from utils.torch_modules import ScaledEmbedding, SpectralBatchNorm
 import utils.constants as constants
@@ -565,7 +565,7 @@ class ZLMModel(nn.Module):
         # pass through the encoder
         hidden_states = self.encoder_model(
             inputs_embeds=tokens,
-            padding_mask=mask,
+            elementwise_pad_mask=mask,
         )
         mu = self.encoder_mu_proj_out(
             hidden_states[..., -self.z_length:, :]
@@ -637,7 +637,7 @@ class ZLMModel(nn.Module):
 
         hidden_states = self.decoder_model(
             inputs_embeds=tokens,
-            padding_mask=mask,
+            elementwise_pad_mask=mask,
         )
 
         logit_states = hidden_states[:, -(self.output_length+1):-1, :]
