@@ -113,7 +113,7 @@ class ZLMTrainer(BaseTrainer):
         )
 
         # encode and decode
-        noise_scale = 1.0 # hook_progess
+        noise_scale = hook_progess
         z, mu, min_eig_val = self.model.encode(
             input_for_model, output_for_model,
             input_mask=input_mask, output_mask=output_mask,
