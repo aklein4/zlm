@@ -470,9 +470,11 @@ class ZLMModel(nn.Module):
         # scale input layers by embedding stats
         # . TODO: what if llama_pretrained is None?
         self.encoder_noise_proj_in.weight.data.zero_()
-        self.decoder_z_proj_in.weight.data.copy_(
-            embed_dist.sample((self.latent_size,)).T / math.sqrt(self.latent_size)
-        )
+        # self.decoder_z_proj_in.weight.data.copy_(
+        #     embed_dist.sample((self.latent_size,)).T / math.sqrt(self.latent_size)
+        # )
+        proj_std = self.embed_tokens.weight.data.std().detach()
+        self.decoder_z_proj_in.weight.data *= proj_std
 
 
     def scaled_embed_init(self, module):
