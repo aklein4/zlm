@@ -19,7 +19,7 @@ from utils.torch_utils import (
 from models.llama import LlamaForCausalLM
 from models.custom_llama import LlamaMLP, LlamaRMSNorm, LlamaDecoderLayer, CustomLlamaModel
 from models import load_checkpoint_state
-from utils.torch_modules import ScaledEmbedding, SeqPool, SpectralBatchNorm
+from utils.torch_modules import ScaledEmbedding, SpectralBatchNorm
 import utils.constants as constants
 
 
@@ -397,26 +397,27 @@ class ZLMModel(nn.Module):
             covariance_matrix=(embed_cov + config.rms_norm_eps * torch.eye(self.hidden_size, device=embed_cov.device))
         )
 
-        # create encoder special tokens
-        self.encoder_sep_token = nn.Parameter(
-            embed_dist.sample((1,))
+        assert len(config.init_z_token_message) == self.z_length, f"Expected init_z_token_message length {self.z_length}, got {len(config.init_z_token_message)}"
+        token_param = lambda x: nn.Parameter(
+            self.embed_tokens(
+                torch.tensor(x, device=self.embed_tokens.weight.device, dtype=torch.long)
+            ).detach()
         )
-        self.encoder_z_tokens = nn.Parameter(
-            embed_dist.sample((self.z_length,))
+        
+        # create encoder special tokens
+        self.encoder_sep_token = token_param(
+            [config.init_sep_token_id]
+        )
+        self.encoder_z_tokens = token_param(
+            config.init_z_token_message
         )
 
         # create decoder special tokens
-        self.decoder_z_tokens = nn.Parameter(
-            # embed_dist.sample((1 + self.z_length,))
-            self.embed_tokens(
-                torch.tensor(
-                    [2089, 5646, 7997, 868, 3535, 288, 8649, 351, 253, 5707, 12342, 282, 6564, 28, 13150, 28, 284, 2914, 29, 20535, 9507, 30, 657, 868, 1956, 411, 7401, 260, 2914, 417, 99, 7360, 284, 260, 10195, 338, 2631, 365, 3477, 28, 3519, 28, 5936, 28, 39326, 28, 284, 750, 2950, 355, 8351, 6177, 643, 965, 5143, 355, 23487, 6782, 3841, 281, 253, 970, 338, 28767, 14700, 30, 378, 7997, 417, 99, 3003, 15915, 314, 288, 325, 2887, 284, 8442, 563, 732, 357, 5443, 42, 357, 868, 4447, 5307, 429, 9853, 28, 2482, 6913, 674, 3841, 28, 284, 1215, 10443, 645, 2364, 314, 17937, 30, 1550, 253, 3116, 5552, 335, 1096, 338, 654, 1363, 690, 655, 28, 260, 7997, 868, 31440, 4811, 260, 768, 1574, 2257, 1770, 355, 4763, 7432, 260, 2914, 338, 260, 2988, 654, 325, 23082, 30, 39932, 868, 325, 12498, 588, 502, 359, 2807, 288, 705, 335, 42, 1022, 351, 260, 1454, 2988, 28, 722, 19484, 3904, 365, 2699, 616, 28, 3301, 28, 355, 16425, 2876, 645, 3350, 643, 284, 1453, 3480, 355, 20956, 645, 502, 1376, 318, 1947, 34738, 30, 378, 7997, 868, 597, 24225, 368, 5856, 288, 260, 2914, 417, 99, 1923, 1265, 3430, 1136, 253, 2232, 9912, 327, 12419, 2029, 28, 284, 253, 540, 11235, 1849, 365, 44872, 28, 5595, 2199, 28, 46990, 28, 284, 18898, 3301, 25, 327, 5289, 355, 904, 29, 44767, 4366, 30, 8498, 314, 441, 354, 990, 32853, 42, 585, 253, 3116, 314, 5794, 28, 9054, 28, 355, 37012, 8351, 28, 260, 7997, 868, 16907, 40902, 284, 1538, 10145, 8837, 338, 1361, 724, 260, 2914, 9377, 14005, 3949, 30, 533, 5857, 12956, 702, 864, 28, 3425, 28, 355, 9999, 28, 357, 868, 4517, 3544, 14569, 284, 2482, 4145, 690, 7427, 880, 37505, 28, 979, 1361, 5506, 2210, 1888, 284, 3062, 29, 22610, 11309, 30, 378, 7997, 868, 2265, 2914, 12976, 411, 11513, 3416, 284, 10115, 2161, 670, 10388, 253, 2244, 2050, 28, 284, 357, 868, 325, 12375, 563, 7250, 715, 347, 15650, 288, 1594, 3646, 1734, 28, 12198, 9316, 28, 355, 10780, 4530, 30, 312, 537, 5939, 42, 260, 7997, 868, 5758, 260, 2914, 417, 99, 3997, 1355, 1036, 46875, 28, 9507, 272, 28, 355, 20420, 4942, 28, 284, 868, 2482, 11125, 6936, 10553, 338, 12232, 756, 1646, 2876, 30, 657, 868, 5605, 1066, 29, 5835, 30278, 28, 18114, 4006, 2468, 1127, 260, 6634, 28, 29786, 9101, 18037, 28, 284, 21447, 3685, 5783, 645, 725, 1096, 4541, 30, 6887, 28, 354, 5646, 7997, 868, 13240, 327, 3634, 690, 34295, 42, 13383, 2785, 645, 1770, 28, 2482, 24098, 5912, 282, 12678, 28, 284, 18537, 12260, 28, 6000, 45876, 28, 284, 2265, 327, 260, 2914, 417, 99, 655, 30]
-                ).long()
-            ).detach()[:self.z_length+1]
+        self.decoder_z_tokens = token_param(
+            [config.init_sep_token_id] + config.init_z_token_message
         )
-        self.decoder_start_output_token = nn.Parameter(
-            # embed_dist.sample((1,))
-            self.embed_tokens.weight.data[2089].clone().detach()[None]
+        self.decoder_start_output_token = token_param(
+            [config.init_sep_token_id]
         )
 
         # create the encoder embeddings
@@ -450,15 +451,6 @@ class ZLMModel(nn.Module):
         )
         self.z_in_norm = LlamaRMSNorm(self.latent_size, eps=config.rms_norm_eps, elementwise_affine=False)
 
-        # create the pooler
-        self.pooler = SeqPool(
-            self.latent_size,
-            self.hidden_size,
-            self.hidden_size,
-            self.z_length,
-            normalize=False
-        )
-
         # create the diffusion components
         self.diffusion_head = DiffusionHead(config)
         self.scheduler = DiffusionScheduler(config)
@@ -478,16 +470,18 @@ class ZLMModel(nn.Module):
             gaussian_init(self.encoder_noise_proj_in)
             gaussian_init(self.decoder_z_proj_in)
             gaussian_init(self.encoder_mu_proj_out)
-            self.pooler.apply(gaussian_init)
 
         # set the diffusion head conditioning embeddings to ones
         self.apply(self.scaled_embed_init)
 
         # scale input layers by embedding stats
-        proj_std = self.embed_tokens.weight.data.std().detach()
+        # . TODO: what if llama_pretrained is None?
         self.encoder_noise_proj_in.weight.data.zero_()
-        self.decoder_z_proj_in.weight.data.zero_() # *= proj_std
-        self.pooler.out_proj.weight.data.zero_() # *= proj_std
+        self.decoder_z_proj_in.weight.data.copy_(
+            config.z_proj_in_init_scale *
+            embed_dist.sample((self.latent_size,)).T /
+            math.sqrt(self.latent_size)
+        )
 
 
     def scaled_embed_init(self, module):
@@ -526,6 +520,7 @@ class ZLMModel(nn.Module):
         input_mask: torch.BoolTensor=None,
         output_mask: torch.BoolTensor=None,
         noise_scale: torch.FloatTensor=None,
+        return_extra: bool=False,
     ):
 
         if noise is None:
@@ -582,12 +577,14 @@ class ZLMModel(nn.Module):
         )
 
         # apply spectral normalization
-        mu, _ = self.mu_out_norm(mu)
+        mu, min_eig_val = self.mu_out_norm(mu)
 
         z = self.scheduler.add_noise(
             mu, torch.zeros(1, dtype=torch.long, device=mu.device), noise
         )
 
+        if return_extra:
+            return z, mu, min_eig_val
         return z, mu
 
 
@@ -602,14 +599,13 @@ class ZLMModel(nn.Module):
     ):
         
         z = self.z_in_norm(z)
-        pooled = self.pooler(z)[:, None, :]
 
         input_tokens = self.embed_tokens(input_ids) + unsqueeze_to_batch(
             self.decoder_input_embeddings, input_ids
         )
         output_tokens = self.embed_tokens(output_ids) + unsqueeze_to_batch(
             self.decoder_output_embeddings, output_ids
-        ) + pooled
+        )
 
         z_tokens = (
             unsqueeze_to_batch(self.decoder_z_tokens, z) +
@@ -620,7 +616,7 @@ class ZLMModel(nn.Module):
         )
         start_output_token = expand_to_batch(
             self.decoder_start_output_token, output_tokens
-        ) + pooled
+        )
 
         tokens = torch.cat(
             [input_tokens, z_tokens, start_output_token, output_tokens], dim=-2
