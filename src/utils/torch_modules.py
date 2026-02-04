@@ -284,7 +284,7 @@ class SpectralBatchNorm(nn.Module):
             x_cov + self.eps * torch.eye(self.shape[-1], device=x.device, dtype=x_cov.dtype)[None]
         )
 
-        min_val = torch.min(eig_vals)
+        min_val = torch.min(eig_vals.detach())
         eig_vals = torch.clamp(eig_vals, min=self.eps) # [S, H]
 
         inv_sqrt_cov = (

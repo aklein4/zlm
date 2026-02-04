@@ -74,4 +74,4 @@ num_uncond_diffusion_samples: 1
 
 # loss weighting configuration
 kl_weight_relu_shift: 0.0
-beta: 0.1
+beta: 0.2

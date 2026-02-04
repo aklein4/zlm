@@ -439,13 +439,10 @@ class ZLM2Model(nn.Module):
         self.encoder_mu_proj_out = nn.Linear(self.hidden_size, self.latent_size, bias=False)
 
         # create the norms
-        spec_eps = config.rms_norm_eps
-        if hasattr(config, "spectral_batch_norm_eps"): # backwards compatibility
-            spec_eps = config.spectral_batch_norm_eps
         self.mu_out_norm = SpectralBatchNorm(
             [self.z_length, self.latent_size],
             config.batch_norm_beta,
-            eps=spec_eps,
+            eps=config.rms_norm_eps,
         )
         self.z_in_norm = LlamaRMSNorm(self.latent_size, eps=config.rms_norm_eps, elementwise_affine=False)
 
@@ -475,10 +472,12 @@ class ZLM2Model(nn.Module):
 
         # scale input layers by embedding stats
         # . TODO: what if llama_pretrained is None?
+        proj_std = self.embed_tokens.weight.data.std().detach()
         self.encoder_noise_proj_in.weight.data.zero_()
-        self.decoder_z_proj_in.weight.data.copy_(
-            embed_dist.sample((self.latent_size,)).T / math.sqrt(self.latent_size)
-        )
+        self.decoder_z_proj_in.weight.data *= proj_std
+        # self.decoder_z_proj_in.weight.data.copy_(
+        #     embed_dist.sample((self.latent_size,)).T / math.sqrt(self.latent_size)
+        # )
 
 
     def head_surgery(self):
@@ -524,7 +523,9 @@ class ZLM2Model(nn.Module):
                 attn.v_proj.weight.data.detach()
             )
             new_v_proj.weight.data[attn.v_proj.weight.data.shape[0]:].mul_(
-                attn.v_proj.weight.data.std().detach() * math.sqrt(new_v_proj.weight.shape[1])
+                attn.v_proj.weight.data.std().detach()
+                * math.sqrt(new_v_proj.weight.shape[1])
+                * math.sqrt(self.config.attention_init_scale)
             )
 
             new_o_proj = nn.Linear(
@@ -537,7 +538,9 @@ class ZLM2Model(nn.Module):
                 attn.o_proj.weight.data.detach()
             )
             new_o_proj.weight.data[:, attn.o_proj.weight.data.shape[1]:].mul_(
-                attn.o_proj.weight.data.std().detach() * math.sqrt(new_o_proj.weight.shape[1])
+                attn.o_proj.weight.data.std().detach()
+                * math.sqrt(new_o_proj.weight.shape[1])
+                * math.sqrt(self.config.attention_init_scale)
             )
 
             attn.q_proj = new_q_proj
@@ -582,6 +585,7 @@ class ZLM2Model(nn.Module):
         input_mask: torch.BoolTensor=None,
         output_mask: torch.BoolTensor=None,
         noise_scale: torch.FloatTensor=None,
+        return_extra: bool=False,
     ):
 
         # handle the noise
@@ -649,7 +653,9 @@ class ZLM2Model(nn.Module):
             mu, torch.zeros(1, dtype=torch.long, device=mu.device), noise
         )
 
-        return z, mu, min_eig_val
+        if return_extra:
+            return z, mu, min_eig_val
+        return z, mu
 
 
     def decode(
@@ -757,7 +763,7 @@ class ZLM2Model(nn.Module):
         encoded_z: torch.FloatTensor=None,
         temperature: float | str = "greedy",
     ):
-        # TODO: update with correct normalization
+        # TODO: update with correct normalization and masking
 
         from transformers.cache_utils import DynamicCache
         from tqdm import tqdm

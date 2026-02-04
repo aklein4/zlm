@@ -48,7 +48,7 @@ rms_norm_eps: 1.0e-05
 pad_attention_bias_value: -100.0
 
 # choose attention_kernel from: [flash_attention, splash_attention, null]
-attention_kernel: nan_safe_flash_attention
+attention_kernel: flash_attention
 
 # pretrained model to use as base
 pretrained_llama: aklein4/SmolLM2-1.7B-TPU
@@ -63,10 +63,10 @@ latent_size: 32
 
 # batch norm configuration
 batch_norm_beta: 0.95
-spectral_batch_norm_eps: 1e-4
 
 # extra attention configuration
 num_z_only_kv_heads: 8
+attention_init_scale: 1.0
 
 # diffusion configuration
 minimum_diffusion_timestep: 0.5

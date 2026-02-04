@@ -48,7 +48,7 @@ rms_norm_eps: 1.0e-05
 pad_attention_bias_value: -100.0
 
 # choose attention_kernel from: [flash_attention, splash_attention, null]
-attention_kernel: nan_safe_flash_attention
+attention_kernel: flash_attention
 
 # pretrained model to use as base
 pretrained_llama: aklein4/SmolLM2-360M-TPU
