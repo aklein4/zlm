@@ -163,7 +163,7 @@ class ZLMTrainer(BaseTrainer):
 
         # calculate the feat loss
         feat_loss_scale = torch.clip(1.0 - fast_hook_progress, min=0.0)
-        targ_feat = F.rms_norm(feat, [feat.shape[-1]], eps=self.model.config.rms_norm_eps)[:, None]
+        targ_feat = F.rms_norm(feat, [feat.shape[-1]], eps=self.model.config.rms_norm_eps)[:, None].detach()
         feat_loss = (
             (pred_feat - targ_feat).pow(2) / 
             (targ_feat.var(dim=0, keepdim=True, unbiased=False) + self.model.config.rms_norm_eps)

@@ -20,13 +20,13 @@ DEVICE = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 # STEP = 5000
 # MODEL_TYPE = None
 
-# MODEL_URL = "aklein4/ZLM-v2_zlm2-med-noise"
-# STEP = 1000
-# MODEL_TYPE = None
-
-MODEL_URL = "aklein4/ZLM-v2_zlm-med-spectral-32z"
-STEP = 2000
+MODEL_URL = "aklein4/ZLM-v2_zlm2-med-prompt"
+STEP = 4000
 MODEL_TYPE = None
+
+# MODEL_URL = "aklein4/ZLM-v2_zlm-med-spectral-32z"
+# STEP = 2000
+# MODEL_TYPE = None
 
 # MODEL_URL = "aklein4/ZLM-v2_zlm-med-ada"
 # STEP = 10000
@@ -38,7 +38,7 @@ MU_PATH = os.path.join(
     constants.LOCAL_DATA_PATH, "mu_values_ada.pt"
 )
 
-BS = 128
+BS = 64
 NUM_STEPS = (1024 * 4) // BS
 
 ATTN_IDX = 24
@@ -56,10 +56,10 @@ def get_data():
         MODEL_URL, STEP,
         attention_kernel=None, # "gpu_flash_attention",
         model_type=MODEL_TYPE,
-        skip_state_dict=True,
-        strict=True,
+        skip_state_dict=False,
+        strict=False,
     ).to(DEVICE)
-    model.train()
+    model.eval()
     pad_token_id = model.config.pad_token_id
 
     data = datasets.load_dataset(
@@ -103,7 +103,7 @@ def get_data():
             torch.zeros_like(output_ids)
         )
 
-        AP.call_fn(model.encoder_model, "enable", idx=ATTN_IDX)
+        AP.call_fn(model.decoder_model, "enable", idx=ATTN_IDX)
 
         # encode and decode
         _, mu = model.encode(
@@ -112,11 +112,12 @@ def get_data():
         )
         all_mu.append(mu.cpu())
 
-        # _ = model.decode(
-        #     input_for_model, output_for_model, _,
-        #     input_mask=input_mask, output_mask=output_mask,
-        # )
-        attn = AP.call_fn(model.encoder_model, "get")
+        _ = model.decode(
+            input_for_model, output_for_model, _,
+            input_mask=input_mask, output_mask=output_mask,
+        )
+
+        attn = AP.call_fn(model.decoder_model, "get")
         
         os.makedirs(local_dir("attention_visualizations"), exist_ok=True)
 
@@ -139,9 +140,9 @@ def get_data():
                 torch.full_like(attn_h, 0.0)
             )
 
-            # attn_h = attn_h.sum(0) / (attn_mask.float().sum(0) + 1e-7)
+            attn_h = attn_h.sum(0) / (attn_mask.float().sum(0) + 1e-7)
             attn_h = attn_h / (attn_h.max(dim=-1, keepdim=True).values + 1e-7)
-            attn_h = attn_h.max(0).values
+            # attn_h = attn_h.max(0).values
 
             # attn_h = attn_h / attn_h.max(dim=-1, keepdim=True).values
 
