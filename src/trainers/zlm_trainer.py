@@ -167,7 +167,10 @@ class ZLMTrainer(BaseTrainer):
         feat_loss = (
             (pred_feat - targ_feat).pow(2) / 
             (targ_feat.var(dim=0, keepdim=True, unbiased=False) + self.model.config.rms_norm_eps)
-        ).mean()
+        ).mean(-1)
+        
+        feat_mask = output_mask.to(feat_loss.dtype)
+        feat_loss = (feat_loss * feat_mask).sum() / (feat_mask.sum() + self.model.config.rms_norm_eps)
 
         # gradient scales
         mu_kl_grad_scale = hook_progess
