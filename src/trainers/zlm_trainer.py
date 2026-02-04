@@ -158,7 +158,7 @@ class ZLMTrainer(BaseTrainer):
 
         # gradient scales
         mu_kl_grad_scale = hook_progess
-        z_states_kl_grad_scale = wait_hook_progress
+        z_states_kl_grad_scale = 1.0 # wait_hook_progress
         weighted_mu_kl_grad_scale = {}
 
         # scaled gradients

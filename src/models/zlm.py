@@ -19,7 +19,7 @@ from utils.torch_utils import (
 from models.llama import LlamaForCausalLM
 from models.custom_llama import LlamaMLP, LlamaRMSNorm, LlamaDecoderLayer, CustomLlamaModel
 from models import load_checkpoint_state
-from utils.torch_modules import ScaledEmbedding, SeqPool, SpectralBatchNorm
+from utils.torch_modules import ScaledEmbedding, SpectralBatchNorm
 import utils.constants as constants
 
 
@@ -443,15 +443,6 @@ class ZLMModel(nn.Module):
             eps=config.rms_norm_eps,
         )
         self.z_in_norm = LlamaRMSNorm(self.latent_size, eps=config.rms_norm_eps, elementwise_affine=False)
-        
-        # create the pooler
-        self.pooler = SeqPool(
-            self.latent_size,
-            self.hidden_size,
-            self.hidden_size,
-            self.z_length,
-            normalize=False
-        )
 
         # create the diffusion components
         self.diffusion_head = DiffusionHead(config)
@@ -472,7 +463,6 @@ class ZLMModel(nn.Module):
             gaussian_init(self.encoder_noise_proj_in)
             gaussian_init(self.decoder_z_proj_in)
             gaussian_init(self.encoder_mu_proj_out)
-            self.pooler.apply(gaussian_init)
 
         # set the diffusion head conditioning embeddings to ones
         self.apply(self.scaled_embed_init)
@@ -485,7 +475,6 @@ class ZLMModel(nn.Module):
         #     embed_dist.sample((self.latent_size,)).T / math.sqrt(self.latent_size)
         # )
         self.decoder_z_proj_in.weight.data *= proj_std
-        self.pooler.out_proj.weight.data *= proj_std
 
 
     def scaled_embed_init(self, module):
@@ -603,14 +592,13 @@ class ZLMModel(nn.Module):
     ):
         
         z = self.z_in_norm(z)
-        pooled = self.pooler(z)[:, None, :]
 
         input_tokens = self.embed_tokens(input_ids) + unsqueeze_to_batch(
             self.decoder_input_embeddings, input_ids
         )
         output_tokens = self.embed_tokens(output_ids) + unsqueeze_to_batch(
             self.decoder_output_embeddings, output_ids
-        ) + pooled
+        )
 
         z_tokens = (
             unsqueeze_to_batch(self.decoder_z_tokens, z) +
@@ -621,7 +609,7 @@ class ZLMModel(nn.Module):
         )
         start_output_token = expand_to_batch(
             self.decoder_start_output_token, output_tokens
-        ) + pooled
+        )
 
         tokens = torch.cat(
             [input_tokens, z_tokens, start_output_token, output_tokens], dim=-2

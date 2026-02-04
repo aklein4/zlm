@@ -44,13 +44,6 @@ mu_out_norm.mean_tracker.num_updates: [null]
 mu_out_norm.mean_tracker.weight: [null, null]
 
 
-# pooling 
-pooler.sequence_logits: [null, fsdp]
-
-pooler.in_proj.weight: [fsdp, null]
-pooler.out_proj.weight: [fsdp, null]
-
-
 # scheduler
 scheduler.timesteps: [null]
 scheduler.a: [null]
