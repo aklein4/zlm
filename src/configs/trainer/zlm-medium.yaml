@@ -62,6 +62,7 @@ init_hook: false
 init_hook_step: null
 hook_warmup_steps: 1000
 hook_wait_steps: 0
+fast_hook_warmup_steps: 100
 
 # threshold configuration
 upper_loss_threshold: 0.75
@@ -75,3 +76,4 @@ num_uncond_diffusion_samples: 1
 # loss weighting configuration
 kl_weight_relu_shift: 0.0
 beta: 0.2
+feat_loss_weight: 1.0
