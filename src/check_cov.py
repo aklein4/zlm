@@ -4,12 +4,14 @@ import os
 import matplotlib.pyplot as plt
 from tqdm import tqdm
 import numpy as np
+import PIL.Image as Image
 
 import datasets
 
 from models import load_checkpoint
 import utils.constants as constants
 from collators.seq_to_seq import SeqToSeqCollator
+from utils.attention_utils import AtttentionProbe as AP
 
 
 DEVICE = torch.device("cuda" if torch.cuda.is_available() else "cpu")
@@ -18,7 +20,11 @@ DEVICE = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 # STEP = 5000
 # MODEL_TYPE = None
 
-MODEL_URL = "aklein4/ZLM-v2_zlm-med-pool"
+# MODEL_URL = "aklein4/ZLM-v2_zlm2-med-noise"
+# STEP = 1000
+# MODEL_TYPE = None
+
+MODEL_URL = "aklein4/ZLM-v2_zlm-med-spectral-32z"
 STEP = 2000
 MODEL_TYPE = None
 
@@ -35,6 +41,8 @@ MU_PATH = os.path.join(
 BS = 128
 NUM_STEPS = (1024 * 4) // BS
 
+ATTN_IDX = 24
+
 
 def local_dir(path):
     return os.path.join(constants.LOCAL_DATA_PATH, path)
@@ -43,14 +51,15 @@ def local_dir(path):
 @torch.no_grad()
 def get_data():
 
+    print("Loading model...")
     model = load_checkpoint(
         MODEL_URL, STEP,
-        attention_kernel="gpu_flash_attention",
+        attention_kernel=None, # "gpu_flash_attention",
         model_type=MODEL_TYPE,
-        skip_state_dict=False,
+        skip_state_dict=True,
         strict=True,
     ).to(DEVICE)
-    model.eval()
+    model.train()
     pad_token_id = model.config.pad_token_id
 
     data = datasets.load_dataset(
@@ -69,6 +78,7 @@ def get_data():
         collate_fn=collator,
     )
 
+    print("Collecting mu values...")
     all_mu = []
     pbar = tqdm(total=NUM_STEPS)
     for i, batch in enumerate(loader):
@@ -93,12 +103,83 @@ def get_data():
             torch.zeros_like(output_ids)
         )
 
+        AP.call_fn(model.encoder_model, "enable", idx=ATTN_IDX)
+
         # encode and decode
         _, mu = model.encode(
             input_for_model, output_for_model,
             input_mask=input_mask, output_mask=output_mask,
         )
         all_mu.append(mu.cpu())
+
+        # _ = model.decode(
+        #     input_for_model, output_for_model, _,
+        #     input_mask=input_mask, output_mask=output_mask,
+        # )
+        attn = AP.call_fn(model.encoder_model, "get")
+        
+        os.makedirs(local_dir("attention_visualizations"), exist_ok=True)
+
+        for h in tqdm(range(attn.shape[1])):
+            attn_h = attn[:, h, :, :]  # [batch, seq, seq]
+            
+            full_mask = torch.cat(
+                [
+                    input_mask,
+                    torch.ones(attn_h.shape[0], attn_h.shape[-1]-input_mask.shape[-1]-output_mask.shape[-1], device=DEVICE, dtype=torch.bool),
+                    output_mask,
+                ],
+                dim=-1
+            )
+            attn_mask = full_mask[:, None, :] & full_mask[:, :, None]
+            
+            attn_h = torch.where(
+                attn_mask,
+                attn_h,
+                torch.full_like(attn_h, 0.0)
+            )
+
+            # attn_h = attn_h.sum(0) / (attn_mask.float().sum(0) + 1e-7)
+            attn_h = attn_h / (attn_h.max(dim=-1, keepdim=True).values + 1e-7)
+            attn_h = attn_h.max(0).values
+
+            # attn_h = attn_h / attn_h.max(dim=-1, keepdim=True).values
+
+            img = Image.fromarray(
+                (attn_h.cpu().numpy() * 255).astype(np.uint8)
+            )
+            img.save(
+                local_dir(
+                    os.path.join(
+                        "attention_visualizations",
+                        f"layer={ATTN_IDX}_head={h}.png"
+                    ),
+                )
+            )
+
+            # attn_h = (
+            #     attn_h /
+            #     attn_h.nan_to_num(float("-inf"), float("-inf"), float("-inf")).max(dim=-1, keepdim=True).values
+            # )
+            # attn_h = torch.log10(attn_h)
+
+            # plt.matshow(
+            #     attn_h.cpu().numpy(),
+            #     vmin=0.0, vmax=attn_h.max().item(),
+            # )
+            # plt.colorbar()
+            # plt.savefig(
+            #     local_dir(
+            #         os.path.join(
+            #             "attention_visualizations",
+            #             f"layer={ATTN_IDX}_head={h}.png"
+            #         ),
+            #     ),
+            #     dpi=300,
+            # )
+            # plt.clf()
+
+        exit(0)
 
         pbar.update(1)
 

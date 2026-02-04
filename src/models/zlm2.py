@@ -17,7 +17,7 @@ from utils.torch_utils import (
 )
 
 from models.llama import LlamaForCausalLM
-from models.custom_llama import LlamaMLP, LlamaRMSNorm, LlamaAttention, LlamaDecoderLayer, CustomLlamaModel
+from models.custom_llama2 import LlamaMLP, LlamaRMSNorm, LlamaAttention, LlamaDecoderLayer, CustomLlamaModel
 from models import load_checkpoint_state
 from utils.torch_modules import ScaledEmbedding, SpectralBatchNorm
 import utils.constants as constants
