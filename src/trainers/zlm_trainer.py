@@ -42,6 +42,24 @@ class ZLMTrainer(BaseTrainer):
                 )
     
 
+    def get_trainable_parameters(self, model: ZLMModel):
+        if not self.config.trainer.frozen_decoder:
+            return model.parameters()
+    
+        params = []
+        for name, p in model.named_parameters():
+            if "decoder_model" in name:
+                continue
+            if "lm_head" in name:
+                continue
+            if "embed_tokens" in name:
+                continue
+            params.append(p)
+        
+        return params
+
+
+
     def get_kl_weights(self, kl):
         if kl.dim() > 1:
             kl = kl.mean(0)
@@ -96,10 +114,6 @@ class ZLMTrainer(BaseTrainer):
             self.hook_step.float() - self.config.trainer.hook_wait_steps,
             self.config.trainer.hook_warmup_steps
         )
-        fast_hook_progress = linear_warmup(
-            self.hook_step.float(),
-            self.config.trainer.fast_hook_warmup_steps
-        )
 
         # prepare inputs
         input_mask = (input_ids != pad_token_id)
@@ -118,7 +132,7 @@ class ZLMTrainer(BaseTrainer):
 
         # encode and decode
         noise_scale = hook_progess
-        z, mu, min_eig_val, feat = self.model.encode(
+        z, mu, min_eig_val = self.model.encode(
             input_for_model, output_for_model,
             input_mask=input_mask, output_mask=output_mask,
             return_extra=True,
@@ -126,7 +140,7 @@ class ZLMTrainer(BaseTrainer):
         )
 
         logit_grad_scale = {}
-        logits, z_states, pred_feat = self.model.decode(
+        logits, z_states = self.model.decode(
             input_for_model, output_for_model, z,
             logit_grad_scale=logit_grad_scale,
             input_mask=input_mask,
@@ -160,17 +174,6 @@ class ZLMTrainer(BaseTrainer):
         # update hooking status
         self.hooked = self.hooked | (lm_loss < self.config.trainer.upper_loss_threshold).reshape(1)
         self.hook_step += self.hooked.long()
-
-        # calculate the feat loss
-        feat_loss_scale = torch.clip(1.0 - fast_hook_progress, min=0.0)
-        targ_feat = F.rms_norm(feat, [feat.shape[-1]], eps=self.model.config.rms_norm_eps)[:, None].detach()
-        feat_loss = (
-            (pred_feat - targ_feat).pow(2) / 
-            (targ_feat.var(dim=0, keepdim=True, unbiased=False) + self.model.config.rms_norm_eps)
-        ).mean(-1)
-        
-        feat_mask = output_mask.to(feat_loss.dtype)
-        feat_loss = (feat_loss * feat_mask).sum() / (feat_mask.sum() + self.model.config.rms_norm_eps)
 
         # gradient scales
         mu_kl_grad_scale = hook_progess
@@ -263,7 +266,6 @@ class ZLMTrainer(BaseTrainer):
             lm_loss +
             self.config.trainer.beta * kl_per_token +
             self.config.trainer.beta * uncond_kl_per_token +
-            self.config.trainer.feat_loss_weight * feat_loss_scale * feat_loss
         )
 
         spectral_parties = self.get_spectral_parties(mu.detach())
@@ -272,8 +274,6 @@ class ZLMTrainer(BaseTrainer):
             "noise_scale": noise_scale,
             "lm_loss": lm_loss,
             "lm_acc": lm_acc,
-            "feat_loss": feat_loss,
-            "feat_loss_scale": feat_loss_scale,
             "lm_loss_scale": lm_loss_scale,
             "kl_grad_scale": mu_kl_grad_scale,
             "full_grad_scale": z_states_kl_grad_scale,

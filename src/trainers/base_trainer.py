@@ -159,6 +159,10 @@ class BaseTrainer:
         return model
 
 
+    def get_trainable_parameters(self, model: torch.nn.Module):
+        return model.parameters()
+
+
     def prepare_optimization(
         self,
         model: torch.nn.Module,
@@ -166,8 +170,10 @@ class BaseTrainer:
     ) -> tuple[torch.optim.Optimizer, torch.optim.lr_scheduler._LRScheduler]:
         """ Sets up the optimizer and learning rate scheduler. """
 
+        params = self.get_trainable_parameters(model)
+
         optimizer = import_optimizer(config.trainer.optimizer.type)(
-            params=model.parameters(),
+            params=params,
             **config.trainer.optimizer.kwargs,
         )
 
@@ -275,6 +281,8 @@ class BaseTrainer:
 
         # prepare model for training
         for p in self.model.parameters():
+            p.requires_grad_(False)
+        for p in self.get_trainable_parameters(self.model):
             p.requires_grad_(True)
         self.model.train()
         self.model.zero_grad()

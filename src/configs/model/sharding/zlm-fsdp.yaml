@@ -80,11 +80,6 @@ uncond_diffusion_head.out_proj.weight: [null, fsdp]
 uncond_tokens: [null, fsdp]
 
 
-# feat head
-feat_norm.weight: [fsdp]
-feat_head.weight: [fsdp, null]
-
-
 # external
 encoder_sep_token: [null, fsdp]
 encoder_z_tokens: [null, fsdp]

@@ -382,7 +382,6 @@ class ZLMModel(nn.Module):
 
         # handle pretrained norms
         self.encoder_model.norm.weight.data.fill_(1.0)
-        self.encoder_model.skip_norm = True
         self.decoder_model.skip_norm = True
 
         # remove the embeddings from the transformers
@@ -462,10 +461,6 @@ class ZLMModel(nn.Module):
             torch.randn(self.z_length, self.hidden_size)
         )
 
-        # create the feature prediction head
-        self.feat_norm = LlamaRMSNorm(config.hidden_size, eps=config.rms_norm_eps)
-        self.feat_head = nn.Linear(config.hidden_size, config.hidden_size, bias=False)
-
         if config.pretrained_llama is None:
             self.apply(gaussian_init)
 
@@ -475,7 +470,6 @@ class ZLMModel(nn.Module):
             gaussian_init(self.encoder_noise_proj_in)
             gaussian_init(self.decoder_z_proj_in)
             gaussian_init(self.encoder_mu_proj_out)
-            gaussian_init(self.feat_head)
 
         # set the diffusion head conditioning embeddings to ones
         self.apply(self.scaled_embed_init)
@@ -578,9 +572,7 @@ class ZLMModel(nn.Module):
             inputs_embeds=tokens,
             elementwise_pad_mask=mask,
         )
-        mu = self.encoder_mu_proj_out(
-            self.encoder_model.norm(hidden_states[..., -self.z_length:, :])
-        )
+        mu = self.encoder_mu_proj_out(hidden_states[..., -self.z_length:, :])
 
         # apply spectral normalization
         mu, min_eig_val = self.mu_out_norm(mu)
@@ -590,7 +582,7 @@ class ZLMModel(nn.Module):
         )
 
         if return_extra:
-            return z, mu, min_eig_val, hidden_states[:, -self.z_length]
+            return z, mu, min_eig_val
         return z, mu
 
 
@@ -655,13 +647,6 @@ class ZLMModel(nn.Module):
         logits = self.lm_head(self.decoder_model.norm(logit_states))
 
         z_states = hidden_states[:, self.input_length:self.input_length + self.z_length]
-
-        if return_extra:
-
-            feat_states = hidden_states[:, -(self.output_length+1):-1, :]
-            pred_feat = self.feat_head(self.feat_norm(feat_states))
-
-            return logits, z_states, pred_feat
 
         return logits, z_states
 
