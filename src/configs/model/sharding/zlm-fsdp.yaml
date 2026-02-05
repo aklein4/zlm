@@ -80,6 +80,17 @@ uncond_diffusion_head.out_proj.weight: [null, fsdp]
 uncond_tokens: [null, fsdp]
 
 
+# highway
+encoder_highway_out_proj.weight: [fsdp, null]
+
+highway_out_norm.mean_tracker.num_updates: [null]
+highway_out_norm.mean_tracker.weight: [null, null]
+highway_out_norm.var_tracker.num_updates: [null]
+highway_out_norm.var_tracker.weight: [null, null]
+
+decoder_highway_in_proj.weight: [fsdp, null]
+
+
 # external
 encoder_sep_token: [null, fsdp]
 encoder_z_tokens: [null, fsdp]

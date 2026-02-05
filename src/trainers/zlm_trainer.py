@@ -106,7 +106,7 @@ class ZLMTrainer(BaseTrainer):
         pad_token_id = self.model.config.pad_token_id
 
         # get the hook progress
-        hook_progess = linear_warmup(
+        hook_progress = linear_warmup(
             self.hook_step.float(),
             self.config.trainer.hook_warmup_steps
         )
@@ -131,12 +131,14 @@ class ZLMTrainer(BaseTrainer):
         )
 
         # encode and decode
-        noise_scale = hook_progess
-        z, mu, min_eig_val = self.model.encode(
+        noise_scale = hook_progress
+        highway_scale = 1.0 - hook_progress
+        z, mu, min_eig_val, highway = self.model.encode(
             input_for_model, output_for_model,
             input_mask=input_mask, output_mask=output_mask,
             return_extra=True,
             noise_scale=noise_scale,
+            highway_scale=highway_scale,
         )
 
         logit_grad_scale = {}
@@ -145,6 +147,8 @@ class ZLMTrainer(BaseTrainer):
             logit_grad_scale=logit_grad_scale,
             input_mask=input_mask,
             output_mask=output_mask,
+            highway=highway,
+            highway_scale=highway_scale,
             return_extra=True,
         )
 
@@ -176,7 +180,7 @@ class ZLMTrainer(BaseTrainer):
         self.hook_step += self.hooked.long()
 
         # gradient scales
-        mu_kl_grad_scale = hook_progess
+        mu_kl_grad_scale = wait_hook_progress
         z_states_kl_grad_scale = wait_hook_progress
         weighted_mu_kl_grad_scale = {}
 
@@ -272,6 +276,7 @@ class ZLMTrainer(BaseTrainer):
 
         aux = {
             "noise_scale": noise_scale,
+            "highway_scale": highway_scale,
             "lm_loss": lm_loss,
             "lm_acc": lm_acc,
             "lm_loss_scale": lm_loss_scale,

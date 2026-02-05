@@ -21,7 +21,7 @@ DEVICE = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 # MODEL_TYPE = None
 
 MODEL_URL = "aklein4/ZLM-v2_zlm2-med-prompt"
-STEP = 4000
+STEP = 8000
 MODEL_TYPE = None
 
 # MODEL_URL = "aklein4/ZLM-v2_zlm-med-spectral-32z"
@@ -57,7 +57,7 @@ def get_data():
         attention_kernel=None, # "gpu_flash_attention",
         model_type=MODEL_TYPE,
         skip_state_dict=False,
-        strict=False,
+        strict=True,
     ).to(DEVICE)
     model.eval()
     pad_token_id = model.config.pad_token_id
@@ -119,7 +119,7 @@ def get_data():
 
         attn = AP.call_fn(model.decoder_model, "get")
         
-        os.makedirs(local_dir("attention_visualizations"), exist_ok=True)
+        os.makedirs(local_dir("new_attention_visualizations"), exist_ok=True)
 
         for h in tqdm(range(attn.shape[1])):
             attn_h = attn[:, h, :, :]  # [batch, seq, seq]
@@ -152,7 +152,7 @@ def get_data():
             img.save(
                 local_dir(
                     os.path.join(
-                        "attention_visualizations",
+                        "new_attention_visualizations",
                         f"layer={ATTN_IDX}_head={h}.png"
                     ),
                 )

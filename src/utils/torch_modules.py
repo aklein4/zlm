@@ -126,14 +126,12 @@ class CustomBatchNorm(nn.Module):
         shape: torch.Size,
         beta: float,
         eps: float=1e-5,
-        attach_gradients: bool=False,
     ):
         super().__init__()
 
         self.shape = tuple(shape)
         self.beta = beta
         self.eps = eps
-        self.attach_gradients = attach_gradients
 
         self.mean_tracker = UnbiasedEMA(
             shape, beta, eps
@@ -155,18 +153,11 @@ class CustomBatchNorm(nn.Module):
         if self.training:
             self.mean_tracker.update(x_mean)
             self.var_tracker.update(x_var)
+        else:
+            x_mean = self.mean_tracker.retrieve()
+            x_var = self.var_tracker.retrieve()
 
-        mean = self.mean_tracker.retrieve()
-        var = self.var_tracker.retrieve()
-
-        if self.attach_gradients:
-            mean.requires_grad_(True)
-            var.requires_grad_(True)
-
-            mean = attach_gradient(mean, x_mean)
-            var = attach_gradient(var, x_var)
-
-        y = (x - mean[None]) * torch.rsqrt(var + self.eps)[None]
+        y = (x - x_mean[None]) * torch.rsqrt(x_var + self.eps)[None]
 
         return y.to(og_dtype)
 
