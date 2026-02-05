@@ -43,7 +43,7 @@ class ZLMTrainer(BaseTrainer):
     
 
     def get_trainable_parameters(self, model: ZLMModel):
-        if not self.config.trainer.frozen_decoder:
+        if not self.config.trainer.freeze_decoder:
             return model.parameters()
     
         params = []
@@ -265,7 +265,7 @@ class ZLMTrainer(BaseTrainer):
         loss = (
             lm_loss +
             self.config.trainer.beta * kl_per_token +
-            self.config.trainer.beta * uncond_kl_per_token +
+            self.config.trainer.beta * uncond_kl_per_token
         )
 
         spectral_parties = self.get_spectral_parties(mu.detach())

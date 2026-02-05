@@ -58,7 +58,7 @@ max_grad_norm: 1.0
 max_grad_value: null
 
 # parameter configuration
-frozen_decoder: false
+freeze_decoder: false
 
 # hook configuration
 init_hook: false
