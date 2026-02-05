@@ -1,7 +1,7 @@
 defaults:
   - _self_  # refers to this config file
-  - sharding: zlm-fsdp  # refers to sharding/llama-fsdp.yaml
-  - remat: zlm3  # refers to remat/llama-scan.yaml
+  - sharding: zlm3-fsdp  # refers to sharding/llama-fsdp.yaml
+  - remat: zlm  # refers to remat/llama-scan.yaml
 
 
 # Used to import the model from this class
