@@ -576,8 +576,8 @@ class ZLM3Model(nn.Module):
             mask = torch.ones_like(hidden_states[..., :1])
         hidden_states = hidden_states * mask
 
-        in_states = hidden_states[:, :self.input_length+1].sum(-2) / mask[:, :self.input_length+1].sum(-2)
-        out_states = hidden_states[:, self.input_length+1:-self.z_length].sum(-2) / mask[:, self.input_length+1:-self.z_length].sum(-2)
+        in_states = hidden_states[:, :self.input_length+1].sum(-2) / (mask[:, :self.input_length+1].sum(-2) + self.config.rms_norm_eps)
+        out_states = hidden_states[:, self.input_length+1:-self.z_length].sum(-2) / (mask[:, self.input_length+1:-self.z_length].sum(-2) + self.config.rms_norm_eps)
         z_states = hidden_states[:, -self.z_length:]
 
         hidden_states = torch.cat(
