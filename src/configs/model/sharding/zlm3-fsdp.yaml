@@ -1,0 +1,125 @@
+
+# === Weights ===
+
+# vocab
+embed_tokens.weight: [fsdp, null]
+lm_head.weight: [fsdp, null]
+
+
+# encoder
+encoder_model.layers.*.self_attn.q_proj.weight: [fsdp, null]
+encoder_model.layers.*.self_attn.k_proj.weight: [fsdp, null]
+encoder_model.layers.*.self_attn.v_proj.weight: [fsdp, null]
+encoder_model.layers.*.self_attn.o_proj.weight: [fsdp, null]
+
+encoder_model.layers.*.mlp.gate_proj.weight: [fsdp, null]
+encoder_model.layers.*.mlp.up_proj.weight: [fsdp, null]
+encoder_model.layers.*.mlp.down_proj.weight: [null, fsdp]
+
+encoder_model.layers.*.input_layernorm.weight: [fsdp]
+encoder_model.layers.*.post_attention_layernorm.weight: [fsdp]
+# encoder_model.norm.weight: [fsdp]
+
+
+# decoder
+decoder_model.layers.*.self_attn.q_proj.weight: [fsdp, null]
+decoder_model.layers.*.self_attn.k_proj.weight: [fsdp, null]
+decoder_model.layers.*.self_attn.v_proj.weight: [fsdp, null]
+decoder_model.layers.*.self_attn.o_proj.weight: [fsdp, null]
+
+decoder_model.layers.*.mlp.gate_proj.weight: [fsdp, null]
+decoder_model.layers.*.mlp.up_proj.weight: [fsdp, null]
+decoder_model.layers.*.mlp.down_proj.weight: [null, fsdp]
+
+decoder_model.layers.*.input_layernorm.weight: [fsdp]
+decoder_model.layers.*.post_attention_layernorm.weight: [fsdp]
+decoder_model.norm.weight: [fsdp]
+
+
+# normalization
+mu_out_norm.cov_tracker.num_updates: [null]
+mu_out_norm.cov_tracker.weight: [null, null, null]
+
+mu_out_norm.mean_tracker.num_updates: [null]
+mu_out_norm.mean_tracker.weight: [null, null]
+
+
+# scheduler
+scheduler.timesteps: [null]
+scheduler.a: [null]
+scheduler.b: [null]
+
+
+# diffusion head
+diffusion_head.x_t_in_proj.weight: [fsdp, null]
+# diffusion_head.hidden_states_in_proj.weight: [fsdp, null]
+
+diffusion_head.layers.*.norm.embed.weight: [null, fsdp]
+diffusion_head.layers.*.mlp.gate_proj.weight: [fsdp, null]
+diffusion_head.layers.*.mlp.up_proj.weight: [fsdp, null]
+diffusion_head.layers.*.mlp.down_proj.weight: [null, fsdp]
+diffusion_head.layers.*.out_scale.embed.weight: [null, fsdp]
+
+diffusion_head.out_norm.embed.weight: [null, fsdp]
+diffusion_head.out_proj.weight: [null, fsdp]
+
+
+# uncond diffusion head
+uncond_diffusion_head.x_t_in_proj.weight: [fsdp, null]
+# uncond_diffusion_head.hidden_states_in_proj.weight: [fsdp, null]
+
+uncond_diffusion_head.layers.*.norm.embed.weight: [null, fsdp]
+uncond_diffusion_head.layers.*.mlp.gate_proj.weight: [fsdp, null]
+uncond_diffusion_head.layers.*.mlp.up_proj.weight: [fsdp, null]
+uncond_diffusion_head.layers.*.mlp.down_proj.weight: [null, fsdp]
+uncond_diffusion_head.layers.*.out_scale.embed.weight: [null, fsdp]
+
+uncond_diffusion_head.out_norm.embed.weight: [null, fsdp]
+uncond_diffusion_head.out_proj.weight: [null, fsdp]
+
+uncond_tokens: [null, fsdp]
+
+
+# external
+encoder_sep_token: [null, fsdp]
+encoder_z_tokens: [null, fsdp]
+
+decoder_z_tokens: [null, fsdp]
+decoder_start_output_token: [null, fsdp]
+
+encoder_input_embeddings: [fsdp]
+encoder_output_embeddings: [fsdp]
+
+decoder_input_embeddings: [fsdp]
+decoder_output_embeddings: [fsdp]
+
+encoder_noise_proj_in.weight: [fsdp, null]
+
+decoder_z_proj_in.weight: [fsdp, null]
+decoder_pool_z_proj_in.weight: [fsdp, null]
+
+encoder_mu_proj_out.weight: [null, fsdp]
+
+
+# === Activations ===
+
+# input
+embed_tokens: [[data, fsdp], null, null]
+
+
+# transformers
+encoder_model.layers.*: [[data, fsdp], null, null]
+decoder_model.layers.*: [[data, fsdp], null, null]
+
+
+# diffusion heads
+diffusion_head.layers.*: [[data, fsdp], null, null]
+diffusion_head.out_proj: [[data, fsdp], null, null]
+
+uncond_diffusion_head.layers.*: [[data, fsdp], null, null]
+uncond_diffusion_head.out_proj: [[data, fsdp], null, null]
+
+# output
+encoder_mu_proj_out: [[data, fsdp], null, null]
+
+lm_head: [[data, fsdp], null, null]

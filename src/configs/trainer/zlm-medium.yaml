@@ -63,8 +63,8 @@ freeze_decoder: false
 # hook configuration
 init_hook: false
 init_hook_step: null
-hook_warmup_steps: 500
-hook_wait_steps: 500
+hook_warmup_steps: 1000
+hook_wait_steps: 0
 
 # threshold configuration
 upper_loss_threshold: 0.75
