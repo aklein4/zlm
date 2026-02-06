@@ -439,7 +439,7 @@ class ZLM3Model(nn.Module):
         self.encoder_mu_proj_out = nn.Linear(3 * self.hidden_size, self.latent_size, bias=False)
 
         # create the norms
-        self.z_state_norm = LlamaRMSNorm(self.latent_size, eps=config.rms_norm_eps, elementwise_affine=False)
+        self.z_state_norm = LlamaRMSNorm(self.hidden_size, eps=config.rms_norm_eps, elementwise_affine=False)
         self.mu_out_norm = SpectralBatchNorm(
             [self.z_length, self.latent_size],
             config.batch_norm_beta,
