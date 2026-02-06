@@ -131,7 +131,7 @@ class ZLMTrainer(BaseTrainer):
         )
 
         # encode and decode
-        noise_scale = hook_progress
+        noise_scale = wait_hook_progress
         highway_scale = 1.0 - hook_progress
         z, mu, min_eig_val, highway = self.model.encode(
             input_for_model, output_for_model,
