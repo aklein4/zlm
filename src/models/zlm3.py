@@ -439,6 +439,7 @@ class ZLM3Model(nn.Module):
         self.encoder_mu_proj_out = nn.Linear(3 * self.hidden_size, self.latent_size, bias=False)
 
         # create the norms
+        self.z_state_norm = LlamaRMSNorm(self.latent_size, eps=config.rms_norm_eps, elementwise_affine=False)
         self.mu_out_norm = SpectralBatchNorm(
             [self.z_length, self.latent_size],
             config.batch_norm_beta,
@@ -576,9 +577,15 @@ class ZLM3Model(nn.Module):
             mask = torch.ones_like(hidden_states[..., :1])
         hidden_states = hidden_states * mask
 
-        in_states = hidden_states[:, :self.input_length+1].sum(-2) / (mask[:, :self.input_length+1].sum(-2) + self.config.rms_norm_eps)
-        out_states = hidden_states[:, self.input_length+1:-self.z_length].sum(-2) / (mask[:, self.input_length+1:-self.z_length].sum(-2) + self.config.rms_norm_eps)
-        z_states = hidden_states[:, -self.z_length:]
+        in_states = self.z_state_norm(
+            hidden_states[:, :self.input_length+1].sum(-2) / (mask[:, :self.input_length+1].sum(-2) + self.config.rms_norm_eps)
+        )
+        out_states = self.z_state_norm(
+            hidden_states[:, self.input_length+1:-self.z_length].sum(-2) / (mask[:, self.input_length+1:-self.z_length].sum(-2) + self.config.rms_norm_eps)
+        )
+        z_states = self.z_state_norm(
+            hidden_states[:, -self.z_length:]
+        )
 
         hidden_states = torch.cat(
             [
