@@ -114,6 +114,10 @@ class ZLMTrainer(BaseTrainer):
             self.hook_step.float() - self.config.trainer.hook_wait_steps,
             self.config.trainer.hook_warmup_steps
         )
+        double_wait_hook_progress = linear_warmup(
+            self.hook_step.float() - (2 * self.config.trainer.hook_wait_steps),
+            self.config.trainer.hook_warmup_steps
+        )
 
         # prepare inputs
         input_mask = (input_ids != pad_token_id)
@@ -180,8 +184,8 @@ class ZLMTrainer(BaseTrainer):
         self.hook_step += self.hooked.long()
 
         # gradient scales
-        mu_kl_grad_scale = wait_hook_progress
-        z_states_kl_grad_scale = wait_hook_progress
+        mu_kl_grad_scale = double_wait_hook_progress
+        z_states_kl_grad_scale = double_wait_hook_progress
         weighted_mu_kl_grad_scale = {}
 
         # scaled gradients
