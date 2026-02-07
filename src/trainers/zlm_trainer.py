@@ -105,6 +105,11 @@ class ZLMTrainer(BaseTrainer):
     def forward(self, input_ids, output_ids):
         pad_token_id = self.model.config.pad_token_id
 
+        if self.config.trainer.online_batch_norm:
+            self.model.mu_out_norm.train()
+        else:
+            self.model.mu_out_norm.eval()
+
         # get the hook progress
         hook_progress = linear_warmup(
             self.hook_step.float(),
