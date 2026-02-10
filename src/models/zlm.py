@@ -19,7 +19,7 @@ from utils.torch_utils import (
 from models.llama import LlamaForCausalLM
 from models.custom_llama import LlamaMLP, LlamaRMSNorm, LlamaDecoderLayer, CustomLlamaModel
 from models import load_checkpoint_state
-from utils.torch_modules import ScaledEmbedding, SpectralBatchNorm, CustomBatchNorm
+from utils.torch_modules import ScaledEmbedding, SpectralBatchNorm, OnceSpectralBatchNorm, CustomBatchNorm
 import utils.constants as constants
 
 
@@ -437,11 +437,18 @@ class ZLMModel(nn.Module):
         self.encoder_mu_proj_out = nn.Linear(self.hidden_size, self.latent_size, bias=False)
 
         # create the norms
-        self.mu_out_norm = SpectralBatchNorm(
-            [self.z_length, self.latent_size],
-            config.batch_norm_beta,
-            eps=config.rms_norm_eps,
-        )
+        if hasattr(config, "once_norm") and config.once_norm:
+            self.mu_out_norm = OnceSpectralBatchNorm(
+                [self.z_length, self.latent_size],
+                config.batch_norm_beta,
+                eps=config.rms_norm_eps,
+            )
+        else:
+            self.mu_out_norm = SpectralBatchNorm(
+                [self.z_length, self.latent_size],
+                config.batch_norm_beta,
+                eps=config.rms_norm_eps,
+            )
         self.z_in_norm = LlamaRMSNorm(self.latent_size, eps=config.rms_norm_eps, elementwise_affine=False)
 
         # create the diffusion components

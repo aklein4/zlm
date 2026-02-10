@@ -63,6 +63,7 @@ latent_size: 32
 
 # batch norm configuration
 batch_norm_beta: 0.95
+once_norm = false
 
 # diffusion configuration
 minimum_diffusion_timestep: 0.5
