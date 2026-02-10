@@ -322,7 +322,7 @@ class BaseTrainer:
             error_count = 0
             
             # skip steps for pretrained model
-            if self.config.model.pretrained_step is not None and step < (self.config.model.pretrained_step + 1):
+            if self.config.model.pretrained_step is not None and step < self.config.model.pretrained_step:
                 if step % 10 == 0:
                     logger.info(f"Skipping step {step} as it is before the pretrained step {self.config.model.pretrained_step}")
                 step += 1

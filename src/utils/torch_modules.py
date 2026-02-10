@@ -307,7 +307,7 @@ class OnceSpectralBatchNorm(SpectralBatchNorm):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
 
-        self.onced = False
+        self.count = 0
 
     
     def forward(self, x: torch.Tensor) -> torch.Tensor:
@@ -333,8 +333,8 @@ class OnceSpectralBatchNorm(SpectralBatchNorm):
             (x - x_mean[:, None]),
         ) / x.shape[1] # [S, H, H]
 
-        if self.training and not self.onced:
-            self.onced = True
+        if self.training and self.count < 2:
+            self.count += 1
 
             self.mean_tracker.zero_out()
             self.cov_tracker.zero_out()
