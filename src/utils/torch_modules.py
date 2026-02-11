@@ -333,7 +333,7 @@ class OnceSpectralBatchNorm(SpectralBatchNorm):
             (x - x_mean[:, None]),
         ) / x.shape[1] # [S, H, H]
 
-        if self.training and self.count < 2:
+        if self.training and self.count < 2 and False:
             self.count += 1
 
             self.mean_tracker.zero_out()
