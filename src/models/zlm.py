@@ -697,6 +697,7 @@ class ZLMModel(nn.Module):
     def sample(
         self,
         input_ids: torch.LongTensor,
+        input_mask: torch.BoolTensor=None,
         noise: torch.FloatTensor=None,
         encoded_z: torch.FloatTensor=None,
         temperature: float | str = "greedy",
@@ -720,6 +721,7 @@ class ZLMModel(nn.Module):
         )
         self.decoder_model(
             inputs_embeds=input_tokens,
+            elementwise_pad_mask=input_mask,
             past_key_values=cache,
         )
 
@@ -739,12 +741,13 @@ class ZLMModel(nn.Module):
                 past_key_values=cache,
             )[:, -1, :] # [B, hidden_size]
 
-            # we do an extra pass to put the last z in the cache
+            # we did an extra pass to put the last z in the cache
             if i >= self.z_length:
                 break
 
+            # diffusion loop to sample the next z
             if encoded_z is None:
-                # diffusion loop to sample the next z
+                
                 z_t = noise[:, i, :] # [B, latent_size]
                 for t in t_iter:
 

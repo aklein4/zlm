@@ -513,12 +513,12 @@ class CustomLlamaModel(nn.Module):
 
         # currently cannot be None because scan needs differentiable inputs
         if constants.XLA_AVAILABLE:
-            if elementwise_pad_mask is None:
-                elementwise_pad_mask = torch.ones_like(input_ids, dtype=torch.bool)
             if past_key_values is None:
                 past_key_values = position_ids.clone() # this is fine as a dummy value
 
         # convert the boolean pad mask to scale and offset masks
+        if elementwise_pad_mask is None:
+            elementwise_pad_mask = torch.ones_like(position_ids, dtype=torch.bool)
         elementwise_pad_mask = self.get_elementwise_pad_mask(elementwise_pad_mask)
 
         # create position embeddings to be shared across the decoder layers
