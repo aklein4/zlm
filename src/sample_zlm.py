@@ -12,10 +12,10 @@ import utils.constants as constants
 
 DEVICE = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
-URL = "aklein4/ZLM-v2_zlm-large-double-wait-cont"
-STEP = 17000
-# URL = "aklein4/ZLM-v2_zlm-large-once-norm"
-# STEP = 19500
+# URL = "aklein4/ZLM-v2_zlm-large-double-wait-cont"
+# STEP = 17000
+URL = "aklein4/ZLM-v2_zlm-large-once-norm"
+STEP = 22000
 
 TOKENIZER_PATH = os.path.join(constants.LOCAL_DATA_PATH, "tokenizer")
 
@@ -40,26 +40,26 @@ TOKENIZER_PATH = os.path.join(constants.LOCAL_DATA_PATH, "tokenizer")
 #     27
 # )
 
-MESSAGES = format_cot(
-    "Denali and Nate work for a dog walking business and are paid for each dog they walk. Denali is responsible for $16$ dogs and Nate is responsible for $12$ dogs. Under the company's new policy, they will be assigned or unassigned new dogs in groups of $x$ dogs. The ratio of Denali's pay to Nate's pay would be the same if Denali started walking $4x$ more dogs and Nate stayed at $12$ dogs or if $x$ of Nate's dogs were reassigned to Denali. Find $x$ if $x\\neq0$.",
-    "The ratio of Denali's pay to Nate's pay is currently $16:12$ or $4:3$. If Denali started walking $4x$ more dogs and Nate stayed at $12$ dogs, the ratio of their pay would be $(16+4x):12$. If $x$ of Nate's dogs were reassigned to Denali, the ratio of their pay would be $(16+x):(12-x)$. Setting these two ratios equal gives us the equation: \n\n$(16+4x)/12 = (16+x)/(12-x)$\n\nCross multiplying and simplifying this equation will allow us to solve for $x$.",
-    5
-)
+# MESSAGES = format_cot(
+#     "Denali and Nate work for a dog walking business and are paid for each dog they walk. Denali is responsible for $16$ dogs and Nate is responsible for $12$ dogs. Under the company's new policy, they will be assigned or unassigned new dogs in groups of $x$ dogs. The ratio of Denali's pay to Nate's pay would be the same if Denali started walking $4x$ more dogs and Nate stayed at $12$ dogs or if $x$ of Nate's dogs were reassigned to Denali. Find $x$ if $x\\neq0$.",
+#     "The ratio of Denali's pay to Nate's pay is currently $16:12$ or $4:3$. If Denali started walking $4x$ more dogs and Nate stayed at $12$ dogs, the ratio of their pay would be $(16+4x):12$. If $x$ of Nate's dogs were reassigned to Denali, the ratio of their pay would be $(16+x):(12-x)$. Setting these two ratios equal gives us the equation: \n\n$(16+4x)/12 = (16+x)/(12-x)$\n\nCross multiplying and simplifying this equation will allow us to solve for $x$.",
+#     5
+# )
 
-# MESSAGES = [
-#     {
-#         "role": "user",
-#         # "content": "What are some ideas for a good short story about a city not on a planet, but rather a generation ship, or on the moon of a gas giant, or somewhere else unusual?"
-#         "content": "Bob had a farm with animals. He had 12 cows and twice as many sheep. He decided to buy 3 pigs for every sheep he had. How many animals were on the farm after the transaction?",
-#         # "content": "Julie is reading a 120-page book. Yesterday, she was able to read 12 pages and today, she read twice as many pages as yesterday. If she wants to read half of the remaining pages tomorrow, how many pages should she read?"
-#     },
-#     {
-#         "role": "assistant",
-#         "content": "Bob had 12 cows.\nHe had twice as many sheep as cows, so he had 12 * 2 = 24 sheep.\nHe decided to buy 3 pigs for every sheep he had, so he bought 24 * 3 = 72 pigs.\nIn total, after the transaction, Bob had 12 cows + 24 sheep + 72 pigs = 108 animals on the farm.\n#### 108\nThe answer is: 108"
-#     }
-# ]
+MESSAGES = [
+    {
+        "role": "user",
+        # "content": "What are some ideas for a good short story about a city not on a planet, but rather a generation ship, or on the moon of a gas giant, or somewhere else unusual?"
+        "content": "Bob had a farm with animals. He had 12 cows and twice as many sheep. He decided to buy 3 pigs for every sheep he had. How many animals were on the farm after the transaction?",
+        # "content": "Julie is reading a 120-page book. Yesterday, she was able to read 12 pages and today, she read twice as many pages as yesterday. If she wants to read half of the remaining pages tomorrow, how many pages should she read?"
+    },
+    {
+        "role": "assistant",
+        "content": "Bob had 12 cows.\nHe had twice as many sheep as cows, so he had 12 * 2 = 24 sheep.\nHe decided to buy 3 pigs for every sheep he had, so he bought 24 * 3 = 72 pigs.\nIn total, after the transaction, Bob had 12 cows + 24 sheep + 72 pigs = 108 animals on the farm.\n#### 108\nThe answer is: 108"
+    }
+]
 
-TEMPERATURE = 0.7
+TEMPERATURE = "greedy"
 
 SEED = 42
 
@@ -79,7 +79,7 @@ def main():
         TOKENIZER_PATH,
     )
 
-    input_text, output_text = MESSAGES # format_chat(MESSAGES)
+    input_text, output_text = format_chat(MESSAGES)
     input_ids = tokenizer(
         [input_text],
         return_tensors="pt",
