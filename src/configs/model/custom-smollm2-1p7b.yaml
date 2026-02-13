@@ -8,7 +8,7 @@ defaults:
 type: custom_llama.CustomLlamaForCausalLM 
 
 # Information about loading from a checkpoint
-pretrained_url: aklein4/SmolLM2-360M-TPU
+pretrained_url: aklein4/SmolLM2-1.7B-TPU
 pretrained_step: 0
 pretrained_strict: false
 
