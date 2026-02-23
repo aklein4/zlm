@@ -1,7 +1,9 @@
 
 # ZLM
 
-A work in progress.
+Train parallel and test serial for scalable latent reasoning. Currently a work in progress.
+
+Research supported with Cloud TPUs from Google's TPU Research Cloud (TRC).
 
 ## TPU VM Setup Instructions
 
