@@ -3,22 +3,9 @@
 
 Train parallel and test serial for scalable latent reasoning. Currently a work in progress.
 
+Built on the [aklein4/easy-torch-tpu](https://github.com/aklein4/easy-torch-tpu) training framework.
+
+
+### Acknowledgements
+
 Research supported with Cloud TPUs from Google's TPU Research Cloud (TRC).
-
-## TPU VM Setup Instructions
-
-1. Create VM with version: `tpu-ubuntu2204-base`
-
-2. Run command: `git clone https://github.com/aklein4/latent-reasoning.git`
-
-3. Run command: `cd ~/zlm && . setup_vm.sh <HF_TOKEN> <WANDB_TOKEN>`
-
-## Running commands
-
-Basic command:
-
-`gcloud compute tpus tpu-vm ssh <NODE_ID> --worker=all --command='<COMMAND>'`
-
-Background command:
-
-`nohup python ~/zlm/src/train.py > train.log 2>&1 &`
