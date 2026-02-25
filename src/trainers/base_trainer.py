@@ -48,7 +48,6 @@ from torchprime.utils.parallelism_utils import lb_cp_enabled, reorder_sequence
 import wandb
 import huggingface_hub as hf
 
-from models.xla import BaseXLAModel
 from utils.import_utils import import_optimizer, import_collator
 from utils import constants
 from utils.remat_utils import advanced_remat
@@ -75,7 +74,7 @@ class BaseTrainer:
 
     def __init__(
         self,
-        model: BaseXLAModel,
+        model: torch.nn.Module,
         config: DictConfig,
         train_dataset: Dataset | IterableDataset,
     ):
