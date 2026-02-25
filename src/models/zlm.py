@@ -307,7 +307,7 @@ class DiffusionHead(nn.Module):
         hidden_states = (
             self.input_states_in_proj(self.input_states_norm(input_states)) +
             self.x_t_in_proj(x_t)
-        )
+        ).to(constants.DT())
 
         # pass through the layers
         hidden_states = self.layers(

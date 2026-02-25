@@ -230,7 +230,7 @@ class ZLMTrainer(BaseTrainer):
                 pred_z_0,
                 dim=-1
             )
-            kls = kls + kl
+            kls = kls + kl.float()
 
             # unconditional kl
             if i < self.config.trainer.num_uncond_diffusion_samples:
@@ -245,7 +245,7 @@ class ZLMTrainer(BaseTrainer):
                     uncond_pred_z_0,
                     dim=-1
                 )
-                uncond_kls = uncond_kls + uncond_kl
+                uncond_kls = uncond_kls + uncond_kl.float()
 
         # mean over samples and sum over batch to get [Z,]
         kl = kls.sum(0) * (self.model.config.num_diffusion_timesteps - 1) / self.config.trainer.num_diffusion_samples
