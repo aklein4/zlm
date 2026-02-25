@@ -252,6 +252,7 @@ class DiffusionHeadLayer(nn.Module):
         hidden_states: torch.FloatTensor,
         timestep: torch.FloatTensor=None,
     ) -> torch.FloatTensor:
+        dtype = hidden_states.dtype
         timestep = timestep.long()
 
         residual = hidden_states
@@ -262,7 +263,7 @@ class DiffusionHeadLayer(nn.Module):
 
         hidden_states = residual + hidden_states
 
-        return hidden_states
+        return hidden_states.to(dtype)
 
 
 class DiffusionHead(nn.Module):
