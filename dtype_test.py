@@ -11,7 +11,7 @@ def main():
 
     torch_xla.sync()
 
-    print(z)
+    print(z, z.dtype)
 
 
 if __name__ == "__main__":
