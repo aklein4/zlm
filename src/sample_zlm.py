@@ -6,16 +6,45 @@ import matplotlib.pyplot as plt
 from transformers import AutoTokenizer
 
 from models import load_checkpoint
-from utils.chat_utils import format_chat, remove_pad
+from utils.chat_utils import format_chat, remove_pad, format_cot, format_no_cot, mcqa_question
 import utils.constants as constants
 
 
 DEVICE = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
-URL = "aklein4/ZLM-v2_zlm-med-ada"
-STEP = 10000
+# URL = "aklein4/ZLM-v2_zlm-large-double-wait-cont"
+# STEP = 17000
+URL = "aklein4/ZLM-v2_zlm-large-once-norm"
+STEP = 22000
 
 TOKENIZER_PATH = os.path.join(constants.LOCAL_DATA_PATH, "tokenizer")
+
+# prompt = mcqa_question(
+#     "One year, the oak trees in a park began producing more acorns than usual. The next year, the population of chipmunks in the park also increased. Which best explains why there were more chipmunks the next year?",
+#     [
+#         "Shady areas increased.",
+#         "Food sources increased.",
+#         "Oxygen levels increased.",
+#         "Available water increased."
+#     ]
+# )
+# MESSAGES = format_no_cot(
+#     prompt,
+#     "The best explanation for the increase in chipmunk population is that food sources increased.",
+#     "B"
+# )
+
+# MESSAGES = format_no_cot(
+#     "What is the smallest positive perfect cube that can be written as the sum of three consecutive integers?",
+#     "The smallest positive perfect cube that can be written as the sum of three consecutive integers is 27, which is equal to 1 + 2 + 3 + 4 + 5 + 6.",
+#     27
+# )
+
+# MESSAGES = format_cot(
+#     "Denali and Nate work for a dog walking business and are paid for each dog they walk. Denali is responsible for $16$ dogs and Nate is responsible for $12$ dogs. Under the company's new policy, they will be assigned or unassigned new dogs in groups of $x$ dogs. The ratio of Denali's pay to Nate's pay would be the same if Denali started walking $4x$ more dogs and Nate stayed at $12$ dogs or if $x$ of Nate's dogs were reassigned to Denali. Find $x$ if $x\\neq0$.",
+#     "The ratio of Denali's pay to Nate's pay is currently $16:12$ or $4:3$. If Denali started walking $4x$ more dogs and Nate stayed at $12$ dogs, the ratio of their pay would be $(16+4x):12$. If $x$ of Nate's dogs were reassigned to Denali, the ratio of their pay would be $(16+x):(12-x)$. Setting these two ratios equal gives us the equation: \n\n$(16+4x)/12 = (16+x)/(12-x)$\n\nCross multiplying and simplifying this equation will allow us to solve for $x$.",
+#     5
+# )
 
 MESSAGES = [
     {
@@ -30,7 +59,7 @@ MESSAGES = [
     }
 ]
 
-TEMPERATURE = 1.0
+TEMPERATURE = "greedy"
 
 SEED = 42
 
@@ -44,6 +73,7 @@ def main():
         URL, STEP,
         attention_kernel="gpu_flash_attention",
     ).to(DEVICE)
+    model.eval()
 
     tokenizer = AutoTokenizer.from_pretrained(
         TOKENIZER_PATH,
@@ -59,26 +89,28 @@ def main():
         return_tensors="pt",
     ).input_ids.to(DEVICE)
 
-    z = None
-    if False:
-        z, mu = model.encode(
-            input_ids.repeat(2, 1), real_output_ids.repeat(2, 1),
-        )
-        
-        kl = 0.5 * (
-            ((mu[0] - mu[1]) * model.scheduler.a[0]).pow(2) / model.scheduler.b[0].pow(2)
-        ).sum(-1)
+    with torch.autocast("cuda", torch.bfloat16, enabled=torch.cuda.is_available()):
 
-        plt.plot(kl.cpu().numpy())
-        plt.ylim(0, 1)
-        plt.savefig("mu_kl.png")
-        return 
-    
-    output_ids, z = model.sample(
-        input_ids.repeat(2, 1),
-        encoded_z=z,
-        temperature=TEMPERATURE,
-    )
+        z = None
+        if False:
+            z, mu = model.encode(
+                input_ids.repeat(2, 1), real_output_ids.repeat(2, 1),
+            )
+            
+            kl = 0.5 * (
+                ((mu[0] - mu[1]) * model.scheduler.a[0]).pow(2) / model.scheduler.b[0].pow(2)
+            ).sum(-1)
+
+            plt.plot(kl.cpu().numpy())
+            plt.ylim(0, 1)
+            plt.savefig("mu_kl.png")
+            return 
+        
+        output_ids, z = model.sample(
+            input_ids.repeat(2, 1),
+            encoded_z=z,
+            temperature=TEMPERATURE,
+        )
 
     print("")
     print(" === INPUT === ")

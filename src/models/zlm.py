@@ -19,7 +19,7 @@ from utils.torch_utils import (
 from models.llama import LlamaForCausalLM
 from models.old_custom_llama import LlamaMLP, LlamaRMSNorm, LlamaDecoderLayer, CustomLlamaModel
 from models import load_checkpoint_state
-from utils.torch_modules import ScaledEmbedding, SpectralBatchNorm
+from utils.torch_modules import ScaledEmbedding, SpectralBatchNorm, OnceSpectralBatchNorm, CustomBatchNorm
 import utils.constants as constants
 
 
@@ -436,11 +436,18 @@ class ZLMModel(nn.Module):
         self.encoder_mu_proj_out = nn.Linear(self.hidden_size, self.latent_size, bias=False)
 
         # create the norms
-        self.mu_out_norm = SpectralBatchNorm(
-            [self.z_length, self.latent_size],
-            config.batch_norm_beta,
-            eps=config.rms_norm_eps,
-        )
+        if hasattr(config, "once_norm") and config.once_norm:
+            self.mu_out_norm = OnceSpectralBatchNorm(
+                [self.z_length, self.latent_size],
+                config.batch_norm_beta,
+                eps=config.rms_norm_eps,
+            )
+        else:
+            self.mu_out_norm = SpectralBatchNorm(
+                [self.z_length, self.latent_size],
+                config.batch_norm_beta,
+                eps=config.rms_norm_eps,
+            )
         self.z_in_norm = LlamaRMSNorm(self.latent_size, eps=config.rms_norm_eps, elementwise_affine=False)
 
         # create the diffusion components
@@ -453,7 +460,17 @@ class ZLMModel(nn.Module):
             torch.randn(self.z_length, self.hidden_size)
         )
 
-        # apply initialization
+        # create the highway components
+        self.encoder_highway_out_proj = nn.Linear(self.hidden_size, self.hidden_size, bias=False)
+        self.highway_out_norm = CustomBatchNorm(
+            [self.z_length, self.hidden_size],
+            config.batch_norm_beta,
+            eps=config.rms_norm_eps,
+        )
+        self.highway_out_rms_norm = LlamaRMSNorm(self.hidden_size, eps=config.rms_norm_eps, elementwise_affine=False)
+        self.highway_in_norm = LlamaRMSNorm(self.hidden_size, eps=config.rms_norm_eps, elementwise_affine=False)
+        self.decoder_highway_in_proj = nn.Linear(self.hidden_size, self.hidden_size, bias=False)
+
         if config.pretrained_llama is None:
             self.apply(gaussian_init)
 
@@ -464,15 +481,18 @@ class ZLMModel(nn.Module):
             gaussian_init(self.decoder_z_proj_in)
             gaussian_init(self.encoder_mu_proj_out)
 
+            gaussian_init(self.encoder_highway_out_proj)
+            gaussian_init(self.decoder_highway_in_proj)
+
         # set the diffusion head conditioning embeddings to ones
         self.apply(self.scaled_embed_init)
 
         # scale input layers by embedding stats
         # . TODO: what if llama_pretrained is None?
         self.encoder_noise_proj_in.weight.data.zero_()
-        self.decoder_z_proj_in.weight.data.copy_(
-            embed_dist.sample((self.latent_size,)).T / math.sqrt(self.latent_size)
-        )
+        self.decoder_z_proj_in.weight.data *= proj_std
+        
+        self.decoder_highway_in_proj.weight.data *= proj_std
 
 
     def scaled_embed_init(self, module):
@@ -484,7 +504,10 @@ class ZLMModel(nn.Module):
         self, 
         input_ids: torch.LongTensor,
         noise_scale: torch.FloatTensor = None,
+        hidden_size: int = None,
     ) -> torch.FloatTensor:
+        if hidden_size is None:
+            hidden_size = self.latent_size
 
         input_tokens = self.embed_tokens(input_ids)
         
@@ -492,7 +515,7 @@ class ZLMModel(nn.Module):
         noise = torch.randn(
             *input_ids.shape[:-1],
             self.z_length,
-            self.latent_size,
+            hidden_size,
             device=input_tokens.device,
             dtype=input_tokens.dtype,
         )
@@ -512,6 +535,7 @@ class ZLMModel(nn.Module):
         output_mask: torch.BoolTensor=None,
         noise_scale: torch.FloatTensor=None,
         return_extra: bool=False,
+        highway_scale: float = None,
     ):
 
         # handle the noise
@@ -567,9 +591,7 @@ class ZLMModel(nn.Module):
             inputs_embeds=tokens,
             elementwise_pad_mask=mask,
         )
-        mu = self.encoder_mu_proj_out(
-            hidden_states[..., -self.z_length:, :]
-        )
+        mu = self.encoder_mu_proj_out(hidden_states[..., -self.z_length:, :])
 
         # apply spectral normalization
         mu, min_eig_val = self.mu_out_norm(mu)
@@ -580,7 +602,23 @@ class ZLMModel(nn.Module):
         )
 
         if return_extra:
-            return z, mu, min_eig_val
+            assert highway_scale is not None
+
+            highway = self.encoder_highway_out_proj(hidden_states[..., -self.z_length:, :])
+            highway = self.highway_out_norm(highway)
+            highway = self.highway_out_rms_norm(highway)
+
+            highway_noise = self.sample_noise(
+                input_ids,
+                hidden_size=self.hidden_size,
+            )
+            highway = (
+                highway_scale * highway +
+                (1 - highway_scale) * highway_noise
+            )
+
+            return z, mu, min_eig_val, highway
+        
         return z, mu
 
 
@@ -592,11 +630,18 @@ class ZLMModel(nn.Module):
         logit_grad_scale: float = None,
         input_mask: torch.BoolTensor=None,
         output_mask: torch.BoolTensor=None,
+        highway: torch.FloatTensor=None,
+        highway_scale: float = None,
+        return_extra: bool=False,
     ):
         bs = input_ids.shape[0]
         
         # normalize z
         z = self.z_in_norm(z)
+
+        if highway is not None:
+            assert highway_scale is not None
+            highway = highway_scale * self.highway_in_norm(highway)
 
         # create the tokens
         input_tokens = self.embed_tokens(input_ids) + unsqueeze_to_batch(
@@ -606,10 +651,14 @@ class ZLMModel(nn.Module):
             self.decoder_output_embeddings, output_ids
         )
 
+        z_projed = self.decoder_z_proj_in(z)
+        if highway is not None:
+            z_projed = z_projed + self.decoder_highway_in_proj(highway)
+
         z_tokens = (
             unsqueeze_to_batch(self.decoder_z_tokens, z) +
             shift(
-                self.decoder_z_proj_in(z),
+                z_projed,
                 n=1, dim=-2, direction="right", narrow=False
             )
         )
@@ -656,6 +705,7 @@ class ZLMModel(nn.Module):
     def sample(
         self,
         input_ids: torch.LongTensor,
+        input_mask: torch.BoolTensor=None,
         noise: torch.FloatTensor=None,
         encoded_z: torch.FloatTensor=None,
         temperature: float | str = "greedy",
@@ -679,6 +729,7 @@ class ZLMModel(nn.Module):
         )
         self.decoder_model(
             inputs_embeds=input_tokens,
+            elementwise_pad_mask=input_mask,
             past_key_values=cache,
         )
 
@@ -698,12 +749,13 @@ class ZLMModel(nn.Module):
                 past_key_values=cache,
             )[:, -1, :] # [B, hidden_size]
 
-            # we do an extra pass to put the last z in the cache
+            # we did an extra pass to put the last z in the cache
             if i >= self.z_length:
                 break
 
+            # diffusion loop to sample the next z
             if encoded_z is None:
-                # diffusion loop to sample the next z
+                
                 z_t = noise[:, i, :] # [B, latent_size]
                 for t in t_iter:
 

@@ -22,9 +22,9 @@ encoder_model.norm.weight: [fsdp]
 
 
 # decoder
-decoder_model.layers.*.self_attn.q_proj.weight: [fsdp, null]
-decoder_model.layers.*.self_attn.k_proj.weight: [fsdp, null]
-decoder_model.layers.*.self_attn.v_proj.weight: [fsdp, null]
+decoder_model.layers.*.self_attn.q_proj.weight: [null, fsdp]
+decoder_model.layers.*.self_attn.k_proj.weight: [null, fsdp]
+decoder_model.layers.*.self_attn.v_proj.weight: [null, fsdp]
 decoder_model.layers.*.self_attn.o_proj.weight: [fsdp, null]
 
 decoder_model.layers.*.mlp.gate_proj.weight: [fsdp, null]
@@ -78,17 +78,6 @@ uncond_diffusion_head.out_norm.embed.weight: [null, fsdp]
 uncond_diffusion_head.out_proj.weight: [null, fsdp]
 
 uncond_tokens: [null, fsdp]
-
-
-# highway
-encoder_highway_out_proj.weight: [fsdp, null]
-
-highway_out_norm.mean_tracker.num_updates: [null]
-highway_out_norm.mean_tracker.weight: [null, null]
-highway_out_norm.var_tracker.num_updates: [null]
-highway_out_norm.var_tracker.weight: [null, null]
-
-decoder_highway_in_proj.weight: [fsdp, null]
 
 
 # external

@@ -82,6 +82,7 @@ class AttentionModule(nn.Module):
     key_states: torch.Tensor,  # (batch_size, num_kv_heads, kv_len, head_dim)
     value_states: torch.Tensor,  # (batch_size, num_kv_heads, kv_len, head_dim)
     attention_mask: torch.Tensor | None = None, # only used in non-kernel attention
+    attention_probe = None,
   ):
     if self.config.attention_kernel != "splash_attention":
       num_key_value_groups = (
@@ -247,6 +248,9 @@ class AttentionModule(nn.Module):
           attn_weights, p=self.config.attention_dropout, training=self.training
         )
         attn_output = torch.matmul(attn_weights, value_states)
+
+        if attention_probe is not None:
+          attn_weights = attention_probe(attn_weights)
 
     if attn_output.size() != (bsz, num_heads, q_len, head_dim):
       raise ValueError(

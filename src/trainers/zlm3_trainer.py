@@ -13,7 +13,7 @@ from utils.loss_utils import lm_loss_fn, lm_acc_fn
 from utils.sharding_utils import shard_with_gradients
 
 
-class ZLMTrainer(BaseTrainer):
+class ZLM3Trainer(BaseTrainer):
     
     model: ZLMModel
 
@@ -105,11 +105,6 @@ class ZLMTrainer(BaseTrainer):
     def forward(self, input_ids, output_ids):
         pad_token_id = self.model.config.pad_token_id
 
-        if self.config.trainer.online_batch_norm:
-            self.model.mu_out_norm.train()
-        else:
-            self.model.mu_out_norm.eval()
-
         # get the hook progress
         hook_progress = linear_warmup(
             self.hook_step.float(),
@@ -117,10 +112,6 @@ class ZLMTrainer(BaseTrainer):
         )
         wait_hook_progress = linear_warmup(
             self.hook_step.float() - self.config.trainer.hook_wait_steps,
-            self.config.trainer.hook_warmup_steps
-        )
-        double_wait_hook_progress = linear_warmup(
-            self.hook_step.float() - (2 * self.config.trainer.hook_wait_steps),
             self.config.trainer.hook_warmup_steps
         )
 
@@ -140,7 +131,7 @@ class ZLMTrainer(BaseTrainer):
         )
 
         # encode and decode
-        noise_scale = wait_hook_progress
+        noise_scale = hook_progress
         highway_scale = 1.0 - hook_progress
         z, mu, min_eig_val, highway = self.model.encode(
             input_for_model, output_for_model,
@@ -189,8 +180,8 @@ class ZLMTrainer(BaseTrainer):
         self.hook_step += self.hooked.long()
 
         # gradient scales
-        mu_kl_grad_scale = double_wait_hook_progress
-        z_states_kl_grad_scale = double_wait_hook_progress
+        mu_kl_grad_scale = wait_hook_progress
+        z_states_kl_grad_scale = wait_hook_progress
         weighted_mu_kl_grad_scale = {}
 
         # scaled gradients
@@ -281,7 +272,7 @@ class ZLMTrainer(BaseTrainer):
             self.config.trainer.beta * uncond_kl_per_token
         )
 
-        spectral_parties = self.get_spectral_parties(mu.detach())
+        spectral_parties = 1.0 #  self.get_spectral_parties(mu.detach())
 
         aux = {
             "noise_scale": noise_scale,
