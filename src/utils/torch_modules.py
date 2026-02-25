@@ -270,12 +270,12 @@ class SpectralBatchNorm(nn.Module):
             (x - x_mean[:, None]),
         ) / x.shape[1] # [S, H, H]
 
-        if self.training:
-            self.mean_tracker.update(x_mean)
-            self.cov_tracker.update(x_cov)
-        else:
-            x_mean = self.mean_tracker.retrieve()
-            x_cov = self.cov_tracker.retrieve()
+        # if self.training:
+        #     self.mean_tracker.update(x_mean)
+        #     self.cov_tracker.update(x_cov)
+        # else:
+        #     x_mean = self.mean_tracker.retrieve()
+        #     x_cov = self.cov_tracker.retrieve()
 
         eig_vals, eig_vecs = torch.linalg.eigh(
             x_cov + self.eps * torch.eye(self.shape[-1], device=x.device, dtype=x_cov.dtype)[None]

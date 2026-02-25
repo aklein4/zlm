@@ -431,19 +431,17 @@ class CustomLlamaModel(nn.Module):
         self.register_buffer("key_offsets", key_offsets, persistent=True)
 
 
-    def get_elementwise_pad_mask(self, elementwise_pad_mask: torch.Tensor | None):
-        if elementwise_pad_mask is None:
-            return None
+    def get_elementwise_pad_mask(self, elementwise_pad_mask: torch.Tensor):
 
         elementwise_pad_mask = elementwise_pad_mask.long()
         return (
             (
-                F.embedding(elementwise_pad_mask, self.query_scales),
-                F.embedding(elementwise_pad_mask, self.query_offsets),
+                F.embedding(elementwise_pad_mask, self.query_scales).to(constants.DT()),
+                F.embedding(elementwise_pad_mask, self.query_offsets).to(constants.DT()),
             ),
             (
-                F.embedding(elementwise_pad_mask, self.key_scales),
-                F.embedding(elementwise_pad_mask, self.key_offsets),
+                F.embedding(elementwise_pad_mask, self.key_scales).to(constants.DT()),
+                F.embedding(elementwise_pad_mask, self.key_offsets).to(constants.DT())
             ),
         )
 
@@ -489,6 +487,7 @@ class CustomLlamaModel(nn.Module):
         # convert input ids to embeddings
         if inputs_embeds is None:
             inputs_embeds = self.embed_tokens(input_ids)
+        inputs_embeds = inputs_embeds.to(constants.DT())
 
         # get shapes
         seq_length = inputs_embeds.shape[1]

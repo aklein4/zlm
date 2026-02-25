@@ -216,7 +216,7 @@ class AdaScale(nn.Module):
         if self.do_norm:
             x = self.norm(x)
 
-        return x * self.embed(condition)
+        return x * self.embed(condition).to(x.dtype)
 
 
 class DiffusionHeadLayer(nn.Module):
@@ -686,7 +686,7 @@ class ZLMModel(nn.Module):
             logit_states = scale_gradient(
                 logit_states, logit_grad_scale
             )
-        logits = self.lm_head(self.decoder_model.norm(logit_states))
+        logits = self.lm_head(self.decoder_model.norm(logit_states)).float()
 
         z_states = hidden_states[:, self.input_length:self.input_length + self.z_length]
 

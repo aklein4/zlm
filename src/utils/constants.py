@@ -1,4 +1,4 @@
-
+import torch
 import os
 
 try:
@@ -23,6 +23,12 @@ PROCESS_IS_MAIN = lambda: xr.process_index() == 0
 
 # total number of processes/devices
 PROCESS_COUNT = lambda: xr.process_count()
+
+# best dtype given device
+def DT():
+    if XLA_AVAILABLE or torch.cuda.is_available():
+        return torch.bfloat16
+    return torch.float32
 
 # these might be the correct ones?
 # XLA_DEVICE = lambda: xm.xla_device()
