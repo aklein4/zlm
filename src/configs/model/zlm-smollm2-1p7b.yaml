@@ -73,3 +73,6 @@ num_diffusion_timesteps: 16
 diffusion_in_proj: false
 num_diffusion_head_layers: 2
 diffusion_mlp_size: 3072
+
+pure_modules:
+ - DiffusionHead
