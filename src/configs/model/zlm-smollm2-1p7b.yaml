@@ -75,4 +75,4 @@ num_diffusion_head_layers: 2
 diffusion_mlp_size: 3072
 
 pure_modules:
- - DiffusionHead
+ - DiffusionHeadLayer
