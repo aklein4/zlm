@@ -563,10 +563,10 @@ class ZLMModel(nn.Module):
 
         tokens = torch.cat(
             [
-                input_tokens,
-                expand_to_batch(self.encoder_sep_token, input_tokens),
-                output_tokens,
-                z_tokens
+                input_tokens.to(constants.DT()),
+                expand_to_batch(self.encoder_sep_token, input_tokens).to(constants.DT()),
+                output_tokens.to(constants.DT()),
+                z_tokens.to(constants.DT()),
             ],
             dim=-2
         )
@@ -661,7 +661,13 @@ class ZLMModel(nn.Module):
         )
 
         tokens = torch.cat(
-            [input_tokens, z_tokens, start_output_token, output_tokens], dim=-2
+            [
+                input_tokens.to(constants.DT()),
+                z_tokens.to(constants.DT()),
+                start_output_token.to(constants.DT()),
+                output_tokens.to(constants.DT()),
+            ],
+            dim=-2
         )
 
         mask = None
