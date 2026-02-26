@@ -44,7 +44,6 @@ def mark_pure_modules(model: nn.Module, config: DictConfig) -> nn.Module:
 
   def transform(mod: nn.Module, _: str):
     if isinstance(mod, pure_module_classes):
-      print(f"Wrapping module {mod} in PureModule")
       return PureModule(mod)
     return mod
 

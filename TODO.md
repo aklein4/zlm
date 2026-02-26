@@ -1,16 +1,16 @@
 
-## Debugging
- - [ ] make sure each example is loaded once onto one device
+### Debugging
+ - [ ] make sure that data is not duplicated when loaded on multiple devices
  - [ ] investigate dtypes and nans
    - Everything prints as float32
    - Printed precision may not match actual precision
      - https://docs.pytorch.org/xla/master/tutorials/precision_tutorial.html
      - https://docs.pytorch.org/xla/release/2.1/index.html
    - Enforcing nan-free attention does not entirely fix it
-   - Parameters can become Nan
-     - even if nan_to_num is applied to update in adamw
- - [x] investigate hang when using flash attention
-   - just kind of went away
+
+
+### Precision  
+
 
 ### Data
  - [x] create a single mixed and shuffled SFT dataset

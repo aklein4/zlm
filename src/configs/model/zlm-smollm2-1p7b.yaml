@@ -76,3 +76,4 @@ diffusion_mlp_size: 3072
 
 pure_modules:
  - DiffusionHeadLayer
+ - LlamaMLP
