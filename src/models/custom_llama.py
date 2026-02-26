@@ -437,12 +437,12 @@ class CustomLlamaModel(nn.Module):
         elementwise_pad_mask = elementwise_pad_mask.long()
         return (
             (
-                F.embedding(elementwise_pad_mask, self.query_scales).to(constants.DT()),
-                F.embedding(elementwise_pad_mask, self.query_offsets).to(constants.DT()),
+                F.embedding(elementwise_pad_mask, self.query_scales),
+                F.embedding(elementwise_pad_mask, self.query_offsets),
             ),
             (
-                F.embedding(elementwise_pad_mask, self.key_scales).to(constants.DT()),
-                F.embedding(elementwise_pad_mask, self.key_offsets).to(constants.DT())
+                F.embedding(elementwise_pad_mask, self.key_scales),
+                F.embedding(elementwise_pad_mask, self.key_offsets)
             ),
         )
 
@@ -488,7 +488,7 @@ class CustomLlamaModel(nn.Module):
         # convert input ids to embeddings
         if inputs_embeds is None:
             inputs_embeds = self.embed_tokens(input_ids)
-        inputs_embeds = inputs_embeds.to(constants.DT())
+        inputs_embeds = inputs_embeds
 
         # get shapes
         seq_length = inputs_embeds.shape[1]

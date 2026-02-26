@@ -308,7 +308,7 @@ class DiffusionHead(nn.Module):
         hidden_states = (
             self.input_states_in_proj(self.input_states_norm(input_states)) +
             self.x_t_in_proj(x_t)
-        ).to(constants.DT())
+        )
 
         # pass through the layers
         hidden_states = self.layers(
@@ -563,10 +563,10 @@ class ZLMModel(nn.Module):
 
         tokens = torch.cat(
             [
-                input_tokens.to(constants.DT()),
-                expand_to_batch(self.encoder_sep_token, input_tokens).to(constants.DT()),
-                output_tokens.to(constants.DT()),
-                z_tokens.to(constants.DT()),
+                input_tokens,
+                expand_to_batch(self.encoder_sep_token, input_tokens),
+                output_tokens,
+                z_tokens,
             ],
             dim=-2
         )
@@ -662,10 +662,10 @@ class ZLMModel(nn.Module):
 
         tokens = torch.cat(
             [
-                input_tokens.to(constants.DT()),
-                z_tokens.to(constants.DT()),
-                start_output_token.to(constants.DT()),
-                output_tokens.to(constants.DT()),
+                input_tokens,
+                z_tokens,
+                start_output_token,
+                output_tokens,
             ],
             dim=-2
         )
