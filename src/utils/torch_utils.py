@@ -46,7 +46,7 @@ class _ScaleGradient(torch.autograd.Function):
         if isinstance(scale, dict):
             scale = scale["value"]
 
-        return grad_output * scale.to(grad_output.dtype), None
+        return grad_output * scale, None
 
 
 
