@@ -103,11 +103,11 @@ decoder_model.layers.*: [[data, fsdp], null, null]
 
 
 # diffusion heads
-diffusion_head.layers.*: [[data, fsdp], null, null]
-diffusion_head.out_proj: [[data, fsdp], null, null]
+diffusion_head.layers.*: [null, [data, fsdp], null, null]
+diffusion_head.out_proj: [null, [data, fsdp], null, null]
 
-uncond_diffusion_head.layers.*: [[data, fsdp], null, null]
-uncond_diffusion_head.out_proj: [[data, fsdp], null, null]
+uncond_diffusion_head.layers.*: [null, [data, fsdp], null, null]
+uncond_diffusion_head.out_proj: [null, [data, fsdp], null, null]
 
 
 # output
