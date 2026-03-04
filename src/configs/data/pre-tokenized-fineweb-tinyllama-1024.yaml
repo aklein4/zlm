@@ -2,13 +2,13 @@
 dataset:
 
     # The Hugging Face Hub URL of the dataset to load.
-    url: HuggingFaceFW/fineweb
+    url: aklein4/fineweb-w-edu-tinyllama
     
     # kwargs to pass to `datasets.load_dataset`
     kwargs:
 
         split: train
-        name: sample-10BT
+        name: length_1024
 
         streaming: true
 
@@ -16,12 +16,8 @@ dataset:
 collator:
 
     # Used to import the collator from this class
-    type: tokenize.TokenizeCollator
+    type: simple.SimpleCollator
 
     # kwargs to pass to the collator constructor
-    kwargs:
-    
-        tokenizer_url: TinyLlama/TinyLlama_v1.1
-        
-        sequence_length: 1024
+    kwargs: {}
     
