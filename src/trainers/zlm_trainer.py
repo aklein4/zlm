@@ -192,13 +192,12 @@ class ZLMTrainer(BaseTrainer):
             z_t[:n_uncond].detach(), t[:n_uncond], self.model.uncond_tokens[None, None, :, :],
         )
         
-        with torch.autocast("xla", enabled=False):
-            kls = self.model.scheduler.kl(
-                mu_for_kl.float(), t, pred_z_0.float(), dim=-1
-            ).mean(0)
-            uncond_kls = self.model.scheduler.kl(
-                mu_for_kl[:n_uncond].detach().float(), t[:n_uncond], uncond_pred_z_0.float(), dim=-1
-            ).mean(0)
+        kls = self.model.scheduler.kl(
+            mu_for_kl.float(), t, pred_z_0.float(), dim=-1
+        ).mean(0)
+        uncond_kls = self.model.scheduler.kl(
+            mu_for_kl[:n_uncond].detach().float(), t[:n_uncond], uncond_pred_z_0.float(), dim=-1
+        ).mean(0)
 
         # sum over batch to get [Z,]
         kl = kls.sum(0) * (self.model.config.num_diffusion_timesteps - 1)
