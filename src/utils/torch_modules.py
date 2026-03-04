@@ -106,13 +106,9 @@ class UnbiasedEMA(nn.Module):
 
         self.num_updates.add_(all_finite.to(self.num_updates.dtype))
 
-        # only update the ema if all values are finite
-        new_weight = (
-            self.beta * self.weight +
-            (1 - self.beta) * x
-        )
-        self.weight.copy_(
-            torch.where(all_finite, new_weight, self.weight)
+        self.weight.lerp_(
+            torch.nan_to_num(x, nan=0.0, posinf=0.0, neginf=0.0),
+            (1 - self.beta) * all_finite.to(self.weight.dtype)
         )
 
 
