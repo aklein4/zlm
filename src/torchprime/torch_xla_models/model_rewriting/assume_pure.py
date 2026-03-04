@@ -47,4 +47,12 @@ def mark_pure_modules(model: nn.Module, config: DictConfig) -> nn.Module:
       return PureModule(mod)
     return mod
 
-  return wrap_module(model, transform)
+  out = wrap_module(model, transform)
+
+  num_pure = 0
+  for m in out.modules():
+    if isinstance(m, PureModule):
+      num_pure += 1
+  logger.info(f"Marked {num_pure} modules as pure.")
+
+  return out
