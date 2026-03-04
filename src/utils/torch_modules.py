@@ -89,10 +89,10 @@ class UnbiasedEMA(nn.Module):
         self.eps = eps
 
         self.register_buffer(
-            'num_updates', torch.zeros(1, dtype=torch.long), persistent=True
+            'num_updates', torch.zeros(1, dtype=torch.long), persistent=False
         )
         self.register_buffer(
-            'weight', torch.zeros(shape), persistent=True
+            'weight', torch.zeros(shape), persistent=False
         )
 
 
@@ -102,9 +102,9 @@ class UnbiasedEMA(nn.Module):
 
         x = x.detach().to(self.weight.dtype)
 
-        all_finite = torch.isfinite(x).all().reshape(1)
+        all_finite = torch.isfinite(x).all()
 
-        self.num_updates.add_(all_finite.long())
+        self.num_updates += all_finite.to(self.num_updates.dtype)
 
         self.weight.lerp_(
             torch.nan_to_num(x, nan=0.0, posinf=0.0, neginf=0.0),

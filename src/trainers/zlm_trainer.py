@@ -9,7 +9,6 @@ from utils.scheduling_utils import linear_warmup
 from utils.torch_utils import scale_gradient
 from utils.loss_utils import lm_loss_fn, lm_acc_fn 
 from utils.sharding_utils import shard_with_gradients
-from utils.torch_modules import UnbiasedEMA
 
 
 class ZLMTrainer(BaseTrainer):
@@ -18,8 +17,6 @@ class ZLMTrainer(BaseTrainer):
 
     hooked: torch.BoolTensor
     hook_step: torch.LongTensor
-
-    lm_loss_ema: UnbiasedEMA
 
 
     def post_init(self):        
@@ -42,12 +39,6 @@ class ZLMTrainer(BaseTrainer):
                     self.config.trainer.hook_wait_steps
                 )
         
-        self.lm_loss_ema = UnbiasedEMA(
-            [1],
-            self.config.trainer.lm_loss_ema_beta,
-            eps=self.model.config.rms_norm_eps,
-        )
-
 
     def get_kl_weights(self, kl):
         if kl.dim() > 1:
@@ -158,9 +149,9 @@ class ZLMTrainer(BaseTrainer):
         )
 
         # calculate logit grad scale
-        self.lm_loss_ema.update(lm_loss.detach().reshape(1))
+        self.model.lm_loss_ema.update(lm_loss.detach().reshape(1))
         lm_loss_scale = self.config.trainer.min_lm_loss_scale + (1 - self.config.trainer.min_lm_loss_scale) * linear_warmup(
-            self.lm_loss_ema.retrieve() - self.config.trainer.lower_loss_threshold,
+            self.model.lm_loss_ema.retrieve() - self.config.trainer.lower_loss_threshold,
             self.config.trainer.upper_loss_threshold - self.config.trainer.lower_loss_threshold,
         )
         logit_grad_scale["value"] = lm_loss_scale

@@ -22,7 +22,7 @@ from utils.torch_utils import (
 from models.llama import LlamaForCausalLM, LlamaMLP, LlamaRMSNorm
 from models.custom_llama import CustomLlamaModel, CustomLlamaDecoderLayer
 from models import load_checkpoint_state
-from utils.torch_modules import ScaledEmbedding, SpectralBatchNorm, OnceSpectralBatchNorm, CustomBatchNorm
+from utils.torch_modules import ScaledEmbedding, SpectralBatchNorm, OnceSpectralBatchNorm, CustomBatchNorm, UnbiasedEMA
 from utils.diffusion_utils import DiffusionScheduler
 
 
@@ -315,6 +315,9 @@ class ZLMModel(nn.Module):
         self.uncond_tokens = nn.Parameter(
             torch.randn(self.z_length, self.hidden_size)
         )
+
+        # for training
+        self.lm_loss_ema = UnbiasedEMA([1], config.lm_loss_ema_beta, eps=config.rms_norm_eps)
 
         if config.pretrained_llama is None:
             self.apply(gaussian_init)
