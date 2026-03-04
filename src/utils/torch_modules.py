@@ -104,7 +104,7 @@ class UnbiasedEMA(nn.Module):
 
         all_finite = torch.isfinite(x).all().reshape(1)
 
-        self.num_updates.add_(all_finite.to(self.num_updates.dtype))
+        self.num_updates.add_(all_finite.long())
 
         self.weight.lerp_(
             torch.nan_to_num(x, nan=0.0, posinf=0.0, neginf=0.0),
