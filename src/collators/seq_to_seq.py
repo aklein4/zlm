@@ -10,7 +10,7 @@ class SeqToSeqCollator:
         pad_token_id: int,
     ):
         """
-        Collator for sequence-to-sequence tasks.
+        Collator for pre-tokenized sequence-to-sequence tasks, with truncation and right-padding to a fixed length.
 
         Args:
             input_length (int): The maximum length of the input sequences.
@@ -61,7 +61,7 @@ def handle_ids(batch, key, sequence_length, pad_token_id):
     )
     input_ids = input_ids[:, :sequence_length]
     
-    # pad to sequence length
+    # extend to sequence length
     pad = torch.full(
         (input_ids.shape[0], sequence_length - input_ids.shape[1]),
         pad_token_id,
