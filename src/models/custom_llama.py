@@ -132,9 +132,7 @@ class CustomLlamaAttention(nn.Module):
         cos, sin = position_embeddings
         query_states, key_states = apply_rotary_pos_emb(query_states, key_states, cos, sin)
 
-        if past_key_values is not None:
-            assert not constants.XLA_AVAILABLE
-
+        if (past_key_values is not None) and (not constants.XLA_AVAILABLE):
             key_states, value_states = past_key_values.update(
                 key_states, value_states, self.layer_idx
             )
