@@ -71,5 +71,5 @@ num_diffusion_head_layers: 2
 diffusion_mlp_size: 256
 
 pure_modules:
-  - SpectralBatchNorm
+  - InternalSpectralBatchNorm
   
