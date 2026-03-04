@@ -1,9 +1,0 @@
-defaults:
-  - tinyllama-1.1b # use most of the settings from tinyllama-1.1b.yaml
-  - _self_ # override with whatever we specify in this file
-
-
-# This checkpoint was created using scripts/convert_hf_checkpoint.py
-pretrained_url: aklein4/TinyLlama_v1.1_TPU
-pretrained_step: 0
-pretrained_strict: true
