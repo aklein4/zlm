@@ -1,5 +1,6 @@
 defaults:
   - smollm2-1p7b # refers to smollm2-1p7b.yaml, which contains the base configuration for this model
+  - zlm-extras # contains zlm-specific configuration defaults
   - _self_  # refers to this config file
   - sharding: zlm-fsdp
   - remat: zlm
@@ -12,26 +13,8 @@ type: zlm.ZLMModel
 # pretrained model to use as base
 pretrained_llama: aklein4/SmolLM2-1.7B-TPU
 
-# lengths
-input_length: 256
-output_length: 512
-z_length: 384
-
-# latent configuration
-latent_size: 32
-
-# diffusion configuration
-minimum_diffusion_timestep: 0.5
-num_diffusion_timesteps: 16
 
 # diffusion head configuration
 diffusion_in_proj: false
 num_diffusion_head_layers: 2
 diffusion_mlp_size: 3072
-
-# training configuration
-lm_loss_ema_beta: 0.75
-
-pure_modules:
-  - InternalSpectralBatchNorm
-  

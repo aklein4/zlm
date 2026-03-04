@@ -1,9 +1,9 @@
 defaults:
-  - zlm-smollm2-1p7b # default zlm configuration
-  - smollm2-360m # model architecture configuration
+  - smollm2-360m # refers to smollm2-1p7b.yaml, which contains the base configuration for this model
+  - zlm-extras # contains zlm-specific configuration defaults
   - _self_  # refers to this config file
-  - override sharding: zlm-fsdp
-  - override remat: zlm
+  - sharding: zlm-fsdp
+  - remat: zlm
 
 
 # Used to import the model from this class
@@ -13,7 +13,8 @@ type: zlm.ZLMModel
 # pretrained model to use as base
 pretrained_llama: aklein4/SmolLM2-360M-TPU
 
+
 # diffusion head configuration
 diffusion_in_proj: false
 num_diffusion_head_layers: 2
-diffusion_mlp_size: 1280
+diffusion_mlp_size: 3072

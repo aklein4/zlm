@@ -1,0 +1,18 @@
+
+# lengths
+input_length: 256
+output_length: 512
+z_length: 384
+
+# latent configuration
+latent_size: 32
+
+# diffusion configuration
+minimum_diffusion_timestep: 0.5
+num_diffusion_timesteps: 16
+
+# training configuration
+lm_loss_ema_beta: 0.75
+
+pure_modules:
+  - InternalSpectralBatchNorm
