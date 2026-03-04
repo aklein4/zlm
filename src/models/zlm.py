@@ -169,7 +169,13 @@ class DiffusionHead(nn.Module):
 
         # remove 1 from timestep since 0 is never used (unused embedding entries can cause issues with xla)
         hidden_states = self.out_norm(hidden_states, (timestep - 1))
-        pred = self.out_proj(hidden_states)
+        
+        device_type = hidden_states.device.type
+        device_type = (
+            device_type if isinstance(device_type, str) and device_type != "mps" else "cpu"
+        )
+        with torch.autocast(device_type=device_type, enabled=False):
+            pred = self.out_proj(hidden_states.float()).float()
 
         return pred
 
