@@ -2,8 +2,8 @@ defaults:
   - zlm-smollm2-1p7b # default zlm configuration
   - smollm2-test # model architecture configuration
   - _self_  # refers to this config file
-  - override /model/sharding: zlm-fsdp
-  - override /model/remat: zlm
+  - override sharding: zlm-fsdp
+  - override remat: zlm
 
 
 # Used to import the model from this class
