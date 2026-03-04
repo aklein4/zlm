@@ -24,8 +24,8 @@ matmul_precision: default # [default, high, highest]
 debug: false
 
 # Information about the W&B run where metrics will be logged.
-project: easy-torch-tpu
-name: default-run
+project: zlm-testing
+name: test
 notes: null
 
 
