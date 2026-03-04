@@ -11,6 +11,7 @@ from utils.scheduling_utils import linear_warmup
 from utils.torch_utils import scale_gradient
 from utils.loss_utils import lm_loss_fn, lm_acc_fn 
 from utils.sharding_utils import shard_with_gradients
+from utils.torch_modules import UnbiasedEMA
 
 
 class ZLMTrainer(BaseTrainer):
@@ -19,6 +20,8 @@ class ZLMTrainer(BaseTrainer):
 
     hooked: torch.BoolTensor
     hook_step: torch.LongTensor
+
+    lm_loss_ema: UnbiasedEMA
 
 
     def post_init(self):        
@@ -40,24 +43,12 @@ class ZLMTrainer(BaseTrainer):
                     self.config.trainer.hook_warmup_steps +
                     self.config.trainer.hook_wait_steps
                 )
-    
-
-    def get_trainable_parameters(self, model: ZLMModel):
-        if not self.config.trainer.freeze_decoder:
-            return model.parameters()
-    
-        params = []
-        for name, p in model.named_parameters():
-            if "decoder_model" in name:
-                continue
-            if "lm_head" in name:
-                continue
-            if "embed_tokens" in name:
-                continue
-            params.append(p)
         
-        return params
-
+        self.lm_loss_ema = UnbiasedEMA(
+            [1],
+            self.config.trainer.lm_loss_ema_beta,
+            eps=self.model.config.rms_norm_eps,
+        )
 
 
     def get_kl_weights(self, kl):
@@ -105,11 +96,6 @@ class ZLMTrainer(BaseTrainer):
     def forward(self, input_ids, output_ids):
         pad_token_id = self.model.config.pad_token_id
 
-        if self.config.trainer.online_batch_norm:
-            self.model.mu_out_norm.train()
-        else:
-            self.model.mu_out_norm.eval()
-
         # get the hook progress
         hook_progress = linear_warmup(
             self.hook_step.float(),
@@ -119,10 +105,10 @@ class ZLMTrainer(BaseTrainer):
             self.hook_step.float() - self.config.trainer.hook_wait_steps,
             self.config.trainer.hook_warmup_steps
         )
-        double_wait_hook_progress = linear_warmup(
-            self.hook_step.float() - (2 * self.config.trainer.hook_wait_steps),
-            self.config.trainer.hook_warmup_steps
-        )
+        # double_wait_hook_progress = linear_warmup(
+        #     self.hook_step.float() - (2 * self.config.trainer.hook_wait_steps),
+        #     self.config.trainer.hook_warmup_steps
+        # )
 
         # prepare inputs
         input_mask = (input_ids != pad_token_id)
@@ -140,14 +126,12 @@ class ZLMTrainer(BaseTrainer):
         )
 
         # encode and decode
-        noise_scale = wait_hook_progress
-        highway_scale = 1.0 - hook_progress
-        z, mu, min_eig_val, highway = self.model.encode(
+        noise_scale = hook_progress
+        z, mu, min_eig_val = self.model.encode(
             input_for_model, output_for_model,
             input_mask=input_mask, output_mask=output_mask,
-            return_extra=True,
             noise_scale=noise_scale,
-            highway_scale=highway_scale,
+            return_extra=True,
         )
 
         logit_grad_scale = {}
@@ -156,8 +140,6 @@ class ZLMTrainer(BaseTrainer):
             logit_grad_scale=logit_grad_scale,
             input_mask=input_mask,
             output_mask=output_mask,
-            highway=highway,
-            highway_scale=highway_scale,
             return_extra=True,
         )
 
@@ -178,10 +160,11 @@ class ZLMTrainer(BaseTrainer):
         )
 
         # calculate logit grad scale
+        self.lm_loss_ema.update(lm_loss.detach().reshape(1))
         lm_loss_scale = self.config.trainer.min_lm_loss_scale + (1 - self.config.trainer.min_lm_loss_scale) * linear_warmup(
-            lm_loss - self.config.trainer.lower_loss_threshold,
+            self.lm_loss_ema.retrieve() - self.config.trainer.lower_loss_threshold,
             self.config.trainer.upper_loss_threshold - self.config.trainer.lower_loss_threshold,
-        ).reshape(1)
+        )
         logit_grad_scale["value"] = lm_loss_scale
 
         # update hooking status
@@ -189,74 +172,54 @@ class ZLMTrainer(BaseTrainer):
         self.hook_step += self.hooked.long()
 
         # gradient scales
-        mu_kl_grad_scale = double_wait_hook_progress
-        z_states_kl_grad_scale = double_wait_hook_progress
+        mu_kl_grad_scale = wait_hook_progress
+        z_states_kl_grad_scale = wait_hook_progress
         weighted_mu_kl_grad_scale = {}
 
         # scaled gradients
-        mu_for_kl = scale_gradient(mu, weighted_mu_kl_grad_scale)
-        z_states_for_kl = scale_gradient(z_states, z_states_kl_grad_scale)
+        mu_for_kl = scale_gradient(mu, weighted_mu_kl_grad_scale)[None].repeat(
+            self.config.trainer.num_diffusion_samples, 1, 1, 1
+        )
+        z_states_for_kl = scale_gradient(z_states, z_states_kl_grad_scale)[None]
 
-        # get the kls by diffusion sampling
-        kls = 0.0
-        uncond_kls = 0.0
-        for i in range(self.config.trainer.num_diffusion_samples):
+        # diffusion sampling
+        t = torch.randint(
+            low=1,
+            high=self.model.config.num_diffusion_timesteps,
+            size=mu_for_kl.shape[:-1],
+            device=input_ids.device,
+            dtype=torch.long,
+        )
+        noise = torch.randn_like(mu_for_kl)
 
-            # sample z_t
-            t = torch.randint(
-                low=1,
-                high=self.model.config.num_diffusion_timesteps,
-                size=z.shape[:-1],
-                device=input_ids.device,
-                dtype=torch.long,
-            )
-            noise = torch.randn_like(z)
+        z_t = self.model.scheduler.add_noise(
+            mu_for_kl, t, noise
+        )
+        pred_z_0 = self.model.diffusion_head(
+            z_t, t, z_states_for_kl,
+        )
+        kls = self.model.scheduler.kl(
+            mu_for_kl, t, pred_z_0, dim=-1
+        ).mean(0)
 
-            z_t = self.model.scheduler.add_noise(
-                mu_for_kl,
-                t,
-                noise
-            )
+        n_uncond = self.config.trainer.num_uncond_diffusion_samples
+        uncond_pred_z_0 = self.model.uncond_diffusion_head(
+            z_t[:n_uncond].detach(), t[:n_uncond], self.model.uncond_tokens[None, None, :, :],
+        )
+        uncond_kls = self.model.scheduler.kl(
+            mu_for_kl[:n_uncond].detach(), t[:n_uncond], uncond_pred_z_0, dim=-1
+        ).mean(0)
 
-            # conditional kl
-            pred_z_0 = self.model.diffusion_head(
-                z_t,
-                t,
-                z_states_for_kl,
-            )
-            kl = self.model.scheduler.kl(
-                mu_for_kl,
-                t,
-                pred_z_0,
-                dim=-1
-            )
-            kls = kls + kl.float()
-
-            # unconditional kl
-            if i < self.config.trainer.num_uncond_diffusion_samples:
-                uncond_pred_z_0 = self.model.uncond_diffusion_head(
-                    z_t.detach(),
-                    t,
-                    self.model.uncond_tokens[None, :, :],
-                )
-                uncond_kl = self.model.scheduler.kl(
-                    mu_for_kl.detach(),
-                    t,
-                    uncond_pred_z_0,
-                    dim=-1
-                )
-                uncond_kls = uncond_kls + uncond_kl.float()
-
-        # mean over samples and sum over batch to get [Z,]
-        kl = kls.sum(0) * (self.model.config.num_diffusion_timesteps - 1) / self.config.trainer.num_diffusion_samples
-        uncond_kl = uncond_kls.sum(0) * (self.model.config.num_diffusion_timesteps - 1) / self.config.trainer.num_uncond_diffusion_samples
+        # sum over batch to get [Z,]
+        kl = kls.sum(0) * (self.model.config.num_diffusion_timesteps - 1)
+        uncond_kl = uncond_kls.sum(0) * (self.model.config.num_diffusion_timesteps - 1)
 
         denom = (output_ids != pad_token_id).float().sum() + self.model.config.rms_norm_eps
 
         # set the weights for the kl grad scaling
         weighted_mu_kl_grad_scale["value"] = (
             mu_kl_grad_scale *
-            self.get_kl_weights(kl)[None, :, None]
+            self.get_kl_weights(kl)[None, None, :, None]
         )
 
         # calculate kls per token
@@ -281,16 +244,18 @@ class ZLMTrainer(BaseTrainer):
             self.config.trainer.beta * uncond_kl_per_token
         )
 
-        spectral_parties = self.get_spectral_parties(mu.detach())
+        spectral_parties = 1.0 # self.get_spectral_parties(mu.detach())
 
         aux = {
-            "noise_scale": noise_scale,
-            "highway_scale": highway_scale,
+            "elbo": elbo,
+
             "lm_loss": lm_loss,
             "lm_acc": lm_acc,
             "lm_loss_scale": lm_loss_scale,
+
             "kl_grad_scale": mu_kl_grad_scale,
             "full_grad_scale": z_states_kl_grad_scale,
+
             "kl_per_token": kl_per_token,
             "effective_parties": effective_parties,
             "uncond_kl_per_token": uncond_kl_per_token,
@@ -299,66 +264,17 @@ class ZLMTrainer(BaseTrainer):
             "baseline_effective_parties": baseline_effective_parties,
             "mean_kl_per_token": mean_kl_per_token,
             "mean_effective_parties": mean_effective_parties,
-            "elbo": elbo,
+            
             "hooked": self.hooked,
             "hook_step": self.hook_step,
+            "hook_progress": hook_progress,
+            "wait_hook_progress": wait_hook_progress,
+            "noise_scale": noise_scale,
+
             "min_eig_val": min_eig_val,
             "spectral_parties": spectral_parties,
+            
             "atom_count": (output_ids != pad_token_id).long().sum(),
         }
 
         return loss, aux
-    
-
-    # def scan_kl(self):
-
-    #     def scan_fn(carry, t_curr):
-    #         t_curr = t_curr.long()
-
-    #         noise = torch.randn_like(z)
-
-    #         z_t = self.model.scheduler.add_noise(
-    #             mu, t_curr, noise
-    #         )
-
-    #         pred_z_0 = self.model.diffusion_head(
-    #             scale_gradient(z_t, kl_grad_weights),
-    #             t_curr,
-    #             scale_gradient(z_states, full_grad_scale),
-    #             self.model.scheduler,
-    #         )
-    #         kl = self.model.scheduler.kl(
-    #             scale_gradient(mu, kl_grad_weights),
-    #             t_curr,
-    #             pred_z_0,
-    #             dim=-1
-    #         )
-
-    #         uncond_pred_z_0 = self.model.uncond_diffusion_head(
-    #             z_t.detach(),
-    #             t_curr,
-    #             self.model.uncond_tokens[None, :, :],
-    #             self.model.scheduler,
-    #         )
-    #         uncond_kl = self.model.scheduler.kl(
-    #             mu.detach(),
-    #             t,
-    #             uncond_pred_z_0,
-    #             dim=-1
-    #         )
-
-    #         return carry, torch.stack([kl, uncond_kl], dim=-1)
-
-    #     t = torch.randint(
-    #         low=1,
-    #         high=self.model.config.num_diffusion_timesteps,
-    #         size=(self.config.trainer.num_diffusion_samples, *z.shape[:-1]),
-    #         device=input_ids.device,
-    #         dtype=torch.long,
-    #     )
-
-    #     _, kl_uncond_kl = scan(
-    #         scan_fn,
-    #         t.clone().float(),
-    #         t.float(),
-    #     )

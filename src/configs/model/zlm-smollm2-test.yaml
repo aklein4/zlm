@@ -48,7 +48,7 @@ rms_norm_eps: 1.0e-05
 pad_attention_bias_value: -100.0
 
 # choose attention_kernel from: [flash_attention, splash_attention, null]
-attention_kernel: nan_safe_flash_attention
+attention_kernel: flash_attention
 
 # pretrained model to use as base
 pretrained_llama: null
@@ -59,7 +59,7 @@ output_length: 512
 z_length: 384
 
 # latent configuration
-latent_size: 64
+latent_size: 32
 
 # diffusion configuration
 minimum_diffusion_timestep: 0.5
@@ -67,5 +67,9 @@ num_diffusion_timesteps: 16
 
 # diffusion head configuration
 diffusion_in_proj: false
-num_diffusion_head_layers: 1
+num_diffusion_head_layers: 2
 diffusion_mlp_size: 256
+
+pure_modules:
+  - SpectralBatchNorm
+  

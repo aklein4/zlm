@@ -22,6 +22,9 @@ class ScaledEmbedding(nn.Embedding):
     def ones_init(self):
         self.weight.data.fill_(1.0 / self.scale)
 
+    def zeros_init(self):
+        self.weight.data.zero_()
+
 
     def forward(self, input: torch.Tensor) -> torch.Tensor:
         return super().forward(input) * self.scale
@@ -228,7 +231,6 @@ class SpectralBatchNorm(nn.Module):
     def __init__(
         self,
         shape: torch.Size,
-        beta: float,
         eps: float=1e-5,
     ):
         super().__init__()
@@ -236,15 +238,6 @@ class SpectralBatchNorm(nn.Module):
         self.shape = tuple(shape)
         assert len(self.shape) == 2, "SpectralBatchNorm only supports 2D inputs"
         self.eps = eps
-
-        self.cov_tracker = UnbiasedEMA(
-            self.shape + (shape[-1],),
-            beta=beta, eps=eps
-        )
-        self.mean_tracker = UnbiasedEMA(
-            shape,
-            beta=beta, eps=eps
-        )
 
     
     def forward(self, x: torch.Tensor) -> torch.Tensor:
@@ -257,49 +250,57 @@ class SpectralBatchNorm(nn.Module):
         """
         assert x.shape[1:] == self.shape, f"Input shape {x.shape} does not match BatchNorm shape {self.shape}"
 
-        x = x.transpose(0, 1) # [S, B, H]
-        x = maybe_shard_with_gradients(x)
-
-        og_dtype = x.dtype
-        x = x.to(torch.float32)
-
-        x_mean = x.mean(dim=1)  # [S, H]
-        x_cov = torch.einsum(
-            'sbi,sbj->sij',
-            (x - x_mean[:, None]),
-            (x - x_mean[:, None]),
-        ) / x.shape[1] # [S, H, H]
-
-        # if self.training:
-        #     self.mean_tracker.update(x_mean)
-        #     self.cov_tracker.update(x_cov)
-        # else:
-        #     x_mean = self.mean_tracker.retrieve()
-        #     x_cov = self.cov_tracker.retrieve()
-
-        eig_vals, eig_vecs = torch.linalg.eigh(
-            x_cov + self.eps * torch.eye(self.shape[-1], device=x.device, dtype=x_cov.dtype)[None]
+        device_type = x.device.type
+        device_type = (
+            device_type if isinstance(device_type, str) and device_type != "mps" else "cpu"
         )
+        with torch.autocast(device_type=device_type, enabled=False):
 
-        min_val = torch.min(eig_vals.detach())
-        eig_vals = torch.clamp(eig_vals, min=self.eps) # [S, H]
+            x = x.transpose(0, 1) # [S, B, H]
+            x = maybe_shard_with_gradients(x)
 
-        inv_sqrt_cov = (
-            eig_vecs @
-            torch.diag_embed(eig_vals.rsqrt()) @
-            eig_vecs.transpose(-1, -2)  
-        ) # [S, H, H]
+            og_dtype = x.dtype
+            x = x.to(torch.float32)
 
-        y = torch.einsum(
-            'shl,sbh->sbl',
-            inv_sqrt_cov,
-            (x - x_mean[:, None]),
-        ) # [S, B, H]
+            x_mean = x.mean(dim=1)  # [S, H]
+            x_cov = torch.einsum(
+                'sbi,sbj->sij',
+                (x - x_mean[:, None]),
+                (x - x_mean[:, None]),
+            ) / x.shape[1] # [S, H, H]
 
-        y = y.transpose(0, 1) # [B, S, H]
-        y = maybe_shard_with_gradients(y)
+            # if self.training:
+            #     self.mean_tracker.update(x_mean)
+            #     self.cov_tracker.update(x_cov)
+            # else:
+            #     x_mean = self.mean_tracker.retrieve()
+            #     x_cov = self.cov_tracker.retrieve()
 
-        return y.to(og_dtype), min_val
+            eig_vals, eig_vecs = torch.linalg.eigh(
+                x_cov + self.eps * torch.eye(self.shape[-1], device=x.device, dtype=x_cov.dtype)[None]
+            )
+
+            min_val = torch.min(eig_vals.detach())
+            eig_vals = torch.clamp(eig_vals, min=self.eps) # [S, H]
+
+            inv_sqrt_cov = (
+                eig_vecs @
+                torch.diag_embed(eig_vals.rsqrt()) @
+                eig_vecs.transpose(-1, -2)  
+            ) # [S, H, H]
+
+            y = torch.einsum(
+                'shl,sbh->sbl',
+                inv_sqrt_cov,
+                (x - x_mean[:, None]),
+            ) # [S, B, H]
+
+            y = y.transpose(0, 1) # [B, S, H]
+            y = maybe_shard_with_gradients(y)
+
+            y = y.to(og_dtype)
+
+        return y, min_val
 
 
 class OnceSpectralBatchNorm(SpectralBatchNorm):

@@ -4,13 +4,18 @@ type: zlm_trainer.ZLMTrainer  # Used to import the trainer from this class
 
 
 # total batch size across all devices
-global_batch_size: 32 
+global_batch_size: 64
 
 # run for N steps
 max_steps: 1000000
 
 # Save a checkpoint every N steps
 checkpoint_interval: 1000000
+
+
+# whether to autocast the forward pass and loss computation.
+# currently only supports autocasting to bfloat16
+use_autocast: true
 
 
 # optimizer configuration
@@ -28,16 +33,24 @@ optimizer:
 
     weight_decay: 0.1
 
-    update_clip: null
-
 
 # Learning rate scheduler configuration
 lr_scheduler:
 
-  type: linear
+  type: warmup_stable_decay
 
-  warmup_steps: 100
-  training_steps: 1000000
+  # get_scheduler requires this outside of kwargs
+  num_warmup_steps: 100
+
+  kwargs:
+
+    num_stable_steps: 1000000
+    num_decay_steps: 5000
+
+    min_lr_ratio: 0.0
+
+    warmup_type: linear
+    decay_type: linear
   
 
 # Defaults to clip the L2 norm of gradients to 1.0.
@@ -51,17 +64,18 @@ max_grad_value: null
 init_hook: false
 init_hook_step: null
 hook_warmup_steps: 1000
-hook_wait_steps: 2000
+hook_wait_steps: 1000
 
 # threshold configuration
-upper_loss_threshold: 0.5
-lower_loss_threshold: 0.25
+lm_loss_ema_beta: 0.75
+upper_loss_threshold: 0.75
+lower_loss_threshold: 0.50
 min_lm_loss_scale: 0.01
 
 # diffusion sampling configuration
-num_diffusion_samples: 2
-num_uncond_diffusion_samples: 1
+num_diffusion_samples: 3
+num_uncond_diffusion_samples: 2
 
 # loss weighting configuration
-kl_weight_relu_shift: 0.5
+kl_weight_relu_shift: 0.0
 beta: 0.1

@@ -5,6 +5,9 @@ import torch.nn.functional as F
 import math
 from omegaconf import DictConfig
 
+from utils import constants
+if constants.XLA_AVAILABLE:
+    from torchprime.torch_xla_models import offloading
 from torchprime.layers.sequential import HomogeneousSequential
 
 from utils.torch_utils import (
@@ -16,8 +19,8 @@ from utils.torch_utils import (
     gaussian_init,
 )
 
-from models.llama import LlamaForCausalLM
-from models.custom_llama import LlamaMLP, LlamaRMSNorm, LlamaDecoderLayer, CustomLlamaModel
+from models.llama import LlamaForCausalLM, LlamaMLP, LlamaRMSNorm
+from models.custom_llama import CustomLlamaModel, CustomLlamaDecoderLayer
 from models import load_checkpoint_state
 from utils.torch_modules import ScaledEmbedding, SpectralBatchNorm, OnceSpectralBatchNorm, CustomBatchNorm
 from utils.diffusion_utils import DiffusionScheduler
@@ -60,14 +63,15 @@ class AdaScale(nn.Module):
         if self.do_norm:
             x = self.norm(x)
 
-        return x * self.embed(condition).to(x.dtype)
+        return x * (1.0 + self.embed(condition).to(x.dtype))
 
 
 class DiffusionHeadLayer(nn.Module):
 
     def __init__(
         self,
-        config: DictConfig
+        config: DictConfig,
+        offload_name: str="diffusion_head_input"
     ):
         super().__init__()
 
@@ -77,18 +81,18 @@ class DiffusionHeadLayer(nn.Module):
             do_norm=True,
             rms_norm_eps=config.rms_norm_eps,
         )
-
         self.mlp = LlamaMLP(
             hidden_size=config.hidden_size,
             intermediate_size=config.diffusion_mlp_size,
             hidden_act=config.hidden_act,
         )
-
         self.out_scale = AdaScale(
             config.hidden_size,
             config.num_diffusion_timesteps-1,
             do_norm=False,
         )
+
+        self.offload_name = offload_name
     
 
     def forward(
@@ -96,7 +100,9 @@ class DiffusionHeadLayer(nn.Module):
         hidden_states: torch.FloatTensor,
         timestep: torch.FloatTensor=None,
     ) -> torch.FloatTensor:
-        dtype = hidden_states.dtype
+        if constants.XLA_AVAILABLE:
+            hidden_states = offloading.offload_name(hidden_states, self.offload_name)
+
         timestep = timestep.long()
 
         residual = hidden_states
@@ -107,14 +113,15 @@ class DiffusionHeadLayer(nn.Module):
 
         hidden_states = residual + hidden_states
 
-        return hidden_states.to(dtype)
+        return hidden_states
 
 
 class DiffusionHead(nn.Module):
 
     def __init__(
         self,
-        config: DictConfig
+        config: DictConfig,
+        offload_name: str="diffusion_head_input"
     ):
         super().__init__()
 
@@ -127,7 +134,7 @@ class DiffusionHead(nn.Module):
 
         self.layers = HomogeneousSequential(
             *[
-                DiffusionHeadLayer(config)
+                DiffusionHeadLayer(config, offload_name=offload_name)
                 for _ in range(config.num_diffusion_head_layers)
             ]
         )
@@ -167,12 +174,12 @@ class DiffusionHead(nn.Module):
         return pred
 
 
-class EncoderModelLayer(LlamaDecoderLayer):
+class EncoderModelLayer(CustomLlamaDecoderLayer):
     offload_name = "encoder_model_input"
 class EncoderModel(CustomLlamaModel):
     layer_type = EncoderModelLayer
 
-class DecoderModelLayer(LlamaDecoderLayer):
+class DecoderModelLayer(CustomLlamaDecoderLayer):
     offload_name = "decoder_model_input"
 class DecoderModel(CustomLlamaModel):
     layer_type = DecoderModelLayer
@@ -235,8 +242,12 @@ class ZLMModel(nn.Module):
         self.decoder_model.embed_tokens = None
 
         # calculate embedding distribution TODO: what if llama_pretrained is None?
-        embed_mean = self.embed_tokens.weight.data.mean(0).detach()
-        embed_cov = torch.cov(self.embed_tokens.weight.data.T).detach()        
+        if config.pretrained_llama is not None:
+            embed_mean = self.embed_tokens.weight.data.mean(0).detach()
+            embed_cov = torch.cov(self.embed_tokens.weight.data.T).detach()        
+        else:
+            embed_mean = torch.zeros(self.hidden_size)
+            embed_cov = torch.eye(self.hidden_size)
         embed_dist = torch.distributions.MultivariateNormal(
             loc=embed_mean,
             covariance_matrix=(embed_cov + config.rms_norm_eps * torch.eye(self.hidden_size, device=embed_cov.device))
@@ -291,7 +302,6 @@ class ZLMModel(nn.Module):
         else:
             self.mu_out_norm = SpectralBatchNorm(
                 [self.z_length, self.latent_size],
-                config.batch_norm_beta,
                 eps=config.rms_norm_eps,
             )
         self.z_in_norm = LlamaRMSNorm(self.latent_size, eps=config.rms_norm_eps, elementwise_affine=False)
@@ -301,21 +311,10 @@ class ZLMModel(nn.Module):
         self.scheduler = DiffusionScheduler(config)
 
         # unconditional diffusion modules
-        self.uncond_diffusion_head = DiffusionHead(config)
+        self.uncond_diffusion_head = DiffusionHead(config, offload_name="uncond_diffusion_head_input")
         self.uncond_tokens = nn.Parameter(
             torch.randn(self.z_length, self.hidden_size)
         )
-
-        # create the highway components
-        self.encoder_highway_out_proj = nn.Linear(self.hidden_size, self.hidden_size, bias=False)
-        self.highway_out_norm = CustomBatchNorm(
-            [self.z_length, self.hidden_size],
-            config.batch_norm_beta,
-            eps=config.rms_norm_eps,
-        )
-        self.highway_out_rms_norm = LlamaRMSNorm(self.hidden_size, eps=config.rms_norm_eps, elementwise_affine=False)
-        self.highway_in_norm = LlamaRMSNorm(self.hidden_size, eps=config.rms_norm_eps, elementwise_affine=False)
-        self.decoder_highway_in_proj = nn.Linear(self.hidden_size, self.hidden_size, bias=False)
 
         if config.pretrained_llama is None:
             self.apply(gaussian_init)
@@ -327,23 +326,21 @@ class ZLMModel(nn.Module):
             gaussian_init(self.decoder_z_proj_in)
             gaussian_init(self.encoder_mu_proj_out)
 
-            gaussian_init(self.encoder_highway_out_proj)
-            gaussian_init(self.decoder_highway_in_proj)
-
         # set the diffusion head conditioning embeddings to ones
         self.apply(self.scaled_embed_init)
 
         # scale input layers by embedding stats
-        proj_std = self.embed_tokens.weight.data.std().detach()
         self.encoder_noise_proj_in.weight.data.zero_()
-        self.decoder_z_proj_in.weight.data *= proj_std
+        self.decoder_z_proj_in.weight.data.copy_(
+            (
+                embed_dist._unbroadcasted_scale_tril @ self.decoder_z_proj_in.weight.data
+            ).detach()
+        )
         
-        self.decoder_highway_in_proj.weight.data *= proj_std
-
 
     def scaled_embed_init(self, module):
         if isinstance(module, ScaledEmbedding):
-            module.ones_init()
+            module.zeros_init()
 
     
     def sample_noise(
@@ -381,7 +378,6 @@ class ZLMModel(nn.Module):
         output_mask: torch.BoolTensor=None,
         noise_scale: torch.FloatTensor=None,
         return_extra: bool=False,
-        highway_scale: float = None,
     ):
 
         if noise is None:
@@ -443,22 +439,7 @@ class ZLMModel(nn.Module):
         )
 
         if return_extra:
-            assert highway_scale is not None
-
-            highway = self.encoder_highway_out_proj(hidden_states[..., -self.z_length:, :])
-            highway = self.highway_out_norm(highway)
-            highway = self.highway_out_rms_norm(highway)
-
-            highway_noise = self.sample_noise(
-                input_ids,
-                hidden_size=self.hidden_size,
-            )
-            highway = (
-                highway_scale * highway +
-                (1 - highway_scale) * highway_noise
-            )
-
-            return z, mu, min_eig_val, highway
+            return z, mu, min_eig_val
         
         return z, mu
 
@@ -471,16 +452,10 @@ class ZLMModel(nn.Module):
         logit_grad_scale: float = None,
         input_mask: torch.BoolTensor=None,
         output_mask: torch.BoolTensor=None,
-        highway: torch.FloatTensor=None,
-        highway_scale: float = None,
         return_extra: bool=False,
     ):
         
         z = self.z_in_norm(z)
-
-        if highway is not None:
-            assert highway_scale is not None
-            highway = highway_scale * self.highway_in_norm(highway)
 
         input_tokens = self.embed_tokens(input_ids) + unsqueeze_to_batch(
             self.decoder_input_embeddings, input_ids
@@ -490,8 +465,6 @@ class ZLMModel(nn.Module):
         )
 
         z_projed = self.decoder_z_proj_in(z)
-        if highway is not None:
-            z_projed = z_projed + self.decoder_highway_in_proj(highway)
 
         z_tokens = (
             unsqueeze_to_batch(self.decoder_z_tokens, z) +
