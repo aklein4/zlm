@@ -89,10 +89,10 @@ class UnbiasedEMA(nn.Module):
         self.eps = eps
 
         self.register_buffer(
-            'num_updates', torch.zeros(1, dtype=torch.long), persistent=False
+            'num_updates', torch.zeros(1, dtype=torch.long), persistent=True
         )
         self.register_buffer(
-            'weight', torch.zeros(shape), persistent=False
+            'weight', torch.zeros(shape), persistent=True
         )
 
 
