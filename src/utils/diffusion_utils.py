@@ -5,7 +5,7 @@ import torch.nn.functional as F
 from omegaconf import DictConfig
 
 import utils.constants as constants
-from torch_utils import unsqueeze_to_channel
+from utils.torch_utils import unsqueeze_to_channel
 
 
 class DiffusionScheduler(nn.Module):
