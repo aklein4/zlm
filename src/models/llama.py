@@ -140,17 +140,29 @@ def apply_rotary_pos_emb(q, k, cos, sin, position_ids=None, unsqueeze_dim=1):
 
 
 class LlamaMLP(nn.Module):
-    def __init__(self, config):
+    def __init__(
+        self,
+        config=None,
+        hidden_size=None,
+        intermediate_size=None,
+        hidden_act=None,
+    ):
         super().__init__()
+
+        if config is not None:
+            hidden_size = config.hidden_size
+            intermediate_size = config.intermediate_size
+            hidden_act = config.hidden_act
+
         self.config = config
-        self.hidden_size = config.hidden_size
-        self.intermediate_size = config.intermediate_size
+        self.hidden_size = hidden_size
+        self.intermediate_size = intermediate_size
         
         self.gate_proj = nn.Linear(self.hidden_size, self.intermediate_size, bias=False)
         self.up_proj = nn.Linear(self.hidden_size, self.intermediate_size, bias=False)
         
         self.down_proj = nn.Linear(self.intermediate_size, self.hidden_size, bias=False)
-        self.act_fn = ACT2FN[config.hidden_act]
+        self.act_fn = ACT2FN[hidden_act]
 
     # @xp.trace_me("LlamaMLP")
     def forward(self, x):
@@ -386,9 +398,10 @@ class LlamaModel(nn.Module):
 
         # TODO(https://github.com/pytorch/xla/issues/8783): Pass position_ids as `long()`
         # when `scan` can take non-differentiable inputs.
-        position_ids = (
-            torch.arange(seq_length, device=inputs_embeds.device).unsqueeze(0).float()
-        )
+        if position_ids is None:
+            position_ids = torch.arange(
+                seq_length, device=inputs_embeds.device
+            ).unsqueeze(0).float()
 
         # Create a causal attention mask
         causal_mask = torch.triu(
@@ -417,7 +430,7 @@ class LlamaModel(nn.Module):
 
 
 class LlamaForCausalLM(nn.Module):
-    
+
     transformer_type = LlamaModel
 
     
