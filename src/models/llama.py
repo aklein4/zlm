@@ -28,24 +28,32 @@ from transformers.utils import logging
 from torchprime.layers.sequential import HomogeneousSequential
 from torchprime.rope.rope import RopeScaling, llama3_rope_frequencies
 from torchprime.torch_xla_models.attention import AttentionModule
-from torchprime.torch_xla_models.loss import cross_entropy_loss
 
 from utils import constants
 if constants.XLA_AVAILABLE:
     from torchprime.torch_xla_models import offloading
+from utils.attention_utils import AtttentionProbe
+from utils.loss_utils import lm_loss_fn
 
 
 logger = logging.get_logger(__name__)
 
 
 class LlamaRMSNorm(nn.Module):
-    def __init__(self, hidden_size, eps=1e-6):
+    def __init__(self, hidden_size, eps=1e-6, elementwise_affine: bool = True):
         """
         LlamaRMSNorm is equivalent to T5LayerNorm
         """
         super().__init__()
-        self.weight = nn.Parameter(torch.ones(hidden_size))
+        self.elementwise_affine = elementwise_affine
         self.variance_epsilon = eps
+        self.normalized_shape = (hidden_size,)
+
+        if self.elementwise_affine:
+            self.weight = nn.Parameter(torch.ones(hidden_size))
+        else:
+            self.register_parameter("weight", None)
+        
 
     def forward(self, hidden_states):
         input_dtype = hidden_states.dtype
@@ -53,7 +61,7 @@ class LlamaRMSNorm(nn.Module):
         
         out = F.rms_norm(
             hidden_states,
-            self.weight.shape,
+            self.normalized_shape,
             weight=self.weight,
             eps=self.variance_epsilon,
         )
@@ -167,10 +175,10 @@ def repeat_kv(hidden_states: torch.Tensor, n_rep: int) -> torch.Tensor:
 class LlamaAttention(nn.Module):
     """Multi-headed attention from 'Attention Is All You Need' paper"""
 
-    def __init__(self, config: DictConfig, layer_idx: int | None = None):
+    def __init__(self, config: DictConfig, layer_idx: int | None = None, is_causal: bool = True):
         super().__init__()
         self.config = config
-        self.attention_block = AttentionModule(config)
+        self.attention_block = AttentionModule(config, is_causal=is_causal)
         self.layer_idx = layer_idx
         if layer_idx is None:
             logger.warning_once(
@@ -186,7 +194,7 @@ class LlamaAttention(nn.Module):
         self.num_key_value_groups = self.num_heads // self.num_key_value_heads
         self.max_position_embeddings = config.max_position_embeddings
         self.rope_theta = config.rope_theta
-        self.is_causal = True
+        self.is_causal = is_causal
 
         if (self.head_dim * self.num_heads) != self.hidden_size:
             raise ValueError(
@@ -212,6 +220,9 @@ class LlamaAttention(nn.Module):
         self.o_proj = nn.Linear(
             self.hidden_size, self.hidden_size, bias=config.attention_bias
         )
+
+        self.probe = AtttentionProbe(layer_idx)
+
 
     # @xp.trace_me("LlamaAttention")
     def forward(
@@ -244,7 +255,8 @@ class LlamaAttention(nn.Module):
             query_states,
             key_states,
             value_states,
-            attention_mask
+            attention_mask,
+            attention_probe=self.probe,
         )
         attn_output = attn_output.transpose(1, 2).contiguous()
         attn_output = attn_output.reshape(bsz, q_len, self.hidden_size)
@@ -253,11 +265,16 @@ class LlamaAttention(nn.Module):
 
 
 class LlamaDecoderLayer(nn.Module):
+
+    offload_name = "decoder_input"
+    is_causal = True
+    
+
     def __init__(self, config: DictConfig, layer_idx: int):
         super().__init__()
         self.hidden_size = config.hidden_size
 
-        self.self_attn = LlamaAttention(config=config, layer_idx=layer_idx)
+        self.self_attn = LlamaAttention(config=config, layer_idx=layer_idx, is_causal=self.is_causal)
 
         self.mlp = LlamaMLP(config)
         self.input_layernorm = LlamaRMSNorm(config.hidden_size, eps=config.rms_norm_eps)
@@ -285,7 +302,7 @@ class LlamaDecoderLayer(nn.Module):
         # torch API because there is no such feature in PyTorch. Instead, the name
         # becomes node metadata during FX graph capture.
         if constants.XLA_AVAILABLE:
-            hidden_states = offloading.offload_name(hidden_states, "decoder_input")
+            hidden_states = offloading.offload_name(hidden_states, self.offload_name)
 
         residual = hidden_states
 
@@ -317,6 +334,9 @@ class LlamaModel(nn.Module):
         config: DictConfig
     """
 
+    layer_type = LlamaDecoderLayer
+    do_norm = True
+
     def __init__(self, config: DictConfig):
         super().__init__()
         self.vocab_size = config.vocab_size
@@ -326,7 +346,7 @@ class LlamaModel(nn.Module):
         # `scan` described in https://pytorch.org/xla/release/r2.6/features/scan.html.
         self.layers = HomogeneousSequential(
             *[
-                LlamaDecoderLayer(config, layer_idx)
+                self.layer_type(config, layer_idx)
                 for layer_idx in range(config.num_hidden_layers)
             ]
         )
@@ -340,15 +360,27 @@ class LlamaModel(nn.Module):
         self.rotary_emb = LlamaRotaryEmbedding(
             head_dim=head_dim, rope_theta=config.rope_theta, scaling=rope_scaling
         )
+    
 
     # @xp.trace_me("LlamaModel")
     def forward(
         self,
-        input_ids: torch.LongTensor,
+        input_ids: torch.LongTensor | None = None,
+        inputs_embeds: torch.FloatTensor | None = None,
         attention_mask: torch.FloatTensor | None = None, # only used in non-kernel attention
+        position_ids: torch.LongTensor | None = None,
     ) -> torch.Tensor:        
+        """
+        Args:
+            input_ids (torch.LongTensor | None): Indices of input sequence tokens in the vocabulary. Shape `(batch_size, sequence_length)`.
+            inputs_embeds (torch.FloatTensor | None): Optionally, instead of passing `input_ids`, you can choose to directly pass an embedded representation. This should be of shape `(batch_size, sequence_length, hidden_size)`.
+            attention_mask (torch.FloatTensor | None): Optional attention mask. Only used if using non-kernel attention implementation.
+            position_ids (torch.LongTensor | None): Optional position ids. If not provided, position ids will be sequential.
+        """
+        
         # convert input ids to embeddings
-        inputs_embeds = self.embed_tokens(input_ids)
+        if inputs_embeds is None:
+            inputs_embeds = self.embed_tokens(input_ids)
 
         seq_length = inputs_embeds.shape[1]
 
@@ -364,33 +396,37 @@ class LlamaModel(nn.Module):
             diagonal=1,
         )
         causal_mask = causal_mask.unsqueeze(0).unsqueeze(0)  # Add batch and head dimension
-
         if attention_mask is not None:
             causal_mask = causal_mask * attention_mask[:, None, None, :]
 
-        hidden_states = inputs_embeds
-
         # create position embeddings to be shared across the decoder layers
-        position_embeddings = self.rotary_emb(hidden_states, position_ids)
+        position_embeddings = self.rotary_emb(inputs_embeds, position_ids)
 
         # decoder layers
         hidden_states = self.layers(
-            hidden_states,
+            inputs_embeds,
             attention_mask=causal_mask,
             position_ids=position_ids,
             position_embeddings=position_embeddings,
         )
 
-        hidden_states = self.norm(hidden_states)
+        if self.do_norm:
+            hidden_states = self.norm(hidden_states)
+        
         return hidden_states
 
 
 class LlamaForCausalLM(nn.Module):
+    
+    transformer_type = LlamaModel
+
+    
     def __init__(self, config):
         super().__init__()
 
         self.config = config
-        self.model = LlamaModel(config)
+        self.model = self.transformer_type(config)
+        self.model.do_norm = False
 
         self.vocab_size = config.vocab_size
         self.lm_head = nn.Linear(config.hidden_size, config.vocab_size, bias=False)
@@ -423,30 +459,87 @@ class LlamaForCausalLM(nn.Module):
     # @xp.trace_me("LlamaForCausalLM")
     def forward(
         self,
-        input_ids: torch.LongTensor,
+        input_ids: torch.LongTensor | None = None,
+        inputs_embeds: torch.FloatTensor | None = None,
         labels: torch.LongTensor | None = None,
         attention_mask: torch.FloatTensor | None = None, # only used in non-kernel attention
         shift_states: bool = False,
+        return_states: bool = False,
     ) -> tuple[torch.FloatTensor, torch.FloatTensor | None]:
+        """
+        Args:
+            input_ids (torch.LongTensor | None): Indices of input sequence tokens in the vocabulary. Shape `(batch_size, sequence_length)`.
+            inputs_embeds (torch.FloatTensor | None): Optionally, instead of passing `input_ids`, you can choose to directly pass an embedded
+            labels (torch.LongTensor | None): Optional labels for computing the loss. Should be of shape `(batch_size, sequence_length)`. If `None`, loss will not be computed.
+            attention_mask (torch.FloatTensor | None): Optional attention mask. Only used if using non-kernel attention implementation.
+            shift_states (bool, optional): Whether to shift the hidden states for next-token prediction. Can save memory compared to shifting the logits later.
+            return_states (bool, optional): Whether to return the hidden states from the model in addition to the logits and loss. Defaults to `False`.
+        Returns:
+            A tuple of `(logits, loss)` or `(logits, loss, hidden_states)`
+        """
         
         hidden_states = self.model(
             input_ids=input_ids,
+            inputs_embeds=inputs_embeds,
             attention_mask=attention_mask,
         )
 
+        lm_states = self.model.norm(hidden_states)
         if shift_states:
             # Shift the hidden states to the right for causal language modeling
-            hidden_states = hidden_states[..., :-1, :].contiguous()
+            lm_states = lm_states[..., :-1, :].contiguous()
 
-        logits = self.lm_head(hidden_states)
+        logits = self.lm_head(lm_states)
         logits = logits.to(torch.float32)
 
         # logits = torch.nn.functional.log_softmax(logits, dim=-1)
         
-        if labels is None:
-            return logits, None
+        loss = None
+        if labels is not None:
         
-        loss = cross_entropy_loss(logits, labels=labels, vocab_size=self.config.vocab_size, ignore_index=self.config.pad_token_id)
+            loss = lm_loss_fn(
+                logits,
+                labels=labels,
+                ignore_index=self.config.pad_token_id,
+                shift_logits=(not shift_states),
+            )
+
+        if return_states:
+            return logits, loss, hidden_states
         
         return logits, loss
+    
+
+    def sample(
+        self,
+        logits: torch.FloatTensor,
+        num_samples: int = 1,
+    ):
+        # import utils.sharding_utils as su
+
+        device_type = logits.device.type
+        device_type = (
+            device_type if isinstance(device_type, str) and device_type != "mps" else "cpu"
+        )
+        with torch.autocast(device_type=device_type, enabled=False):
+
+            p = F.softmax(logits.float(), dim=-1)
+            cum_p = torch.cumsum(p, dim=-1)
+
+            coin = torch.rand(
+                num_samples, *logits.shape[:-1], device=logits.device, dtype=logits.dtype
+            )
+
+            samples = (cum_p >= coin[..., None]).long().sum(dim=-1) - 1
+
+            # spec = su.batch_shard_spec(samples)
+            # spec = (spec[1], spec[0]) + spec[2:]
+            # samples = su.maybe_shard_with_gradients(
+            #     samples, spec=spec
+            # )
+
+            if num_samples == 1:
+                return samples.squeeze(0)
+
+            return samples
     
