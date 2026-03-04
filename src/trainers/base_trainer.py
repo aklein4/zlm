@@ -2,12 +2,7 @@
 
 This script provides a `Trainer` class that sets up model sharding, activation checkpointing,
 optimization, and the training loop with XLA-specific configurations. It is designed to work with
-distributed TPU training and includes utilities for metrics logging and MFU computation.
-
-Typical usage example:
-
-    trainer = Trainer(model, config, train_dataset)
-    trainer.train_loop(metrics_logger)
+distributed TPU training.
 """
 
 import logging
@@ -16,7 +11,6 @@ import os
 from timeit import default_timer as timer
 import shutil
 import json
-import numpy as np
 import re
 import time
 
@@ -62,7 +56,7 @@ class BaseTrainer:
 
     This class encapsulates model preparation, optimizer configuration, data loading,
     and the training loop. It is designed to handle distributed training across TPU cores,
-    enabling features like SPMD sharding, activation checkpointing, and profiling.
+    enabling features like SPMD sharding, and activation checkpointing.
 
     Args:
         model: The model to train.
@@ -86,7 +80,7 @@ class BaseTrainer:
 
         self.model = self.prepare_model(model, config)
 
-        self.optimizer, self.lr_scheduler = self.prepare_optimization(self.model, config)
+        self.optimizers, self.lr_schedulers = self.prepare_optimization(self.model, config)
 
         # set up saving
         if not self.config.debug and constants.PROCESS_IS_MAIN():
@@ -159,6 +153,8 @@ class BaseTrainer:
 
 
     def get_trainable_parameters(self, model: torch.nn.Module):
+        if hasattr(model, "get_trainable_parameters"):
+            return model.get_trainable_parameters()
         return model.parameters()
 
 
@@ -171,6 +167,37 @@ class BaseTrainer:
 
         params = self.get_trainable_parameters(model)
 
+        if "multiple_optimizers" in config.trainer:
+
+            assert isinstance(params, dict)
+            assert len(params) == len(config.trainer.multiple_optimizers)
+
+            optimizers = {}
+            lr_schedulers = {}
+
+            for key, c in config.trainer.multiple_optimizers.items():
+                optimizer_config = c.optimizer
+                lr_scheduler_config = c.lr_scheduler
+
+                optimizers[key] = import_optimizer(optimizer_config.type)(
+                    params=params[key],
+                    **optimizer_config.kwargs,
+                )
+
+                lr_schedulers[key] = get_scheduler(
+                    name=lr_scheduler_config.type,
+                    optimizer=optimizers[key],
+                    num_warmup_steps=lr_scheduler_config.num_warmup_steps,
+                    num_training_steps=(
+                        lr_scheduler_config.num_training_steps if "num_training_steps" in lr_scheduler_config else None
+                    ),
+                    scheduler_specific_kwargs=lr_scheduler_config.kwargs,
+                )
+
+            return optimizers, lr_schedulers
+
+        assert not isinstance(params, dict)
+
         optimizer = import_optimizer(config.trainer.optimizer.type)(
             params=params,
             **config.trainer.optimizer.kwargs,
@@ -180,10 +207,13 @@ class BaseTrainer:
             name=config.trainer.lr_scheduler.type,
             optimizer=optimizer,
             num_warmup_steps=config.trainer.lr_scheduler.num_warmup_steps,
+            num_training_steps=(
+                config.trainer.lr_scheduler.num_training_steps if "num_training_steps" in config.trainer.lr_scheduler else None
+            ),
             scheduler_specific_kwargs=config.trainer.lr_scheduler.kwargs,
         )
 
-        return optimizer, lr_scheduler
+        return {"main": optimizer}, {"main": lr_scheduler}
     
 
     def _get_train_dataloader(self) -> pl.MpDeviceLoader:
@@ -281,8 +311,15 @@ class BaseTrainer:
         # prepare model for training
         for p in self.model.parameters():
             p.requires_grad_(False)
-        for p in self.get_trainable_parameters(self.model):
-            p.requires_grad_(True)
+        params = self.get_trainable_parameters(self.model)
+        if isinstance(params, dict):
+            for ps in params.values():
+                for p in ps:
+                    p.requires_grad_(True)
+        else:
+            for p in params:
+                p.requires_grad_(True)
+        
         self.model.train()
         self.model.zero_grad()
 
@@ -306,6 +343,7 @@ class BaseTrainer:
         training_start_time = timer()
 
         # run the training loop
+        # TODO: enable multi-epoch training
         while step < max_step:
             try:
                 batch = next(train_iterator)
@@ -345,17 +383,18 @@ class BaseTrainer:
 
             # perform the training step
             trace_start_time = timer()
-            loss, aux, grad_norm, lr = self.train_step(batch)
+            loss, aux, grad_norm = self.train_step(batch)
             trace_end_time = timer()
 
             # post-step closure for logging
             def step_closure(
-                start_time, epoch, step, loss, grad_norm, aux, trace_start_time, trace_end_time, lr
+                start_time, epoch, step, loss, grad_norm, aux, trace_start_time, trace_end_time
             ):
                 training_time_elapsed = (
                     timer() - start_time  
                 ) / 3600 # in hours
 
+                # keep track of something like number of tokens trained on
                 if "atom_count" in aux.keys():
                     self.atoms_seen += aux["atom_count"].detach().item()
 
@@ -382,14 +421,13 @@ class BaseTrainer:
                 to_wandb["loss"] = loss
                 to_wandb["grad_norm"] = grad_norm
                 to_wandb["trace_time_ms"] = (trace_end_time - trace_start_time) * 1000
-                to_wandb["lr"] = lr
                 to_wandb["epoch"] = epoch
 
                 to_wandb["examples_seen"] = (step + 1) * self.global_batch_size
                 if "atom_count" in aux.keys():
                     to_wandb["atoms_seen"] = self.atoms_seen
 
-                to_wandb["nan"] = 1 - int(math.isfinite(loss))
+                to_wandb["loss_nan"] = 1 - int(math.isfinite(loss))
 
                 to_wandb["training_time_elapsed_hr"] = training_time_elapsed
                 to_wandb["avg_time_per_step_s"] = training_time_elapsed * 3600 / (step + 1)
@@ -410,7 +448,6 @@ class BaseTrainer:
                     {k: (v.detach().clone() if isinstance(v, torch.Tensor) else v) for k, v in aux.items()},
                     trace_start_time,
                     trace_end_time,
-                    lr,
                 ),
                 run_async=True,
             )
@@ -429,20 +466,32 @@ class BaseTrainer:
     @torch_xla.compile(full_graph=True)
     def train_step(self, batch: dict) -> tuple[torch.Tensor, dict, torch.Tensor]:
         
-        loss, aux = self.forward(**batch)
+        with torch.autocast('xla', dtype=torch.bfloat16, enabled=self.config.trainer.use_autocast):
+            loss, aux = self.forward(**batch)
 
         loss.backward()
         
         grad_norm = self.clip_gradients()
 
-        opt_aux = self.optimizer.step()
-        aux.update(opt_aux)
+        key_name = lambda key, x: f"{key}_{x}" if len(self.optimizers) > 1 else x
+
+        for key, optimizer in self.optimizers.items():
+
+            opt_aux = optimizer.step()
+            if opt_aux is not None:
+                aux.update(
+                    {key_name(key, k): v for k, v in opt_aux.items()}
+                )
+
+        for key, lr_scheduler in self.lr_schedulers.items():
+            
+            lr = lr_scheduler.get_last_lr()[0]
+            aux.update({key_name(key, "lr"): lr})
+            lr_scheduler.step()
+        
         self.model.zero_grad(set_to_none=False)
 
-        lr = self.lr_scheduler.get_last_lr()[0]
-        self.lr_scheduler.step()
-
-        return loss, aux, grad_norm, lr
+        return loss, aux, grad_norm
 
 
     def forward(self, **batch) -> tuple[torch.Tensor, dict]:
