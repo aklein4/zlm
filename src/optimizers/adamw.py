@@ -5,11 +5,13 @@ from torch.optim import Optimizer
 
 import math
 
+from utils.torch_utils import safe_finite
+
 
 class AdamW(Optimizer):
     """
     Implements Adam algorithm with weight decay fix as introduced in `Decoupled Weight Decay Regularization
-    <https://arxiv.org/abs/1711.05101>`__.
+    <https://arxiv.org/abs/1711.05101>`.
 
     Parameters:
         params (:obj:`Iterable[torch.nn.parameter.Parameter]`):
@@ -26,6 +28,10 @@ class AdamW(Optimizer):
             Whether ot not to correct bias in Adam (for instance, in Bert TF repository they use :obj:`False`).
         update_clip (:obj:`float`, `optional`, defaults to `None`):
             If a float value is provided, the update is clipped to the range :obj:`[-update_clip, update_clip]`.
+        fix_nan (:obj:`bool`, `optional`, defaults to `True`):
+            Whether to fix NaN values in gradients and updates by replacing them with zeros.
+        state_dtype (:obj:`torch.dtype`, `optional`, defaults to "bfloat16"):
+            The data type to use for the optimizer state (e.g., "float32", "bfloat16", "float16").
     """
 
     def __init__(
@@ -37,6 +43,8 @@ class AdamW(Optimizer):
         weight_decay: float = 0.0,
         correct_bias: bool = True,
         update_clip: float = None,
+        fix_nan: bool = True,
+        state_dtype: torch.dtype = "float32",
     ):
         if lr < 0.0:
             raise ValueError("Invalid learning rate: {} - should be >= 0.0".format(lr))
@@ -47,7 +55,10 @@ class AdamW(Optimizer):
         if not 0.0 <= eps:
             raise ValueError("Invalid epsilon value: {} - should be >= 0.0".format(eps))
         
-        defaults = dict(lr=lr, betas=betas, eps=eps, weight_decay=weight_decay, correct_bias=correct_bias, update_clip=update_clip)
+        defaults = dict(
+            lr=lr, betas=betas, eps=eps, weight_decay=weight_decay, correct_bias=correct_bias,
+            update_clip=update_clip, fix_nan=fix_nan, state_dtype=getattr(torch, state_dtype)
+        )
         
         super().__init__(params, defaults)
 
@@ -64,8 +75,9 @@ class AdamW(Optimizer):
         if closure is not None:
             loss = closure()
 
+        grad_nan = torch.tensor([False], device=self.param_groups[0]['params'][0].device)
         update_nan = torch.tensor([False], device=self.param_groups[0]['params'][0].device)
-        pre_param_nan = torch.tensor([False], device=self.param_groups[0]['params'][0].device)
+        param_nan = torch.tensor([False], device=self.param_groups[0]['params'][0].device)
         post_param_nan = torch.tensor([False], device=self.param_groups[0]['params'][0].device)
         for group in self.param_groups:
             for p in group["params"]:
@@ -80,20 +92,25 @@ class AdamW(Optimizer):
                     raise RuntimeError("AdamW does not support sparse gradients.")
 
                 # handle nan gradients
-                grad = torch.nan_to_num(grad, nan=0.0, posinf=0.0, neginf=0.0)
+                grad_nan = grad_nan | (~torch.isfinite(grad)).any()
+                if group["fix_nan"]:
+                    grad = safe_finite(grad)
+
+                param_nan = param_nan | (~torch.isfinite(p)).any()
 
                 state = self.state[p]
+                state_dtype = group["state_dtype"]
 
                 # State initialization
                 if len(state) == 0:
                     state["step"] = 0
                     # Exponential moving average of gradient values
-                    state["exp_avg"] = torch.zeros_like(grad, dtype=torch.bfloat16)
+                    state["exp_avg"] = torch.zeros_like(grad, dtype=state_dtype)
                     # Exponential moving average of squared gradient values
-                    state["exp_avg_sq"] = torch.zeros_like(grad, dtype=torch.bfloat16)
+                    state["exp_avg_sq"] = torch.zeros_like(grad, dtype=state_dtype)
                 else:
-                    state["exp_avg"] = state["exp_avg"].to(grad.device, dtype=torch.bfloat16)
-                    state["exp_avg_sq"] = state["exp_avg_sq"].to(grad.device, dtype=torch.bfloat16)
+                    state["exp_avg"] = state["exp_avg"].to(grad.device, dtype=state_dtype)
+                    state["exp_avg_sq"] = state["exp_avg_sq"].to(grad.device, dtype=state_dtype)
 
                 exp_avg, exp_avg_sq = state["exp_avg"], state["exp_avg_sq"]
                 beta1, beta2 = group["betas"]
@@ -110,9 +127,6 @@ class AdamW(Optimizer):
                     grad.pow(2).to(exp_avg_sq.dtype),
                     alpha=1.0 - beta2
                 )
-                exp_avg_sq.clamp_(min=group["eps"]**2)
-
-                denom = exp_avg_sq.to(p.dtype).sqrt()
 
                 step_size = group["lr"]
                 if group["correct_bias"]:  # No bias correction for Bert
@@ -120,30 +134,28 @@ class AdamW(Optimizer):
                     bias_correction2 = 1.0 - beta2 ** state["step"]
                     step_size = step_size * math.sqrt(bias_correction2) / bias_correction1
 
+                denom = torch.clamp(
+                    exp_avg_sq.to(p.dtype), min=group["eps"]**2
+                ).sqrt()
                 update = exp_avg.to(p.dtype) / denom
                 if group["update_clip"] is not None:
                     update = torch.clamp(update, -group["update_clip"], group["update_clip"])
 
                 update_nan = update_nan | (~torch.isfinite(update)).any()
-                pre_param_nan = pre_param_nan | (~torch.isfinite(p)).any()
+                if group["fix_nan"]:
+                    update = safe_finite(update)
 
-                p.add_(update, alpha=-step_size)
-
-                # Just adding the square of the weights to the loss function is *not*
-                # the correct way of using L2 regularization/weight decay with Adam,
-                # since that will interact with the m and v parameters in strange ways.
-                #
-                # Instead we want to decay the weights in a manner that doesn't interact
-                # with the m/v parameters. This is equivalent to adding the square
-                # of the weights to the loss with plain (non-momentum) SGD.
-                # Add weight decay at the end (fixed version)
                 if group["weight_decay"] > 0.0:
                     p.add_(p, alpha=-group["lr"] * group["weight_decay"])
+
+                p.add_(update, alpha=-step_size)
 
                 post_param_nan = post_param_nan | (~torch.isfinite(p)).any()
 
         return {
+            "grad_nan": grad_nan.long(),
             "update_nan": update_nan.long(),
-            "pre_param_nan": pre_param_nan.long(),
-            "post_param_nan": post_param_nan.long(),
+            "param_nan": param_nan.long(),
+            "post_param_nan": post_param_nan.long()
         }
+    
