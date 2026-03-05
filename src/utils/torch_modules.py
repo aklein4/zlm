@@ -13,7 +13,7 @@ class ContinuousEmbedding(nn.Module):
     def __init__(
         self,
         num_frequencies: int,
-        embedding_dim: int,
+        embedding_dim: int | None = None,
         input_min: float=0.0,
         input_max: float=1.0,
         bias: bool=False,
@@ -32,24 +32,28 @@ class ContinuousEmbedding(nn.Module):
         )
         self.register_buffer('frequencies', frequencies, persistent=True)
 
-        self.proj = nn.Linear(
-            2 * num_frequencies,
-            embedding_dim,
-            bias=bias,
-        )
+        if embedding_dim is not None:
+            self.proj = nn.Linear(
+                2 * num_frequencies,
+                embedding_dim,
+                bias=bias,
+            )
 
 
     def forward(self, x: torch.Tensor) -> torch.Tensor:
         x = (x - self.input_min) / (self.input_max - self.input_min)
 
-        theta = x.unsqueeze(-1) * self.frequencies
+        theta = x.unsqueeze(-1) * self.frequencies.to(x.dtype)
 
         emb_sin = torch.sin(theta)
         emb_cos = torch.cos(theta)
 
         emb = torch.cat([emb_sin, emb_cos], dim=-1)
 
-        return self.proj(emb)
+        if self.embedding_dim is not None:
+            return self.proj(emb)
+
+        return emb
 
 
 class UnbiasedEMA(nn.Module):

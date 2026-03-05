@@ -22,7 +22,7 @@ from utils.torch_utils import (
 from models.llama import LlamaForCausalLM, LlamaMLP, LlamaRMSNorm
 from models.custom_llama import CustomLlamaModel, CustomLlamaDecoderLayer
 from models import load_checkpoint_state
-from utils.torch_modules import SpectralBatchNorm, OnceSpectralBatchNorm, CustomBatchNorm, UnbiasedEMA
+from utils.torch_modules import ContinuousEmbedding, SpectralBatchNorm, OnceSpectralBatchNorm, CustomBatchNorm, UnbiasedEMA
 from utils.diffusion_utils import DiffusionScheduler
 
 
@@ -38,7 +38,7 @@ class AdaScale(nn.Module):
         super().__init__()
 
         self.embed = nn.Linear(
-            num_embeddings, hidden_size, bias=False
+            32, hidden_size, bias=False
         )
         self.scale = hidden_size ** 0.5
 
@@ -127,7 +127,7 @@ class DiffusionHead(nn.Module):
     ):
         super().__init__()
 
-        self.num_diffusion_timesteps = config.num_diffusion_timesteps
+        self.embed_t = ContinuousEmbedding(32, input_min=1.0, input_max=config.num_diffusion_timesteps-1)
 
         self.x_t_in_proj = nn.Linear(config.latent_size, config.hidden_size, bias=False)
 
@@ -159,10 +159,7 @@ class DiffusionHead(nn.Module):
         input_states: torch.FloatTensor,
     ) -> torch.FloatTensor:
 
-        t_embed = F.one_hot(
-            timestep - 1, # timestep 0 is never used
-            num_classes=(self.num_diffusion_timesteps - 1)
-        ).to(x_t.dtype)
+        t_embed = self.embed_t(timestep.to(x_t.dtype))
 
         # process the inputs
         hidden_states = (
