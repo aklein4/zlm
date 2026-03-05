@@ -100,8 +100,8 @@ class DiffusionHeadLayer(nn.Module):
         hidden_states: torch.FloatTensor,
         timestep: torch.FloatTensor=None,
     ) -> torch.FloatTensor:
-        # if constants.XLA_AVAILABLE:
-        #     hidden_states = offloading.offload_name(hidden_states, self.offload_name)
+        if constants.XLA_AVAILABLE:
+            hidden_states = offloading.offload_name(hidden_states, self.offload_name)
 
         timestep = timestep.long()
 
