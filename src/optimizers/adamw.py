@@ -149,8 +149,8 @@ class AdamW(Optimizer):
                     update = safe_finite(update)
 
                 if group["weight_decay"] > 0.0:
-                    p.add_(p, alpha=-group["lr"] * group["weight_decay"])
-                p.add_(-step_size * update)
+                    p.add_(-group["lr"] * group["weight_decay"] * finite.to(p.dtype) * p)
+                p.add_(-step_size * finite.to(p.dtype) * update)
 
                 post_param_nan = post_param_nan | (~torch.isfinite(p)).any()
 
