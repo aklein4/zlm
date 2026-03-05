@@ -233,13 +233,14 @@ class SpectralBatchNorm(nn.Module):
         self.norm = InternalSpectralBatchNorm(shape, eps)
     
     def forward(self, x: torch.Tensor) -> torch.Tensor:
-        device_type = x.device.type
-        device_type = (
-            device_type if isinstance(device_type, str) and device_type != "mps" else "cpu"
-        )
-        with torch.autocast(device_type=device_type, enabled=False):
-            y, min_val = self.norm(x)
-        return y, min_val
+        # device_type = x.device.type
+        # device_type = (
+        #     device_type if isinstance(device_type, str) and device_type != "mps" else "cpu"
+        # )
+        # with torch.autocast(device_type=device_type, enabled=False):
+        #     y, min_val = self.norm(x)
+        # return y, min_val
+        return self.norm(x)
 
 
 class InternalSpectralBatchNorm(nn.Module):

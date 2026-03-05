@@ -149,9 +149,13 @@ class ZLMTrainer(BaseTrainer):
         )
 
         # calculate logit grad scale
-        self.model.lm_loss_ema.update(lm_loss.detach().reshape(1))
+        # self.model.lm_loss_ema.update(lm_loss.detach().reshape(1))
+        # lm_loss_scale = self.config.trainer.min_lm_loss_scale + (1 - self.config.trainer.min_lm_loss_scale) * linear_warmup(
+        #     self.model.lm_loss_ema.retrieve() - self.config.trainer.lower_loss_threshold,
+        #     self.config.trainer.upper_loss_threshold - self.config.trainer.lower_loss_threshold,
+        # )
         lm_loss_scale = self.config.trainer.min_lm_loss_scale + (1 - self.config.trainer.min_lm_loss_scale) * linear_warmup(
-            self.model.lm_loss_ema.retrieve() - self.config.trainer.lower_loss_threshold,
+            lm_loss.detach().reshape(1) - self.config.trainer.lower_loss_threshold,
             self.config.trainer.upper_loss_threshold - self.config.trainer.lower_loss_threshold,
         )
         logit_grad_scale["value"] = lm_loss_scale
