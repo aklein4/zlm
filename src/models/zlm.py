@@ -41,7 +41,7 @@ class AdaScale(nn.Module):
             num_embeddings=num_embeddings,
             embedding_dim=hidden_size,
         )
-        self.scale = self.embedding_dim ** 0.5
+        self.scale = hidden_size ** 0.5
 
         self.do_norm = do_norm
         if do_norm:
