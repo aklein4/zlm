@@ -3,11 +3,8 @@ from typing import Callable, Iterable, Tuple
 import torch
 from torch.optim import Optimizer
 
-from torch_xla.experimental.assume_pure import PureModule
-import torch_xla.core.xla_model as xm
-
 import math
-from utils.torch_utils import NewtonSchulzModule, safe_finite
+from utils.torch_utils import newton_schulz, safe_finite
 
 
 class ScaledMuon(Optimizer):
@@ -67,69 +64,63 @@ class ScaledMuon(Optimizer):
             fix_nan=fix_nan, state_dtype=getattr(torch, state_dtype)
         )
 
-        self.newton_schulz = PureModule(NewtonSchulzModule(steps=num_iterations, eps=eps))
-        
         super().__init__(params, defaults)
 
 
-    def adamw_update(self, group, p, grad):
+    def adamw_update(self, group, p, grad, finite):
 
         state = self.state[p]
         state_dtype = group["state_dtype"]
 
         # State initialization
         if len(state) == 0:
-
-            state["step"] = 0
+            state["step"] = torch.zeros(1, device=grad.device, dtype=torch.long)
             # Exponential moving average of gradient values
             state["exp_avg"] = torch.zeros_like(grad, dtype=state_dtype)
             # Exponential moving average of squared gradient values
             state["exp_avg_sq"] = torch.zeros_like(grad, dtype=state_dtype)
-        
         else:
-
+            state["step"] = state["step"].to(grad.device, dtype=torch.long)
             state["exp_avg"] = state["exp_avg"].to(grad.device, dtype=state_dtype)
             state["exp_avg_sq"] = state["exp_avg_sq"].to(grad.device, dtype=state_dtype)
 
         exp_avg, exp_avg_sq = state["exp_avg"], state["exp_avg_sq"]
         beta1, beta2 = group["betas"]
 
-        state["step"] += 1
+        state["step"].add_(finite.to(state["step"].dtype))
 
         # Decay the first and second moment running average coefficient
         # In-place operations to update the averages at the same time
-        exp_avg.mul_(beta1).add_(
+        exp_avg.lerp_(
             grad.to(exp_avg.dtype),
-            alpha=1.0 - beta1
+            (1.0 - beta1) * finite.to(exp_avg.dtype)
         )
-        exp_avg_sq.mul_(beta2).add_(
-            grad.pow(2).to(exp_avg_sq.dtype),
-            alpha=1.0 - beta2
+        exp_avg_sq.lerp_(
+            grad.to(exp_avg_sq.dtype).pow(2),
+            (1.0 - beta2) * finite.to(exp_avg_sq.dtype)
         )
 
-        bias_correction1 = 1.0 - beta1 ** state["step"]
-        bias_correction2 = 1.0 - beta2 ** state["step"]
-        step_size = group["lr"] * math.sqrt(bias_correction2) / bias_correction1
+        bias_correction1 = 1.0 - beta1 ** state["step"].to(p.dtype)
+        bias_correction2 = 1.0 - beta2 ** state["step"].to(p.dtype)
+        step_size = group["lr"] * torch.sqrt(bias_correction2) / bias_correction1
 
-        denom = torch.clamp(
-            exp_avg_sq.to(p.dtype), min=group["eps"]**2
-        ).sqrt()
-        update = exp_avg.to(p.dtype) / denom
+        update = (
+            exp_avg.to(p.dtype) /
+            torch.clamp(exp_avg_sq.to(p.dtype), min=group["eps"]**2).sqrt()
+        )
 
         update_nan = (~torch.isfinite(update)).any()
         if group["fix_nan"]:
             update = safe_finite(update)
-        post_update_nan = (~torch.isfinite(update)).any()
 
         if group["weight_decay"] > 0.0:
-            p.add_(p, alpha=-group["lr"] * group["weight_decay"])
+            p.add_(-group["lr"] * group["weight_decay"] * finite.to(p.dtype) * p)
+        p.add_(-step_size * finite.to(p.dtype) * update)
 
-        p.add_(update, alpha=-step_size)
-
-        return update_nan, post_update_nan
+        return update_nan
 
     
-    def muon_update(self, group, p, grad):
+    def muon_update(self, group, p, grad, finite):
 
         state = self.state[p]
         state_dtype = group["state_dtype"]
@@ -147,32 +138,30 @@ class ScaledMuon(Optimizer):
         # In-place operations to update the averages at the same time
         exp_avg.lerp_(
             grad.to(exp_avg.dtype),
-            1 - beta1
+            (1.0 - beta1) * finite.to(exp_avg.dtype)
         )
 
         update = exp_avg
         if group["nesterov"]:
             update = torch.lerp(grad.to(exp_avg.dtype), exp_avg, beta1)
 
-        update = self.newton_schulz(
-            update.to(torch.bfloat16)
+        update = newton_schulz(
+            update.to(torch.bfloat16), steps=group["num_iterations"], eps=group["eps"]
         ).to(p.dtype)
 
         update_nan = (~torch.isfinite(update)).any()
         if group["fix_nan"]:
             update = safe_finite(update)
-        post_update_nan = (~torch.isfinite(update)).any()
 
         step_size = group["lr"] * group["rms_scale"] * math.sqrt(
             max(grad.shape[0], grad.shape[1])
         )
 
         if group["weight_decay"] > 0.0:
-            p.add_(p, alpha=-group["lr"] * group["weight_decay"])
+            p.add_(-group["lr"] * group["weight_decay"] * finite.to(p.dtype) * p)
+        p.add_(-step_size * finite.to(p.dtype) * update)
 
-        p.add_(update, alpha=-step_size)
-
-        return update_nan, post_update_nan
+        return update_nan
 
 
     @torch.no_grad()
@@ -188,9 +177,7 @@ class ScaledMuon(Optimizer):
             loss = closure()
 
         grad_nan = torch.tensor([False], device=self.param_groups[0]['params'][0].device)
-        post_grad_nan = torch.tensor([False], device=self.param_groups[0]['params'][0].device)
         update_nan = torch.tensor([False], device=self.param_groups[0]['params'][0].device)
-        post_update_nan = torch.tensor([False], device=self.param_groups[0]['params'][0].device)
         param_nan = torch.tensor([False], device=self.param_groups[0]['params'][0].device)
         post_param_nan = torch.tensor([False], device=self.param_groups[0]['params'][0].device)
         for group in self.param_groups:
@@ -206,10 +193,10 @@ class ScaledMuon(Optimizer):
                     raise RuntimeError("AdamW does not support sparse gradients.")
 
                 # handle nan gradients
+                finite = torch.isfinite(grad).all()
                 grad_nan = grad_nan | (~torch.isfinite(grad)).any()
                 if group["fix_nan"]:
                     grad = safe_finite(grad)
-                post_grad_nan = post_grad_nan | (~torch.isfinite(grad)).any()
 
                 param_nan = param_nan | (~torch.isfinite(p)).any()
 
@@ -218,21 +205,17 @@ class ScaledMuon(Optimizer):
                     min(grad.shape) <= 1 or
                     (hasattr(p, "no_muon") and p.no_muon)
                 ):
-                    curr_update_nan, post = self.adamw_update(group, p, grad)
+                    curr_update_nan = self.adamw_update(group, p, grad, finite)
                 else:
-                    curr_update_nan, post = self.muon_update(group, p, grad)
+                    curr_update_nan = self.muon_update(group, p, grad, finite)
 
                 update_nan = update_nan | curr_update_nan
-                post_update_nan = post_update_nan | post
-
                 post_param_nan = post_param_nan | (~torch.isfinite(p)).any()
 
         return {
             "grad_nan": grad_nan.long(),
             "update_nan": update_nan.long(),
             "param_nan": param_nan.long(),
-            "post_grad_nan": post_grad_nan.long(),
-            "post_update_nan": post_update_nan.long(),
             "post_param_nan": post_param_nan.long(),
         }
     

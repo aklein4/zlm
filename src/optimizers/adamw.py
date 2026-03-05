@@ -124,11 +124,11 @@ class AdamW(Optimizer):
                 # In-place operations to update the averages at the same time
                 exp_avg.lerp_(
                     grad.to(exp_avg.dtype),
-                    weight=(1.0 - beta1) * finite.to(exp_avg.dtype)
+                    (1.0 - beta1) * finite.to(exp_avg.dtype)
                 )
                 exp_avg_sq.lerp_(
                     grad.to(exp_avg_sq.dtype).pow(2),
-                    weight=(1.0 - beta2) * finite.to(exp_avg_sq.dtype)
+                    (1.0 - beta2) * finite.to(exp_avg_sq.dtype)
                 )
 
                 step_size = group["lr"]
