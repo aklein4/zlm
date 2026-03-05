@@ -8,8 +8,8 @@ advanced:
         optimization_barrier_layers:
          - DiffusionHeadLayer
         scan_layers: layers
-        offload_tensors:
-         - diffusion_head_input
+        offload_tensors: []
+        #  - diffusion_head_input
 
  -  name: uncond_diffusion_head
     settings:
@@ -18,8 +18,8 @@ advanced:
         optimization_barrier_layers:
          - DiffusionHeadLayer
         scan_layers: layers
-        offload_tensors:
-         - uncond_diffusion_head_input
+        offload_tensors: []
+        #  - uncond_diffusion_head_input
 
  -  name: encoder_model
     settings:
