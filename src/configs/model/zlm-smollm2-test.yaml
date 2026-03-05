@@ -78,5 +78,5 @@ lm_loss_ema_beta: 0.75
 
 pure_modules:
   - InternalSpectralBatchNorm
-  - DiffusionHead
+  - DiffusionHeadLayer
   
