@@ -96,7 +96,7 @@ def add_activation_checkpointing_and_scan(
       names_to_offload=offload_tensors,
     )
   )
-  return scan_layers.compile(model, layers_to_scan, partition_fn=partition_fn)
+  return scan_layers.compile(model, layers_to_scan, partition_fn=partition_fn, is_layer_pure=is_layer_pure)
 
 
 def add_optimization_barriers(model: nn.Module, remat_config: DictConfig) -> nn.Module:
