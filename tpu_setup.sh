@@ -21,8 +21,8 @@ pip install --upgrade pip
 pip install --upgrade setuptools
 
 # install torch
-pip install torch==2.8.0 --index-url https://download.pytorch.org/whl/cpu
-pip install torch_xla[tpu]==2.8.0
+pip install torch==2.9.0 --index-url https://download.pytorch.org/whl/cpu
+pip install torch_xla[tpu]==2.9.0
 
 # install extras
 pip install setuptools==67.7.2
