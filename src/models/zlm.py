@@ -446,7 +446,7 @@ class ZLMModel(nn.Module):
         # )
         # with torch.autocast(device_type=device_type, enabled=False):
         #     mu = self.encoder_mu_proj_out(
-        #         hidden_states[..., -self.z_length:, :].float()
+        #         hidden_states.float()[..., -self.z_length:, :]
         #     ).float()
 
         # apply spectral normalization
