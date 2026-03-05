@@ -37,9 +37,8 @@ class AdaScale(nn.Module):
     ):
         super().__init__()
 
-        self.embed = nn.Embedding(
-            num_embeddings=num_embeddings,
-            embedding_dim=hidden_size,
+        self.embed = nn.Linear(
+            num_embeddings, hidden_size, bias=False
         )
         self.scale = hidden_size ** 0.5
 
@@ -103,18 +102,16 @@ class DiffusionHeadLayer(nn.Module):
     def forward(
         self,
         hidden_states: torch.FloatTensor,
-        timestep: torch.FloatTensor=None,
+        t_embed: torch.FloatTensor=None,
     ) -> torch.FloatTensor:
         # if constants.XLA_AVAILABLE:
         #     hidden_states = offloading.offload_name(hidden_states, self.offload_name)
 
-        timestep = timestep.long()
-
         residual = hidden_states
 
-        hidden_states = self.norm(hidden_states, timestep)
+        hidden_states = self.norm(hidden_states, t_embed)
         hidden_states = self.mlp(hidden_states)
-        hidden_states = self.out_scale(hidden_states, timestep)
+        hidden_states = self.out_scale(hidden_states, t_embed)
 
         hidden_states = residual + hidden_states
 
@@ -129,6 +126,8 @@ class DiffusionHead(nn.Module):
         offload_name: str="diffusion_head_input"
     ):
         super().__init__()
+
+        self.num_diffusion_timesteps = config.num_diffusion_timesteps
 
         self.x_t_in_proj = nn.Linear(config.latent_size, config.hidden_size, bias=False)
 
@@ -160,6 +159,11 @@ class DiffusionHead(nn.Module):
         input_states: torch.FloatTensor,
     ) -> torch.FloatTensor:
 
+        t_embed = F.one_hot(
+            timestep - 1, # timestep 0 is never used
+            num_classes=(self.num_diffusion_timesteps - 1)
+        ).to(x_t.dtype)
+
         # process the inputs
         hidden_states = (
             self.input_states_in_proj(self.input_states_norm(input_states)) +
@@ -169,11 +173,11 @@ class DiffusionHead(nn.Module):
         # pass through the layers
         hidden_states = self.layers(
             hidden_states,
-            timestep=(timestep - 1).float(), # xla scan only supports differentiable dtypes
+            t_embed=t_embed,
         )
 
         # remove 1 from timestep since 0 is never used (unused embedding entries can cause issues with xla)
-        hidden_states = self.out_norm(hidden_states, (timestep - 1))
+        hidden_states = self.out_norm(hidden_states, t_embed)
         
         device_type = hidden_states.device.type
         device_type = (
