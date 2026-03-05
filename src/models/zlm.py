@@ -127,6 +127,7 @@ class DiffusionHead(nn.Module):
     ):
         super().__init__()
 
+        # we would prefer to use a lookup table but torch-xla does not like it for some reason
         self.embed_t = ContinuousEmbedding(
             config.num_timestep_embed_frequencies,
             input_min=1.0, input_max=config.num_diffusion_timesteps-1

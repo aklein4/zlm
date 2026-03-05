@@ -26,10 +26,10 @@ class ContinuousEmbedding(nn.Module):
         self.input_min = input_min
         self.input_max = input_max
 
-        frequencies = np.pi * torch.arange(
+        frequencies = np.pi * (1 + torch.arange(
             num_frequencies,
             dtype=torch.float32
-        )
+        ))
         self.register_buffer('frequencies', frequencies, persistent=True)
 
         if embedding_dim is not None:
