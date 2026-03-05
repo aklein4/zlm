@@ -38,7 +38,7 @@ class AdaScale(nn.Module):
         super().__init__()
 
         self.embed = nn.Linear(
-            32, hidden_size, bias=False
+            64, hidden_size, bias=False
         )
         self.scale = hidden_size ** 0.5
 

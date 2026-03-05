@@ -111,9 +111,13 @@ def main(config: omegaconf.DictConfig):
     )
     logger.info(f"Trainer initialized: {config.trainer.type}")
 
-    # TODO(https://github.com/pytorch/xla/issues/8954): Remove `jax_env_context`.
-    with torch_xla._internal.jax_workarounds.jax_env_context():
+    if torch_xla.version.__version__.startswith("2.9"):
         trainer.train_loop()
+    
+    else:
+        # TO DO (https://github.com/pytorch/xla/issues/8954): Remove `jax_env_context`.
+        with torch_xla._internal.jax_workarounds.jax_env_context():
+            trainer.train_loop()
 
     return 0
 
