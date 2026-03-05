@@ -63,7 +63,7 @@ class AdaScale(nn.Module):
         if self.do_norm:
             x = self.norm(x)
 
-        return x # * (1.0 + self.embed(condition).to(x.dtype))
+        return x * (1.0 + self.embed(condition).to(x.dtype))
 
 
 class DiffusionHeadLayer(nn.Module):
@@ -100,8 +100,8 @@ class DiffusionHeadLayer(nn.Module):
         hidden_states: torch.FloatTensor,
         timestep: torch.FloatTensor=None,
     ) -> torch.FloatTensor:
-        if constants.XLA_AVAILABLE:
-            hidden_states = offloading.offload_name(hidden_states, self.offload_name)
+        # if constants.XLA_AVAILABLE:
+        #     hidden_states = offloading.offload_name(hidden_states, self.offload_name)
 
         timestep = timestep.long()
 
@@ -169,7 +169,13 @@ class DiffusionHead(nn.Module):
 
         # remove 1 from timestep since 0 is never used (unused embedding entries can cause issues with xla)
         hidden_states = self.out_norm(hidden_states, (timestep - 1))
-        pred = self.out_proj(hidden_states)
+        
+        device_type = hidden_states.device.type
+        device_type = (
+            device_type if isinstance(device_type, str) and device_type != "mps" else "cpu"
+        )
+        with torch.autocast(device_type=device_type, enabled=False):
+            pred = self.out_proj(hidden_states.float()).float()
 
         return pred
 
@@ -432,7 +438,16 @@ class ZLMModel(nn.Module):
             inputs_embeds=tokens,
             elementwise_pad_mask=mask,
         )
-        mu = self.encoder_mu_proj_out(hidden_states[..., -self.z_length:, :])
+
+                
+        device_type = hidden_states.device.type
+        device_type = (
+            device_type if isinstance(device_type, str) and device_type != "mps" else "cpu"
+        )
+        with torch.autocast(device_type=device_type, enabled=False):
+            mu = self.encoder_mu_proj_out(
+                hidden_states[..., -self.z_length:, :].float()
+            ).float()
 
         # apply spectral normalization
         mu, min_eig_val = self.mu_out_norm(mu)

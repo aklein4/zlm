@@ -149,13 +149,9 @@ class ZLMTrainer(BaseTrainer):
         )
 
         # calculate logit grad scale
-        # self.model.lm_loss_ema.update(lm_loss.detach().reshape(1))
-        # lm_loss_scale = self.config.trainer.min_lm_loss_scale + (1 - self.config.trainer.min_lm_loss_scale) * linear_warmup(
-        #     self.model.lm_loss_ema.retrieve() - self.config.trainer.lower_loss_threshold,
-        #     self.config.trainer.upper_loss_threshold - self.config.trainer.lower_loss_threshold,
-        # )
+        self.model.lm_loss_ema.update(lm_loss.detach().reshape(1))
         lm_loss_scale = self.config.trainer.min_lm_loss_scale + (1 - self.config.trainer.min_lm_loss_scale) * linear_warmup(
-            lm_loss.detach().reshape(1) - self.config.trainer.lower_loss_threshold,
+            self.model.lm_loss_ema.retrieve() - self.config.trainer.lower_loss_threshold,
             self.config.trainer.upper_loss_threshold - self.config.trainer.lower_loss_threshold,
         )
         logit_grad_scale["value"] = lm_loss_scale
@@ -176,6 +172,7 @@ class ZLMTrainer(BaseTrainer):
         z_states_for_kl = scale_gradient(z_states, z_states_kl_grad_scale)[None]
 
         # diffusion sampling
+        n_uncond = self.config.trainer.num_uncond_diffusion_samples
         t = torch.randint(
             low=1,
             high=self.model.config.num_diffusion_timesteps,
@@ -184,24 +181,24 @@ class ZLMTrainer(BaseTrainer):
             dtype=torch.long,
         )
         noise = torch.randn_like(mu_for_kl)
-
         z_t = self.model.scheduler.add_noise(
             mu_for_kl, t, noise
         )
+
         pred_z_0 = self.model.diffusion_head(
             z_t, t, z_states_for_kl,
         )
-        kls = self.model.scheduler.kl(
-            mu_for_kl, t, pred_z_0, dim=-1
-        ).mean(0)
-
-        n_uncond = self.config.trainer.num_uncond_diffusion_samples
         uncond_pred_z_0 = self.model.uncond_diffusion_head(
             z_t[:n_uncond].detach(), t[:n_uncond], self.model.uncond_tokens[None, None, :, :],
         )
-        uncond_kls = self.model.scheduler.kl(
-            mu_for_kl[:n_uncond].detach(), t[:n_uncond], uncond_pred_z_0, dim=-1
-        ).mean(0)
+        
+        with torch.autocast("xla", enabled=False):
+            kls = self.model.scheduler.kl(
+                mu_for_kl.float(), t, pred_z_0.float(), dim=-1
+            ).mean(0)
+            uncond_kls = self.model.scheduler.kl(
+                mu_for_kl[:n_uncond].detach().float(), t[:n_uncond], uncond_pred_z_0.float(), dim=-1
+            ).mean(0)
 
         # sum over batch to get [Z,]
         kl = kls.sum(0) * (self.model.config.num_diffusion_timesteps - 1)
