@@ -43,6 +43,8 @@ scheduler.b: [null]
 
 
 # diffusion head
+diffusion_head.embed_t.frequencies: [null]
+
 diffusion_head.x_t_in_proj.weight: [fsdp, null]
 # diffusion_head.hidden_states_in_proj.weight: [fsdp, null]
 
