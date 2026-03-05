@@ -57,6 +57,7 @@ def compile(
   if not isinstance(seq, HomogeneousSequential):
     raise ValueError(f"compile only supports HomogeneousSequential, got {type(seq)}")
   # Replace the submodule
+  print("HERE IS LAYER PURE:", is_layer_pure, flush=True)
   mod.set_submodule(
     sequential_to_scan, compile_one_stack(seq, partition_fn=partition_fn, is_layer_pure=is_layer_pure)
   )

@@ -57,7 +57,6 @@ def add_activation_checkpointing_and_scan(
   layers_to_scan = remat_config.get("scan_layers", None)
   offload_tensors = remat_config.get("offload_tensors", [])
   is_layer_pure = remat_config.get("is_layer_pure", False)
-  print("HERE IS LAYER PURE:", is_layer_pure, flush=True)
 
   # Checking preconditions and logging.
   if remat_classes:
