@@ -37,10 +37,11 @@ class AdaScale(nn.Module):
     ):
         super().__init__()
 
-        self.embed = ScaledEmbedding(
+        self.embed = nn.Embedding(
             num_embeddings=num_embeddings,
             embedding_dim=hidden_size,
         )
+        self.scale = self.embedding_dim ** 0.5
 
         self.do_norm = do_norm
         if do_norm:
@@ -63,7 +64,11 @@ class AdaScale(nn.Module):
         if self.do_norm:
             x = self.norm(x)
 
-        return x # * (1.0 + self.embed(condition).to(x.dtype))
+        s = 1.0 + (
+            self.scale * self.embed(condition).to(x.dtype)
+        )
+
+        return x * s
 
 
 class DiffusionHeadLayer(nn.Module):
@@ -336,20 +341,21 @@ class ZLMModel(nn.Module):
             gaussian_init(self.encoder_mu_proj_out)
 
         # set the diffusion head conditioning embeddings to ones
-        self.apply(self.scaled_embed_init)
+        self.apply(self.ada_scale_init)
 
-        # scale input layers by embedding stats
+        # ignore noise on encoder input at init
         self.encoder_noise_proj_in.weight.data.zero_()
+
+        # init decoder_z_proj_in using the top |z| of the embedding covariance
+        eigvals, eigvecs = torch.linalg.eigh(embed_cov)
         self.decoder_z_proj_in.weight.data.copy_(
-            (
-                embed_dist._unbroadcasted_scale_tril @ self.decoder_z_proj_in.weight.data
-            ).detach()
+            eigvecs[:, -self.latent_size:] * torch.sqrt(eigvals[None, -self.latent_size:])
         )
         
 
-    def scaled_embed_init(self, module):
-        if isinstance(module, ScaledEmbedding):
-            module.zeros_init()
+    def ada_scale_init(self, module):
+        if isinstance(module, AdaScale):
+            module.embed.weight.data.zero_()
 
     
     def sample_noise(

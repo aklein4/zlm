@@ -8,28 +8,6 @@ from utils.torch_utils import attach_gradient
 from utils.sharding_utils import maybe_shard_with_gradients
 
 
-class ScaledEmbedding(nn.Embedding):
-
-    def __init__(
-        self,
-        *args,
-        **kwargs,
-    ):
-        super().__init__(*args, **kwargs)
-        self.scale = self.embedding_dim ** 0.5
-
-
-    def ones_init(self):
-        self.weight.data.fill_(1.0 / self.scale)
-
-    def zeros_init(self):
-        self.weight.data.zero_()
-
-
-    def forward(self, input: torch.Tensor) -> torch.Tensor:
-        return super().forward(input) * self.scale
-
-
 class ContinuousEmbedding(nn.Module):
 
     def __init__(
