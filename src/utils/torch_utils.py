@@ -288,17 +288,6 @@ def safe_finite(x: torch.Tensor, safe=False) -> torch.Tensor:
         return torch.nan_to_num(x, nan=0.0, posinf=0.0, neginf=0.0)
 
 
-class NewtonSchulzModule(nn.Module):
-
-    def __init__(self, steps=5, eps=1e-7):
-        super().__init__()
-        self.steps = steps
-        self.eps = eps
-
-    def forward(self, G):
-        return newton_schulz(G, self.steps, self.eps)
-    
-
 def newton_schulz(G, steps=5, eps=1e-7):
     """
     Perform spectral whitening on G using Newton-Schulz iteration.
@@ -325,7 +314,8 @@ def newton_schulz(G, steps=5, eps=1e-7):
     if constants.XLA_AVAILABLE:
         ts = torch.arange(steps, device=X.device)
         X, _ = scan(
-            _newton_schulz_inner, X, ts
+            _newton_schulz_inner, X, ts,
+            is_fn_pure=True
         )
     else:
         for t in range(steps):

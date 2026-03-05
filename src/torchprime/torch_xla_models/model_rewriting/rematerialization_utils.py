@@ -56,6 +56,7 @@ def add_activation_checkpointing_and_scan(
   )
   layers_to_scan = remat_config.get("scan_layers", None)
   offload_tensors = remat_config.get("offload_tensors", [])
+  is_layer_pure = remat_config.get("is_layer_pure", False)
 
   # Checking preconditions and logging.
   if remat_classes:
@@ -80,7 +81,7 @@ def add_activation_checkpointing_and_scan(
     return wrap_module(model, maybe_checkpoint) if remat_classes else model
 
   if not remat_classes:
-    return scan_layers.compile(model, layers_to_scan)
+    return scan_layers.compile(model, layers_to_scan, is_layer_pure=is_layer_pure)
 
   seq = model.get_submodule(layers_to_scan)
   assert isinstance(seq, HomogeneousSequential)

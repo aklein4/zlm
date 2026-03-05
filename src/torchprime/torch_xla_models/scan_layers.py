@@ -7,9 +7,10 @@ from torchprime.layers.sequential import HomogeneousSequential, PyTree, splat
 
 
 class HomogeneousSequentialScan(HomogeneousSequential):
-  def __init__(self, *args, partition_fn=default_partition):
+  def __init__(self, *args, partition_fn=default_partition, is_layer_pure=False):
     super().__init__(*args)
     self.partition_fn = partition_fn
+    self.is_layer_pure = is_layer_pure
 
   def forward(self, *input, **broadcasted_inputs: PyTree):
     # `self.children()` returns an iterator over the immediate submodules, i.e.
@@ -21,8 +22,10 @@ class HomogeneousSequentialScan(HomogeneousSequential):
     if len(input) == 1:
       # Handle single argument case: we don't need to call the module with a tuple.
       input = input[0]
+    print("PURE:", self.is_layer_pure, flush=True)
     out, _broadcasted_inputs_back = scan_layers(
-      layers, (input, broadcasted_inputs), partition_fn=self.partition_fn
+      layers, (input, broadcasted_inputs), partition_fn=self.partition_fn,
+      is_layer_pure=self.is_layer_pure
     )
     return out
 
@@ -38,23 +41,23 @@ class BroadcastArguments(torch.nn.Module):
 
 
 def compile_one_stack(
-  mod: HomogeneousSequential, partition_fn=default_partition
+  mod: HomogeneousSequential, partition_fn=default_partition, is_layer_pure=False
 ) -> HomogeneousSequential:
   # Replace base class with our optimized subclass.
   if isinstance(mod, HomogeneousSequentialScan):
     raise NotImplementedError("Cannot compile HomogeneousSequential twice")
-  new_mod = HomogeneousSequentialScan(*mod.children(), partition_fn=partition_fn)
+  new_mod = HomogeneousSequentialScan(*mod.children(), partition_fn=partition_fn, is_layer_pure=is_layer_pure)
   return new_mod
 
 
 def compile(
-  mod: nn.Module, sequential_to_scan: str, partition_fn=default_partition
+  mod: nn.Module, sequential_to_scan: str, partition_fn=default_partition, is_layer_pure=False
 ) -> nn.Module:
   seq = mod.get_submodule(sequential_to_scan)
   if not isinstance(seq, HomogeneousSequential):
     raise ValueError(f"compile only supports HomogeneousSequential, got {type(seq)}")
   # Replace the submodule
   mod.set_submodule(
-    sequential_to_scan, compile_one_stack(seq, partition_fn=partition_fn)
+    sequential_to_scan, compile_one_stack(seq, partition_fn=partition_fn, is_layer_pure=is_layer_pure)
   )
   return mod
