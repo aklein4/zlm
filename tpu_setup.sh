@@ -13,33 +13,26 @@ Example:
     . tpu_setup.sh <HF_ID> <HF_TOKEN> <WANDB_TOKEN>
 '
 
-# boilerplate
-sudo apt-get update -y
-
-# install python 3.11
-sudo apt install -y python3.11 python3.11-venv python3.11-dev 
-
 # update path(?)
 export PATH="/home/$USER/.local/bin:$PATH"
 
 # # upgrade and update pip
-python3.11 -m pip install --upgrade pip
-python3.11 -m pip install --upgrade setuptools
+pip install --upgrade pip
+pip install --upgrade setuptools
 
 # install torch
-python3.11 -m pip install torch==2.9.0 --index-url https://download.pytorch.org/whl/cpu
-python3.11 -m pip install torch_xla[tpu]==2.9.0
-python3.11 -m pip install --pre torch_xla[pallas]==2.9.0 --index-url https://us-python.pkg.dev/ml-oss-artifacts-published/jax/simple/ --find-links https://storage.googleapis.com/jax-releases/libtpu_releases.html
+pip install torch==2.8.0 --index-url https://download.pytorch.org/whl/cpu
+pip install torch_xla[tpu]==2.8.0
 
 # install extras
-python3.11 -m pip install setuptools==67.7.2
-python3.11 -m pip install -r tpu_requirements.txt
+pip install setuptools==67.7.2
+pip install -r tpu_requirements.txt
 
 # login to huggingface
 hf auth login --token $2
 
 # login to wandb
-python3.11 -m wandb login $3
+python -m wandb login $3
 
 # create a .env file to store the Hugging Face ID
 echo "HF_ID=$1" > .env

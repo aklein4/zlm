@@ -69,6 +69,7 @@ num_diffusion_timesteps: 16
 
 # diffusion head configuration
 diffusion_in_proj: false
+num_timestep_embed_frequencies: 32
 num_diffusion_head_layers: 2
 diffusion_mlp_size: 256
 

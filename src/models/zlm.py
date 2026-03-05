@@ -31,14 +31,14 @@ class AdaScale(nn.Module):
     def __init__(
         self,
         hidden_size: int,
-        num_embeddings: int,
+        num_frequencies: int,
         do_norm: bool=False,
         rms_norm_eps: float=None,
     ):
         super().__init__()
 
         self.embed = nn.Linear(
-            64, hidden_size, bias=False
+            2 * num_frequencies, hidden_size, bias=False
         )
         self.scale = hidden_size ** 0.5
 
@@ -81,7 +81,7 @@ class DiffusionHeadLayer(nn.Module):
 
         self.norm = AdaScale(
             config.hidden_size,
-            config.num_diffusion_timesteps-1,
+            config.num_timestep_embed_frequencies,
             do_norm=True,
             rms_norm_eps=config.rms_norm_eps,
         )
@@ -92,7 +92,7 @@ class DiffusionHeadLayer(nn.Module):
         )
         self.out_scale = AdaScale(
             config.hidden_size,
-            config.num_diffusion_timesteps-1,
+            config.num_timestep_embed_frequencies,
             do_norm=False,
         )
 
@@ -127,7 +127,10 @@ class DiffusionHead(nn.Module):
     ):
         super().__init__()
 
-        self.embed_t = ContinuousEmbedding(32, input_min=1.0, input_max=config.num_diffusion_timesteps-1)
+        self.embed_t = ContinuousEmbedding(
+            config.num_timestep_embed_frequencies,
+            input_min=1.0, input_max=config.num_diffusion_timesteps-1
+        )
 
         self.x_t_in_proj = nn.Linear(config.latent_size, config.hidden_size, bias=False)
 
@@ -145,7 +148,7 @@ class DiffusionHead(nn.Module):
 
         self.out_norm = AdaScale(
             config.hidden_size,
-            config.num_diffusion_timesteps-1,
+            config.num_timestep_embed_frequencies,
             do_norm=True,
             rms_norm_eps=config.rms_norm_eps,
         )
