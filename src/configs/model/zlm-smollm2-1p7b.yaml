@@ -75,6 +75,5 @@ diffusion_mlp_size: 3072
 # training configuration
 lm_loss_ema_beta: 0.75
 
-pure_modules:
-  - InternalSpectralBatchNorm
+pure_modules: []
   

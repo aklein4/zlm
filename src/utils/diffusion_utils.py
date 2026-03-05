@@ -112,9 +112,6 @@ class DiffusionScheduler(nn.Module):
             unsqueeze_to_channel(self.b[timestep], noise) * noise
         )
 
-    def forward(self, x_0, timestep, noise):
-        return self.add_noise(x_0, timestep, noise)
-
 
     def step(
         self,
