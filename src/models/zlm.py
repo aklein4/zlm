@@ -438,15 +438,7 @@ class ZLMModel(nn.Module):
             inputs_embeds=tokens,
             elementwise_pad_mask=mask,
         )
-               
-        device_type = hidden_states.device.type
-        device_type = (
-            device_type if isinstance(device_type, str) and device_type != "mps" else "cpu"
-        )
-        with torch.autocast(device_type=device_type, enabled=False):
-            mu = self.encoder_mu_proj_out(
-                hidden_states[..., -self.z_length:, :].float()
-            ).float()
+        mu = self.encoder_mu_proj_out(hidden_states[..., -self.z_length:, :])
 
         # apply spectral normalization
         mu, min_eig_val = self.mu_out_norm(mu)
