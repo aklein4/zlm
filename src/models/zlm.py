@@ -22,7 +22,7 @@ from utils.torch_utils import (
 from models.llama import LlamaForCausalLM, LlamaMLP, LlamaRMSNorm
 from models.custom_llama import CustomLlamaModel, CustomLlamaDecoderLayer
 from models import load_checkpoint_state
-from utils.torch_modules import ScaledEmbedding, SpectralBatchNorm, OnceSpectralBatchNorm, CustomBatchNorm, UnbiasedEMA
+from utils.torch_modules import SpectralBatchNorm, OnceSpectralBatchNorm, CustomBatchNorm, UnbiasedEMA
 from utils.diffusion_utils import DiffusionScheduler
 
 
