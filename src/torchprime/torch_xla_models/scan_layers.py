@@ -22,7 +22,6 @@ class HomogeneousSequentialScan(HomogeneousSequential):
     if len(input) == 1:
       # Handle single argument case: we don't need to call the module with a tuple.
       input = input[0]
-    print("PURE:", self.is_layer_pure, flush=True)
     out, _broadcasted_inputs_back = scan_layers(
       layers, (input, broadcasted_inputs), partition_fn=self.partition_fn,
       is_layer_pure=self.is_layer_pure
