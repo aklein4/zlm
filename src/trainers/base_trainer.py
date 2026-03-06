@@ -125,7 +125,7 @@ class BaseTrainer:
         model = apply_xla_patch_to_nn_linear(model)
 
         # Add `xp.Trace` to linear layers in the module tree (just for profiling?).
-        model = auto_trace(model)
+        # model = auto_trace(model)
 
         # print model parameters that to not have sharding spec
         config_names = set(self.config.model.sharding.keys())
