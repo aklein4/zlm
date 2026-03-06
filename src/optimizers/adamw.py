@@ -3,8 +3,6 @@ from typing import Callable, Iterable, Tuple
 import torch
 from torch.optim import Optimizer
 
-from torch_xla.experimental.assume_pure import assume_pure
-
 import math
 
 from utils.torch_utils import safe_finite
@@ -66,28 +64,6 @@ class AdamW(Optimizer):
 
 
     @torch.no_grad()
-    def pre_step(self):
-        for group in self.param_groups:
-            for p in group["params"]:
-                
-                state = self.state[p]
-                state_dtype = group["state_dtype"]
-
-                # State initialization
-                if len(state) == 0:
-                    state["step"] = torch.zeros(1, device=p.device, dtype=torch.long)
-                    # Exponential moving average of gradient values
-                    state["exp_avg"] = torch.zeros_like(p, dtype=state_dtype)
-                    # Exponential moving average of squared gradient values
-                    state["exp_avg_sq"] = torch.zeros_like(p, dtype=state_dtype)
-                else:
-                    state["step"] = state["step"].to(p.device, dtype=torch.long)
-                    state["exp_avg"] = state["exp_avg"].to(p.device, dtype=state_dtype)
-                    state["exp_avg_sq"] = state["exp_avg_sq"].to(p.device, dtype=state_dtype)
-
-
-    @assume_pure
-    @torch.no_grad()
     def step(self, closure: Callable = None):
         """
         Performs a single optimization step.
@@ -125,6 +101,19 @@ class AdamW(Optimizer):
                 param_nan = param_nan | (~torch.isfinite(p)).any()
 
                 state = self.state[p]
+                state_dtype = group["state_dtype"]
+
+                # State initialization
+                if len(state) == 0:
+                    state["step"] = torch.zeros(1, device=grad.device, dtype=torch.long)
+                    # Exponential moving average of gradient values
+                    state["exp_avg"] = torch.zeros_like(grad, dtype=state_dtype)
+                    # Exponential moving average of squared gradient values
+                    state["exp_avg_sq"] = torch.zeros_like(grad, dtype=state_dtype)
+                else:
+                    state["step"] = state["step"].to(grad.device, dtype=torch.long)
+                    state["exp_avg"] = state["exp_avg"].to(grad.device, dtype=state_dtype)
+                    state["exp_avg_sq"] = state["exp_avg_sq"].to(grad.device, dtype=state_dtype)
 
                 exp_avg, exp_avg_sq = state["exp_avg"], state["exp_avg_sq"]
                 beta1, beta2 = group["betas"]
