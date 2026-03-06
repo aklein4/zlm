@@ -705,12 +705,13 @@ class ZLMModel(nn.Module):
     def sample(
         self,
         input_ids: torch.LongTensor,
+        num_output_tokens: int = None,
         input_mask: torch.BoolTensor=None,
         noise: torch.FloatTensor=None,
         encoded_z: torch.FloatTensor=None,
         temperature: float | str = "greedy",
+        verbose: bool=False,
     ):
-        # TODO: update with correct normalization
 
         from transformers.cache_utils import DynamicCache
         from tqdm import tqdm
@@ -737,7 +738,7 @@ class ZLMModel(nn.Module):
         all_z = []
         prev_normed_z = torch.zeros_like(noise[:, 0, :]) # [B, latent_size]
         t_iter = torch.arange(1, self.scheduler.num_timesteps).to(noise.device).flip(0)
-        for i in tqdm(range(self.z_length + 1), desc="sampling z"):
+        for i in tqdm(range(self.z_length + 1), desc="sampling z", disable=(not verbose)):
             
             # pass the previous z token through the decoder
             z_token = (
@@ -791,7 +792,8 @@ class ZLMModel(nn.Module):
         prev_logit_token = expand_to_batch(
             self.decoder_start_output_token, prev_normed_z[:, None, :]
         )[:, 0, :] # [B, hidden_size]
-        for i in tqdm(range(self.output_length), desc="sampling output"):
+        num_output_tokens = self.output_length if num_output_tokens is None else num_output_tokens
+        for i in tqdm(range(num_output_tokens), desc="sampling output", disable=(not verbose)):
 
             logit_states = self.decoder_model(
                 inputs_embeds=prev_logit_token[:, None, :],

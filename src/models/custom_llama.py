@@ -612,3 +612,53 @@ class CustomLlamaForCausalLM(nn.Module):
         
         return logits, loss
     
+
+    @torch.no_grad()
+    def sample(
+        self,
+        input_ids: torch.LongTensor,
+        num_output_tokens: int,
+        input_mask: torch.FloatTensor | None = None,
+        temperature: float | str = "greedy",
+        verbose: bool = False,
+    ):
+
+        from transformers.cache_utils import DynamicCache
+        from tqdm import tqdm
+
+        cache = DynamicCache()
+
+        # pass the input tokens through the model
+        self.model.forward(
+            input_ids=input_ids[:, :-1],
+            elementwise_pad_mask=(input_mask[:, :-1] if input_mask is not None else None),
+            past_key_values=cache,
+        )
+        
+        # sample the output tokens
+        output_ids = []
+        for i in tqdm(range(num_output_tokens), desc="sampling output", disable=(not verbose)):
+            
+            input_ids = output_ids[-1][:, None] if len(output_ids) > 0 else input_ids[:, -1:]
+            input_mask = None if (len(output_ids) > 0 or input_mask is None) else input_mask[:, -1:]
+
+            hidden_states = self.model.forward(
+                input_ids=input_ids,
+                elementwise_pad_mask=input_mask,
+                past_key_values=cache,
+            )
+            logits = self.lm_head(hidden_states[:, -1, :])
+
+            if isinstance(temperature, str):
+                assert temperature == "greedy", "Only 'greedy' temperature string is supported"
+                next_token = torch.argmax(logits, dim=-1) # [B]
+
+            else:
+                probs = F.softmax(logits / temperature, dim=-1) # [B, vocab_size]
+                next_token = torch.multinomial(probs, num_samples=1)[:, 0] # [B]
+            
+            output_ids.append(next_token)
+
+        output_ids = torch.stack(output_ids, dim=1) # [B, num_output_tokens]
+
+        return output_ids
