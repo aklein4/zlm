@@ -12,12 +12,12 @@ import utils.constants as constants
 
 DEVICE = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
-# URL = "aklein4/ZLM-v2_zlm-large-double-wait-cont"
-# STEP = 17000
-URL = "aklein4/ZLM-v2_zlm-large-once-norm"
-STEP = 22000
+URL = "aklein4/ZLM-v2_zlm-large-double-wait-cont"
+STEP = 17000
+# URL = "aklein4/ZLM-v2_zlm-large-once-norm"
+# STEP = 22000
 
-TOKENIZER_PATH = os.path.join(constants.LOCAL_DATA_PATH, "tokenizer")
+TOKENIZER_PATH = "./local_data/tokenizer/" # os.path.join(constants.LOCAL_DATA_PATH, "tokenizer")
 
 # prompt = mcqa_question(
 #     "One year, the oak trees in a park began producing more acorns than usual. The next year, the population of chipmunks in the park also increased. Which best explains why there were more chipmunks the next year?",
@@ -79,7 +79,7 @@ def main():
         TOKENIZER_PATH,
     )
 
-    input_text, output_text = format_chat(MESSAGES)
+    input_text, output_text = format_no_cot(MESSAGES[0]['content'], MESSAGES[1]['content'], 108) # format_chat(MESSAGES)
     input_ids = tokenizer(
         [input_text],
         return_tensors="pt",
@@ -89,28 +89,26 @@ def main():
         return_tensors="pt",
     ).input_ids.to(DEVICE)
 
-    with torch.autocast("cuda", torch.bfloat16, enabled=torch.cuda.is_available()):
-
-        z = None
-        if False:
-            z, mu = model.encode(
-                input_ids.repeat(2, 1), real_output_ids.repeat(2, 1),
-            )
-            
-            kl = 0.5 * (
-                ((mu[0] - mu[1]) * model.scheduler.a[0]).pow(2) / model.scheduler.b[0].pow(2)
-            ).sum(-1)
-
-            plt.plot(kl.cpu().numpy())
-            plt.ylim(0, 1)
-            plt.savefig("mu_kl.png")
-            return 
-        
-        output_ids, z = model.sample(
-            input_ids.repeat(2, 1),
-            encoded_z=z,
-            temperature=TEMPERATURE,
+    z = None
+    if False:
+        z, mu = model.encode(
+            input_ids.repeat(2, 1), real_output_ids.repeat(2, 1),
         )
+        
+        kl = 0.5 * (
+            ((mu[0] - mu[1]) * model.scheduler.a[0]).pow(2) / model.scheduler.b[0].pow(2)
+        ).sum(-1)
+
+        plt.plot(kl.cpu().numpy())
+        plt.ylim(0, 1)
+        plt.savefig("mu_kl.png")
+        return 
+    
+    output_ids, z = model.sample(
+        input_ids.repeat(2, 1),
+        encoded_z=z,
+        temperature=TEMPERATURE,
+    )
 
     print("")
     print(" === INPUT === ")
