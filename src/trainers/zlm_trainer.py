@@ -40,8 +40,8 @@ class ZLMTrainer(BaseTrainer):
                 )
 
         # disable muon for parameters that shouldn't use it
-        self.model.embed_tokens.weight.no_muon = True
-        self.model.lm_head.weight.no_muon = True
+        self.model.embed_tokens._orig_mod.weight.no_muon = True
+        self.model.lm_head._orig_mod.weight.no_muon = True
 
         for mod in self.model.modules():
             if isinstance(mod, AdaScale):
