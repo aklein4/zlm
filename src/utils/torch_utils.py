@@ -315,7 +315,7 @@ def newton_schulz(G, steps=5, eps=1e-7):
         ts = torch.arange(steps, device=X.device)
         X, _ = scan(
             _newton_schulz_inner, X, ts,
-            is_fn_pure=True
+            # is_fn_pure=True
         )
     else:
         for t in range(steps):
