@@ -204,7 +204,7 @@ class ScaledMuon(Optimizer):
                 if (
                     grad.dim() != 2 or
                     min(grad.shape) <= 1 or
-                    (hasattr(p, "no_muon") and p.no_muon)
+                    (hasattr(p, "no_muon") and p.no_muon) or True
                 ):
                     if hasattr(p, "no_muon") and p.no_muon:
                         no_muon_count += 1
