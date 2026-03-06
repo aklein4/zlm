@@ -4,7 +4,7 @@ import torch.nn.functional as F
 import numpy as np
 
 from trainers.base_trainer import BaseTrainer
-from models.zlm import ZLMModel
+from models.zlm import ZLMModel, AdaScale
 from utils.scheduling_utils import linear_warmup
 from utils.torch_utils import scale_gradient
 from utils.loss_utils import lm_loss_fn, lm_acc_fn 
@@ -38,6 +38,22 @@ class ZLMTrainer(BaseTrainer):
                     self.config.trainer.hook_warmup_steps +
                     self.config.trainer.hook_wait_steps
                 )
+
+        # disable muon for parameters that shouldn't use it
+        self.model.embed_tokens.weight.no_muon = True
+        self.model.lm_head.weight.no_muon = True
+
+        for mod in self.model.modules():
+            if isinstance(mod, AdaScale):
+                mod.embed.weight.no_muon = True
+        
+        self.model.uncond_tokens.no_muon = True
+
+        self.model.encoder_sep_token.no_muon = True
+        self.model.encoder_z_tokens.no_muon = True
+
+        self.model.decoder_z_tokens.no_muon = True
+        self.model.decoder_start_output_token.no_muon = True
         
 
     def get_kl_weights(self, kl):

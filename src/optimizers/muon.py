@@ -180,6 +180,7 @@ class ScaledMuon(Optimizer):
         update_nan = torch.tensor([False], device=self.param_groups[0]['params'][0].device)
         param_nan = torch.tensor([False], device=self.param_groups[0]['params'][0].device)
         post_param_nan = torch.tensor([False], device=self.param_groups[0]['params'][0].device)
+        no_muon_count = torch.tensor([0], device=self.param_groups[0]['params'][0].device, dtype=torch.long)
         for group in self.param_groups:
             for p in group["params"]:
                 
@@ -205,6 +206,8 @@ class ScaledMuon(Optimizer):
                     min(grad.shape) <= 1 or
                     (hasattr(p, "no_muon") and p.no_muon)
                 ):
+                    if hasattr(p, "no_muon") and p.no_muon:
+                        no_muon_count += 1
                     curr_update_nan = self.adamw_update(group, p, grad, finite)
                 else:
                     curr_update_nan = self.muon_update(group, p, grad, finite)
@@ -217,5 +220,6 @@ class ScaledMuon(Optimizer):
             "update_nan": update_nan.long(),
             "param_nan": param_nan.long(),
             "post_param_nan": post_param_nan.long(),
+            "no_muon_count": no_muon_count,
         }
     

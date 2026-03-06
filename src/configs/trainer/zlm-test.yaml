@@ -21,7 +21,7 @@ use_autocast: true
 # optimizer configuration
 optimizer:
 
-  type: adamw.AdamW
+  type: muon.ScaledMuon
 
   kwargs:
 
