@@ -477,6 +477,8 @@ class BaseTrainer:
 
         for key, optimizer in self.optimizers.items():
 
+            if hasattr(optimizer, "pre_step"):
+                optimizer.pre_step()
             opt_aux = optimizer.step()
             if opt_aux is not None:
                 aux.update(
