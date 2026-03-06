@@ -311,7 +311,7 @@ def newton_schulz(G, steps=5, eps=1e-7):
     X = X / (X.norm(dim=(-2, -1), keepdim=True) + eps)
 
     # Perform the NS iterations
-    if constants.XLA_AVAILABLE:
+    if constants.XLA_AVAILABLE and False:
         ts = torch.arange(steps, device=X.device)
         X, _ = scan(
             _newton_schulz_inner, X, ts,
