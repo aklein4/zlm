@@ -5,7 +5,7 @@ import numpy as np
 
 from trainers.base_trainer import BaseTrainer
 from models.zlm import ZLMModel, AdaScale
-from utils.scheduling_utils import linear_warmup
+from utils.scheduling_utils import linear_warmup, cosine_warmup
 from utils.torch_utils import scale_gradient
 from utils.loss_utils import lm_loss_fn, lm_acc_fn 
 from utils.sharding_utils import shard_with_gradients
@@ -97,16 +97,31 @@ class ZLMTrainer(BaseTrainer):
 
         return v.mean().detach()
 
+    
+    def mutual_information(self, mu):
+
+        mu = mu.transpose(0, 1) # [S, B, H]
+        mu = shard_with_gradients(mu)
+
+        dists = torch.cdist(mu, mu, p=2) # [S, B, B]
+
+        kls = (self.model.scheduler.a[0] * dists.pow(2)) / (2 * self.model.scheduler.b[0].pow(2))
+        logp = torch.log_softmax(-kls, dim=-1) # [S, B, B]
+
+        mi = torch.diagonal(logp, dim1=-2, dim2=-1).mean() - np.log(1 / logp.shape[-1])
+
+        return mi
+
 
     def forward(self, input_ids, output_ids):
         pad_token_id = self.model.config.pad_token_id
 
         # get the hook progress
-        hook_progress = linear_warmup(
+        hook_progress = cosine_warmup(
             self.hook_step.float(),
             self.config.trainer.hook_warmup_steps
         )
-        wait_hook_progress = linear_warmup(
+        wait_hook_progress = cosine_warmup(
             self.hook_step.float() - self.config.trainer.hook_wait_steps,
             self.config.trainer.hook_warmup_steps
         )
@@ -132,7 +147,7 @@ class ZLMTrainer(BaseTrainer):
 
         # encode and decode
         noise_scale = hook_progress
-        z, mu, min_eig_val = self.model.encode(
+        z, mu = self.model.encode(
             input_for_model, output_for_model,
             input_mask=input_mask, output_mask=output_mask,
             noise_scale=noise_scale,
@@ -244,10 +259,14 @@ class ZLMTrainer(BaseTrainer):
         mean_kl_per_token = mean_kl.sum() / denom
         mean_effective_parties = self.get_effective_parties(mean_kl.sum(-1).sum(0))
 
+        mi = self.mutual_information(mu)
+        mi_scale = wait_hook_progress
+
         loss = (
             lm_loss +
             self.config.trainer.beta * kl_per_token +
-            self.config.trainer.beta * uncond_kl_per_token
+            self.config.trainer.beta * uncond_kl_per_token +
+            (-self.config.trainer.mi_weight) * mi_scale * mi
         )
 
         spectral_parties = 1.0 # self.get_spectral_parties(mu.detach())
@@ -270,6 +289,9 @@ class ZLMTrainer(BaseTrainer):
             "baseline_effective_parties": baseline_effective_parties,
             "mean_kl_per_token": mean_kl_per_token,
             "mean_effective_parties": mean_effective_parties,
+
+            "mutual_information": mi,
+            "mutual_information_scale": mi_scale,
             
             "hooked": self.hooked,
             "hook_step": self.hook_step,
@@ -277,7 +299,7 @@ class ZLMTrainer(BaseTrainer):
             "wait_hook_progress": wait_hook_progress,
             "noise_scale": noise_scale,
 
-            "min_eig_val": min_eig_val,
+            # "min_eig_val": min_eig_val,
             "spectral_parties": spectral_parties,
             
             "atom_count": (output_ids != pad_token_id).long().sum(),

@@ -61,7 +61,7 @@ output_length: 512
 z_length: 384
 
 # latent configuration
-latent_size: 32
+latent_size: 128
 
 # diffusion configuration
 minimum_diffusion_timestep: 0.5

@@ -22,7 +22,7 @@ from utils.torch_utils import (
 from models.llama import LlamaForCausalLM, LlamaMLP, LlamaRMSNorm
 from models.custom_llama import CustomLlamaModel, CustomLlamaDecoderLayer
 from models import load_checkpoint_state
-from utils.torch_modules import ContinuousEmbedding, SpectralBatchNorm, OnceSpectralBatchNorm, CustomBatchNorm, UnbiasedEMA
+from utils.torch_modules import ContinuousEmbedding, UnbiasedEMA
 from utils.diffusion_utils import DiffusionScheduler
 
 
@@ -309,17 +309,7 @@ class ZLMModel(nn.Module):
         self.encoder_mu_proj_out = nn.Linear(self.hidden_size, self.latent_size, bias=False)
 
         # create the norms
-        if hasattr(config, "once_norm") and config.once_norm:
-            self.mu_out_norm = OnceSpectralBatchNorm(
-                [self.z_length, self.latent_size],
-                config.batch_norm_beta,
-                eps=config.rms_norm_eps,
-            )
-        else:
-            self.mu_out_norm = SpectralBatchNorm(
-                [self.z_length, self.latent_size],
-                eps=config.rms_norm_eps,
-            )
+        self.mu_out_norm = LlamaRMSNorm(self.hidden_size, eps=config.rms_norm_eps, elementwise_affine=False)
         self.z_in_norm = LlamaRMSNorm(self.latent_size, eps=config.rms_norm_eps, elementwise_affine=False)
 
         # create the diffusion components
@@ -452,14 +442,11 @@ class ZLMModel(nn.Module):
         mu = self.encoder_mu_proj_out(hidden_states[..., -self.z_length:, :])
 
         # apply spectral normalization
-        mu, min_eig_val = self.mu_out_norm(mu)
+        mu = self.mu_out_norm(mu)
 
         z = self.scheduler.add_noise(
             mu, torch.zeros(1, dtype=torch.long, device=mu.device), noise
         )
-
-        if return_extra:
-            return z, mu, min_eig_val
         
         return z, mu
 
