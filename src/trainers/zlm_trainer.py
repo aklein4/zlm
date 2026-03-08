@@ -5,7 +5,7 @@ import numpy as np
 
 from trainers.base_trainer import BaseTrainer
 from models.zlm import ZLMModel, AdaScale
-from utils.scheduling_utils import linear_warmup
+from utils.scheduling_utils import linear_warmup, cosine_warmup
 from utils.torch_utils import scale_gradient
 from utils.loss_utils import lm_loss_fn, lm_acc_fn 
 from utils.sharding_utils import shard_with_gradients
@@ -102,11 +102,11 @@ class ZLMTrainer(BaseTrainer):
         pad_token_id = self.model.config.pad_token_id
 
         # get the hook progress
-        hook_progress = linear_warmup(
+        hook_progress = cosine_warmup(
             self.hook_step.float(),
             self.config.trainer.hook_warmup_steps
         )
-        wait_hook_progress = linear_warmup(
+        wait_hook_progress = cosine_warmup(
             self.hook_step.float() - self.config.trainer.hook_wait_steps,
             self.config.trainer.hook_warmup_steps
         )
