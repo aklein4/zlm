@@ -105,10 +105,10 @@ class ZLMTrainer(BaseTrainer):
 
         dists = torch.cdist(mu, mu, p=2) # [S, B, B]
 
-        kls = (self.model.scheduler.a[0] * dists).pow(2) / (2 * self.model.scheduler.b[0].pow(2))
-        logp = torch.log_softmax(-kls, dim=-1) # [S, B, B]
+        scores = -(self.model.scheduler.a[0] * dists).pow(2) / (2 * self.model.scheduler.b[0].pow(2))
+        masked_scores = scores - torch.eye(scores.shape[-1], device=scores.device, dtype=scores.dtype)[None] * 1e9
 
-        mi = torch.diagonal(logp, dim1=-2, dim2=-1).mean() - np.log(1 / logp.shape[-1])
+        mi = -torch.logsumexp(masked_scores, dim=-1).mean()
 
         return mi
 
