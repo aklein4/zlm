@@ -4,7 +4,7 @@ import torch.nn.functional as F
 import numpy as np
 
 from trainers.base_trainer import BaseTrainer
-from models.zlm import ZLMModel, AdaScale
+from models.zlm import ZLMModel
 from utils.scheduling_utils import linear_warmup, cosine_warmup
 from utils.torch_utils import scale_gradient
 from utils.loss_utils import lm_loss_fn, lm_acc_fn 
