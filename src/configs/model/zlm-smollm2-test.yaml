@@ -61,19 +61,14 @@ output_length: 512
 z_length: 384
 
 # latent configuration
-latent_size: 32
+latent_size: 64
+z_ar_steps: 4
 
-# diffusion configuration
-minimum_diffusion_timestep: 0.5
-num_diffusion_timesteps: 16
-
-# diffusion head configuration
-diffusion_in_proj: false
-num_timestep_embed_frequencies: 32
-num_diffusion_head_layers: 2
-diffusion_mlp_size: 256
+# head configuration
+head_intermediate_size: 384
 
 # training configuration
 lm_loss_ema_beta: 0.75
 
 pure_modules: []
+  

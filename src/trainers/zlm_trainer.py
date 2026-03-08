@@ -42,10 +42,6 @@ class ZLMTrainer(BaseTrainer):
         # disable muon for parameters that shouldn't use it
         self.model.embed_tokens._orig_mod.weight.no_muon = True
         self.model.lm_head._orig_mod.weight.no_muon = True
-
-        for mod in self.model.modules():
-            if isinstance(mod, AdaScale):
-                mod.embed.weight.no_muon = True
         
         self.model.uncond_tokens.no_muon = True
 
@@ -56,18 +52,6 @@ class ZLMTrainer(BaseTrainer):
         self.model.decoder_start_output_token.no_muon = True
         
 
-    def get_kl_weights(self, kl):
-        if kl.dim() > 1:
-            kl = kl.mean(0)
-
-        w = kl / kl.mean()
-        w = torch.relu(w - self.config.trainer.kl_weight_relu_shift)
-
-        w = w * (kl.sum() / ((w * kl).sum() + self.model.config.rms_norm_eps))
-
-        return w.detach()
-
-
     def get_effective_parties(self, x):
         p = x / (x.sum() + self.model.config.rms_norm_eps)
 
@@ -76,26 +60,27 @@ class ZLMTrainer(BaseTrainer):
         return n / x.numel()
 
 
-    def get_spectral_parties(self, x):
+    def kl_loss(
+        self,
+        mu: torch.FloatTensor,
+        pred_mu: torch.FloatTensor,
+    ):
 
-        x = x.transpose(0, 1) # [S, B, H]
-        x = shard_with_gradients(x)
+        mu_kl_scale = {}
+        scaled_mu = scale_gradient(mu, mu_kl_scale)
+    
+        kl = ((scaled_mu - pred_mu).pow(2) / 2).sum(0) # [S, Z]
 
-        x = x - x.mean(dim=1, keepdim=True)
-        cov = torch.einsum(
-            'sbi,sbj->sij',
-            x, x
-        ) / x.shape[1] # [S, H, H]
+        sequence_weights = kl.mean(-1, keepdim=True)
+        channel_weights = kl.mean(-2, keepdim=True)
+        weights = sequence_weights * channel_weights
 
-        v = torch.linalg.eigvalsh(
-            cov + self.model.mu_out_norm.eps * torch.eye(x.shape[-1], device=x.device, dtype=cov.dtype)[None]
-        ) # [S, H]
+        weights = weights * kl.mean() / ((weights * kl).mean() + self.model.config.rms_norm_eps)
+        weights = weights.detach()
 
-        p = v / (v.sum(-1, keepdim=True) + self.model.config.rms_norm_eps)
-        n = 1 / (p.pow(2).sum(-1) + self.model.config.rms_norm_eps)
-        v = n / x.shape[-1]
+        mu_kl_scale["value"] = weights[None]
 
-        return v.mean().detach()
+        return kl.sum(), sequence_weights, channel_weights
 
 
     def forward(self, input_ids, output_ids):
@@ -110,10 +95,6 @@ class ZLMTrainer(BaseTrainer):
             self.hook_step.float() - self.config.trainer.hook_wait_steps,
             self.config.trainer.hook_warmup_steps
         )
-        # double_wait_hook_progress = linear_warmup(
-        #     self.hook_step.float() - (2 * self.config.trainer.hook_wait_steps),
-        #     self.config.trainer.hook_warmup_steps
-        # )
 
         # prepare inputs
         input_mask = (input_ids != pad_token_id)
@@ -132,11 +113,10 @@ class ZLMTrainer(BaseTrainer):
 
         # encode and decode
         noise_scale = hook_progress
-        z, mu, min_eig_val = self.model.encode(
+        z, mu = self.model.encode(
             input_for_model, output_for_model,
             input_mask=input_mask, output_mask=output_mask,
             noise_scale=noise_scale,
-            return_extra=True,
         )
 
         logit_grad_scale = {}
@@ -145,7 +125,6 @@ class ZLMTrainer(BaseTrainer):
             logit_grad_scale=logit_grad_scale,
             input_mask=input_mask,
             output_mask=output_mask,
-            return_extra=True,
         )
 
         # get the lm loss metrics
@@ -178,79 +157,52 @@ class ZLMTrainer(BaseTrainer):
 
         # gradient scales
         mu_kl_grad_scale = wait_hook_progress
+        mu_for_kl = scale_gradient(mu, mu_kl_grad_scale)
+        z_for_kl = self.model.add_noise(mu_for_kl)
+
         z_states_kl_grad_scale = wait_hook_progress
-        weighted_mu_kl_grad_scale = {}
+        z_states_for_kl = scale_gradient(z_states, z_states_kl_grad_scale)
 
-        # scaled gradients
-        mu_for_kl = scale_gradient(mu, weighted_mu_kl_grad_scale)[None].repeat(
-            self.config.trainer.num_diffusion_samples, 1, 1, 1
+        # get decoder predictions
+        pred_mu = self.model.decoder_head(
+            z_states_for_kl, z_for_kl
         )
-        z_states_for_kl = scale_gradient(z_states, z_states_kl_grad_scale)[None]
-
-        # diffusion sampling
-        n_uncond = self.config.trainer.num_uncond_diffusion_samples
-        t = torch.randint(
-            low=1,
-            high=self.model.config.num_diffusion_timesteps,
-            size=mu_for_kl.shape[:-1],
-            device=input_ids.device,
-            dtype=torch.long,
-        )
-        noise = torch.randn_like(mu_for_kl)
-        z_t = self.model.scheduler.add_noise(
-            mu_for_kl, t, noise
+        uncond_pred_mu = self.model.uncond_decoder_head(
+            self.model.uncond_tokens[None], z_for_kl.detach()
         )
 
-        pred_z_0 = self.model.diffusion_head(
-            z_t, t, z_states_for_kl,
+        # get kl
+        kl, sequence_weights, channel_weights = self.kl_loss(
+            mu_for_kl, pred_mu
         )
-        uncond_pred_z_0 = self.model.uncond_diffusion_head(
-            z_t[:n_uncond].detach(), t[:n_uncond], self.model.uncond_tokens[None, None, :, :],
+        uncond_kl, uncond_sequence_weights, uncond_channel_weights = self.kl_loss(
+            mu_for_kl.detach(), uncond_pred_mu
         )
-        
-        with torch.autocast("xla", enabled=False):
-            kls = self.model.scheduler.kl(
-                mu_for_kl.float(), t, pred_z_0.float(), dim=-1
-            ).mean(0)
-            uncond_kls = self.model.scheduler.kl(
-                mu_for_kl[:n_uncond].detach().float(), t[:n_uncond], uncond_pred_z_0.float(), dim=-1
-            ).mean(0)
-
-        # sum over batch to get [Z,]
-        kl = kls.sum(0) * (self.model.config.num_diffusion_timesteps - 1)
-        uncond_kl = uncond_kls.sum(0) * (self.model.config.num_diffusion_timesteps - 1)
+        mean_kl, mean_sequence_weights, mean_channel_weights = self.kl_loss(
+            mu_for_kl.detach(), mu_for_kl.detach().mean(0, keepdim=True)
+        )
 
         denom = (output_ids != pad_token_id).float().sum() + self.model.config.rms_norm_eps
 
-        # set the weights for the kl grad scaling
-        weighted_mu_kl_grad_scale["value"] = (
-            mu_kl_grad_scale *
-            self.get_kl_weights(kl)[None, None, :, None]
-        )
-
         # calculate kls per token
-        kl_per_token = kl.sum() / denom
-        effective_parties = self.get_effective_parties(kl)
+        kl_per_token = kl / denom
+        effective_parties = self.get_effective_parties(sequence_weights)
+        channel_parties = self.get_effective_parties(channel_weights)
         elbo = lm_loss + kl_per_token
 
-        uncond_kl_per_token = uncond_kl.sum() / denom
-        uncond_effective_parties = self.get_effective_parties(uncond_kl)
+        uncond_kl_per_token = uncond_kl / denom
+        uncond_effective_parties = self.get_effective_parties(uncond_sequence_weights)
+        uncond_channel_parties = self.get_effective_parties(uncond_channel_weights)
 
-        baseline_kl = 0.5 * (mu * self.model.scheduler.a[0]).pow(2) / self.model.scheduler.b[0].pow(2)
-        baseline_kl_per_token = baseline_kl.sum() / denom
-        baseline_effective_parties = self.get_effective_parties(baseline_kl.sum(-1).sum(0))
-
-        mean_kl = 0.5 * ((mu - mu.mean(0, keepdim=True)) * self.model.scheduler.a[0]).pow(2) / self.model.scheduler.b[0].pow(2)
-        mean_kl_per_token = mean_kl.sum() / denom
-        mean_effective_parties = self.get_effective_parties(mean_kl.sum(-1).sum(0))
-
+        mean_kl_per_token = mean_kl / denom
+        mean_effective_parties = self.get_effective_parties(mean_sequence_weights)
+        mean_channel_parties = self.get_effective_parties(mean_channel_weights)
+        
         loss = (
             lm_loss +
             self.config.trainer.beta * kl_per_token +
             self.config.trainer.beta * uncond_kl_per_token
         )
-
-        spectral_parties = 1.0 # self.get_spectral_parties(mu.detach())
 
         aux = {
             "elbo": elbo,
@@ -264,21 +216,21 @@ class ZLMTrainer(BaseTrainer):
 
             "kl_per_token": kl_per_token,
             "effective_parties": effective_parties,
+            "channel_parties": channel_parties,
+
             "uncond_kl_per_token": uncond_kl_per_token,
             "uncond_effective_parties": uncond_effective_parties,
-            "baseline_kl_per_token": baseline_kl_per_token,
-            "baseline_effective_parties": baseline_effective_parties,
+            "uncond_channel_parties": uncond_channel_parties,
+
             "mean_kl_per_token": mean_kl_per_token,
             "mean_effective_parties": mean_effective_parties,
+            "mean_channel_parties": mean_channel_parties,
             
             "hooked": self.hooked,
             "hook_step": self.hook_step,
             "hook_progress": hook_progress,
             "wait_hook_progress": wait_hook_progress,
             "noise_scale": noise_scale,
-
-            "min_eig_val": min_eig_val,
-            "spectral_parties": spectral_parties,
             
             "atom_count": (output_ids != pad_token_id).long().sum(),
         }
