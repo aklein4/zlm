@@ -270,7 +270,7 @@ class ZLMModel(nn.Module):
     def add_noise(
         self,
         mu: torch.FloatTensor,
-        noise: torch.FloatTensor,
+        noise: torch.FloatTensor | None = None,
     ) -> torch.FloatTensor:
 
         if noise is None:
