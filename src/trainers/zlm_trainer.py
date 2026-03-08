@@ -113,9 +113,11 @@ class ZLMTrainer(BaseTrainer):
 
         # encode and decode
         noise_scale = hook_progress
+        noise = self.model.sample_noise(input_for_model)
         z, mu = self.model.encode(
             input_for_model, output_for_model,
             input_mask=input_mask, output_mask=output_mask,
+            noise=noise,
             noise_scale=noise_scale,
         )
 
@@ -158,7 +160,7 @@ class ZLMTrainer(BaseTrainer):
         # gradient scales
         mu_kl_grad_scale = wait_hook_progress
         mu_for_kl = scale_gradient(mu, mu_kl_grad_scale)
-        z_for_kl = self.model.add_noise(mu_for_kl)
+        z_for_kl = self.model.add_noise(mu_for_kl, noise)
 
         z_states_kl_grad_scale = wait_hook_progress
         z_states_for_kl = scale_gradient(z_states, z_states_kl_grad_scale)
