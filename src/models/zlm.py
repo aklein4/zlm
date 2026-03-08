@@ -30,15 +30,15 @@ class ARHead(nn.Module):
         super().__init__()
 
         self.states_gate_proj = nn.Linear(
-            config.hidden_size, self.head_intermediate_size, bias=False
+            config.hidden_size, config.head_intermediate_size, bias=False
         )
         self.states_up_proj = nn.Linear(
-            config.hidden_size, self.head_intermediate_size, bias=False
+            config.hidden_size, config.head_intermediate_size, bias=False
         )
 
         self.z_gate_proj = ARLinear(
             config.latent_size,
-            self.head_intermediate_size,
+            config.head_intermediate_size,
             config.z_ar_steps,
             self_attend=False,
             bias=False
@@ -52,7 +52,7 @@ class ARHead(nn.Module):
         )
 
         self.down_proj = ARLinear(
-            self.head_intermediate_size,
+            config.head_intermediate_size,
             config.latent_size,
             config.z_ar_steps,
             self_attend=True,
