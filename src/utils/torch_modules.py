@@ -102,10 +102,12 @@ class ARLinear(nn.Module):
         mask = mask.repeat_interleave(self.out_features // n, dim=0).repeat_interleave(self.in_features // n, dim=1)
         self.register_buffer('mask', mask, persistent=True)
 
-        self.weight.copy_(
-            self.mask.detach() *
-            torch.randn_like(self.weight) /
-            (torch.sqrt(self.mask.sum(dim=-1, keepdim=True)) + 1e-6).detach()
+        self.weight.data.copy_(
+            (
+                self.mask *
+                torch.randn_like(self.weight) /
+                (torch.sqrt(self.mask.sum(dim=-1, keepdim=True)) + 1e-6)
+            ).detach()
         )
 
     
