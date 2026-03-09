@@ -295,12 +295,22 @@ class InternalSpectralBatchNorm(nn.Module):
         return y, min_val
 
 
-class OnceSpectralBatchNorm(SpectralBatchNorm):
+class OnceSpectralBatchNorm(InternalSpectralBatchNorm):
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
 
-        self.count = 0
+        self.register_buffer(
+            "mean", torch.zeros(self.shape, dtype=torch.float32), persistent=True
+        )
+        self.mean: nn.Buffer
+
+        self.register_buffer(
+            "inv_sqrt_cov", torch.zeros(self.shape + (self.shape[-1],), dtype=torch.float32), persistent=True
+        )
+        self.inv_sqrt_cov: nn.Buffer
+
+        self.inited = kwargs.get("inited", False)
 
     
     def forward(self, x: torch.Tensor) -> torch.Tensor:
@@ -313,54 +323,56 @@ class OnceSpectralBatchNorm(SpectralBatchNorm):
         """
         assert x.shape[1:] == self.shape, f"Input shape {x.shape} does not match BatchNorm shape {self.shape}"
 
-        x = x.transpose(0, 1) # [S, B, H]
-        x = maybe_shard_with_gradients(x)
-
-        og_dtype = x.dtype
-        x = x.to(torch.float32)
-
-        x_mean = x.mean(dim=1)  # [S, H]
-        x_cov = torch.einsum(
-            'sbi,sbj->sij',
-            (x - x_mean[:, None]),
-            (x - x_mean[:, None]),
-        ) / x.shape[1] # [S, H, H]
-
-        if self.training and self.count < 2 and False:
-            self.count += 1
-
-            self.mean_tracker.zero_out()
-            self.cov_tracker.zero_out()
-
-            self.mean_tracker.update(x_mean)
-            self.cov_tracker.update(x_cov)
-
-        x_mean = self.mean_tracker.retrieve()
-        x_cov = self.cov_tracker.retrieve()
-
-        eig_vals, eig_vecs = torch.linalg.eigh(
-            x_cov + self.eps * torch.eye(self.shape[-1], device=x.device, dtype=x_cov.dtype)[None]
+        device_type = x.device.type
+        device_type = (
+            device_type if isinstance(device_type, str) and device_type != "mps" else "cpu"
         )
+        with torch.autocast(device_type=device_type, enabled=False):
+        
+            x = x.transpose(0, 1) # [S, B, H]
+            x = maybe_shard_with_gradients(x)
 
-        min_val = torch.min(eig_vals.detach())
-        eig_vals = torch.clamp(eig_vals, min=self.eps) # [S, H]
+            og_dtype = x.dtype
+            x = x.to(torch.float32)
 
-        inv_sqrt_cov = (
-            eig_vecs @
-            torch.diag_embed(eig_vals.rsqrt()) @
-            eig_vecs.transpose(-1, -2)  
-        ) # [S, H, H]
+            if self.training and not self.inited:
+                
+                x_mean = x.mean(dim=1)  # [S, H]
+                x_cov = torch.einsum(
+                    'sbi,sbj->sij',
+                    (x - x_mean[:, None]),
+                    (x - x_mean[:, None]),
+                ) / x.shape[1] # [S, H, H]
 
-        y = torch.einsum(
-            'shl,sbh->sbl',
-            inv_sqrt_cov,
-            (x - x_mean[:, None]),
-        ) # [S, B, H]
+                eig_vals, eig_vecs = torch.linalg.eigh(
+                    x_cov + self.eps * torch.eye(self.shape[-1], device=x.device, dtype=x_cov.dtype)[None]
+                )
 
-        y = y.transpose(0, 1) # [B, S, H]
-        y = maybe_shard_with_gradients(y)
+                eig_vals = torch.clamp(eig_vals, min=self.eps) # [S, H]
 
-        return y.to(og_dtype), min_val
+                inv_sqrt_cov = (
+                    eig_vecs @
+                    torch.diag_embed(eig_vals.rsqrt()) @
+                    eig_vecs.transpose(-1, -2)  
+                ) # [S, H, H]
+
+                self.mean.copy_(x_mean.detach())
+                self.inv_sqrt_cov.copy_(inv_sqrt_cov.detach())
+
+                self.inited = True
+
+            y = torch.einsum(
+                'shl,sbh->sbl',
+                self.inv_sqrt_cov,
+                (x - self.mean[:, None]),
+            ) # [S, B, H]
+
+            y = y.transpose(0, 1) # [B, S, H]
+            y = maybe_shard_with_gradients(y)
+
+            y = y.to(og_dtype)
+
+        return y, 0.0
 
 
 class InitialSpectralNorm(nn.Module):

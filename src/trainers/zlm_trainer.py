@@ -77,23 +77,28 @@ class ZLMTrainer(BaseTrainer):
 
 
     def get_spectral_parties(self, x):
+        device_type = x.device.type
+        device_type = (
+            device_type if isinstance(device_type, str) and device_type != "mps" else "cpu"
+        )
+        with torch.autocast(device_type=device_type, enabled=False):
 
-        x = x.transpose(0, 1) # [S, B, H]
-        x = shard_with_gradients(x)
+            x = x.transpose(0, 1) # [S, B, H]
+            x = shard_with_gradients(x)
 
-        x = x - x.mean(dim=1, keepdim=True)
-        cov = torch.einsum(
-            'sbi,sbj->sij',
-            x, x
-        ) / x.shape[1] # [S, H, H]
+            x = x - x.mean(dim=1, keepdim=True)
+            cov = torch.einsum(
+                'sbi,sbj->sij',
+                x, x
+            ) / x.shape[1] # [S, H, H]
 
-        v = torch.linalg.eigvalsh(
-            cov + self.model.mu_out_norm.eps * torch.eye(x.shape[-1], device=x.device, dtype=cov.dtype)[None]
-        ) # [S, H]
+            v = torch.linalg.eigvalsh(
+                cov + self.model.mu_out_norm.eps * torch.eye(x.shape[-1], device=x.device, dtype=cov.dtype)[None]
+            ) # [S, H]
 
-        p = v / (v.sum(-1, keepdim=True) + self.model.config.rms_norm_eps)
-        n = 1 / (p.pow(2).sum(-1) + self.model.config.rms_norm_eps)
-        v = n / x.shape[-1]
+            p = v / (v.sum(-1, keepdim=True) + self.model.config.rms_norm_eps)
+            n = 1 / (p.pow(2).sum(-1) + self.model.config.rms_norm_eps)
+            v = n / x.shape[-1]
 
         return v.mean().detach()
 
@@ -250,7 +255,7 @@ class ZLMTrainer(BaseTrainer):
             self.config.trainer.beta * uncond_kl_per_token
         )
 
-        spectral_parties = 1.0 # self.get_spectral_parties(mu.detach())
+        spectral_parties = self.get_spectral_parties(mu.detach()) if self.model.config.get("once_norm", False) else 1.0
 
         aux = {
             "elbo": elbo,

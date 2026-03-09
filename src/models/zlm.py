@@ -309,11 +309,11 @@ class ZLMModel(nn.Module):
         self.encoder_mu_proj_out = nn.Linear(self.hidden_size, self.latent_size, bias=False)
 
         # create the norms
-        if hasattr(config, "once_norm") and config.once_norm:
+        if config.get("once_norm", False):
             self.mu_out_norm = OnceSpectralBatchNorm(
                 [self.z_length, self.latent_size],
-                config.batch_norm_beta,
                 eps=config.rms_norm_eps,
+                inited=config.get("once_norm_inited", False),
             )
         else:
             self.mu_out_norm = SpectralBatchNorm(

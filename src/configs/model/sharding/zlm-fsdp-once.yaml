@@ -1,0 +1,7 @@
+defaults:
+  - zlm-fsdp
+  - _self_
+
+
+mu_out_norm.mean: [null, null]
+mu_out_norm.inv_sqrt_cov: [null, null, null]
