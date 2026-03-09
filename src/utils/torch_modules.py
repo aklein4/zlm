@@ -361,7 +361,6 @@ class OnceSpectralBatchNorm(InternalSpectralBatchNorm):
                 self.inv_sqrt_cov.copy_(inv_sqrt_cov.detach())
 
                 self.inited = True
-                print("INITED!", flush=True)
 
             y = torch.einsum(
                 'shl,sbh->sbl',
