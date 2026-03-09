@@ -298,6 +298,7 @@ class InternalSpectralBatchNorm(nn.Module):
 class OnceSpectralBatchNorm(InternalSpectralBatchNorm):
 
     def __init__(self, *args, **kwargs):
+        inited = kwargs.pop("inited", False)
         super().__init__(*args, **kwargs)
 
         self.register_buffer(
@@ -310,7 +311,7 @@ class OnceSpectralBatchNorm(InternalSpectralBatchNorm):
         )
         self.inv_sqrt_cov: nn.Buffer
 
-        self.inited = kwargs.get("inited", False)
+        self.inited = inited
 
     
     def forward(self, x: torch.Tensor) -> torch.Tensor:
