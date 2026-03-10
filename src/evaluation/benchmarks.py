@@ -72,7 +72,7 @@ class BaseBenchmark:
         self.dataset = None
 
         if self.max_examples is not None:
-            data = data.select(range(self.max_examples))
+            data = data.select(range(min(self.max_examples, len(data))))
 
         return data
 

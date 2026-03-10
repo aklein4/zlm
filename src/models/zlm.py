@@ -544,6 +544,11 @@ class ZLMModel(nn.Module):
         t_iter: torch.LongTensor,
         z_states: torch.FloatTensor,
     ) -> torch.FloatTensor:
+        noise = torch.randn(
+            len(t_iter)+5, *z_t.shape,
+            device=z_t.device, dtype=z_t.dtype,
+        )
+
         for t in t_iter:
 
             pred_z_0 = self.diffusion_head(
@@ -560,7 +565,7 @@ class ZLMModel(nn.Module):
                 z_t,
                 t,
                 pred_z_0,
-                torch.randn_like(z_t),
+                noise[t],
             ) # [B, latent_size]
 
         return z_t
