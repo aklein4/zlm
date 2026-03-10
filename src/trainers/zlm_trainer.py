@@ -1,5 +1,6 @@
 import torch
 import torch.nn.functional as F
+from torch.func import functional_call
 
 import numpy as np
 
@@ -179,13 +180,17 @@ class ZLMTrainer(BaseTrainer):
         contrast_scale = wait_hook_progress
         mu_for_contrast = mu.flip(0)
         z_for_contrast = z.flip(0)
-        for p in self.model.decoder_head.parameters():
-            p.requires_grad_(False)
-        contrast_pred_mu = self.model.decoder_head(
-            z_states.detach(), z_for_contrast
+        contrast_params = {
+            name: p.detach() for name, p in self.model.decoder_head.named_parameters()
+        }
+        contrast_buffers = {
+            name: b.detach() for name, b in self.model.decoder_head.named_buffers()
+        }
+        contrast_pred_mu = functional_call(
+            self.model.decoder_head,
+            (contrast_params, contrast_buffers),
+            (z_states.detach(), z_for_contrast),
         )
-        for p in self.model.decoder_head.parameters():
-            p.requires_grad_(True)
 
         # get kl
         kl, sequence_weights, channel_weights = self.kl_loss(
