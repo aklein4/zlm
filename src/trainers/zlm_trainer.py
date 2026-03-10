@@ -181,7 +181,7 @@ class ZLMTrainer(BaseTrainer):
         z_for_contrast = z.flip(0)
         for p in self.model.decoder_head.parameters():
             p.requires_grad_(False)
-        contrast_pred_mu = self.model.uncond_decoder_head(
+        contrast_pred_mu = self.model.decoder_head(
             z_states.detach(), z_for_contrast
         )
         for p in self.model.decoder_head.parameters():
