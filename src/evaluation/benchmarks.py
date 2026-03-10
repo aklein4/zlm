@@ -517,6 +517,55 @@ class math500(MathBenchmark):
         )
 
 
+class minervamath(MathBenchmark):
+
+    name = "Minerva-Math"
+
+    url = "math-ai/minervamath"
+    split = "test"
+
+    def extract_example(self, example):
+        return (
+            example["question"],
+            example["answer"].strip(),
+        )
+
+
+class amc23(MathBenchmark):
+
+    name = "AMC-23"
+
+    url = "math-ai/amc23"
+    split = "test"
+
+    def extract_example(self, example):
+        return (
+            example["question"],
+            example["answer"].strip(),
+        )
+
+
+class aime2025(MathBenchmark):
+
+    name = "AIME-2025"
+
+    url = "MathArena/aime_2025"
+    split = "train"
+
+    def extract_example(self, example):
+        return (
+            example["problem"],
+            str(example["answer"]),
+        )
+
+
+class aime2026(aime2025):
+
+    name = "AIME-2026"
+
+    url = "MathArena/aime_2026"
+
+
 BENCHMARK_DICT = {
     cls[1].name: cls[1]
     for cls in inspect.getmembers(sys.modules[__name__], inspect.isclass)

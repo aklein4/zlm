@@ -551,17 +551,17 @@ class ZLMModel(nn.Module):
                 t,
                 z_states,
             ) # [B, latent_size]
-            z_t = self.scheduler.ddim_step(
-                z_t,
-                t,
-                pred_z_0,
-            ) # [B, latent_size]
-            # z_t = self.scheduler.step(
+            # z_t = self.scheduler.ddim_step(
             #     z_t,
             #     t,
             #     pred_z_0,
-            #     torch.randn_like(z_t),
             # ) # [B, latent_size]
+            z_t = self.scheduler.step(
+                z_t,
+                t,
+                pred_z_0,
+                torch.randn_like(z_t),
+            ) # [B, latent_size]
 
         return z_t
 

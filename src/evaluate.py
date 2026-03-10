@@ -6,7 +6,7 @@ import os
 from transformers import AutoTokenizer
 
 from models import load_checkpoint
-from evaluation import run_benchmarks
+from evaluation import run_benchmarks, BENCHMARK_DICT
 import utils.constants as constants
 
 
@@ -120,7 +120,7 @@ if __name__ == "__main__":
         type=str,
         nargs="+",
         default=None,
-        help="List of benchmarks to evaluate on. If not specified, evaluates on all available benchmarks.",
+        help=f"List of benchmarks to evaluate on. Defaults to all benchmarks. Available: " + ", ".join(BENCHMARK_DICT.keys()),
     )
 
     args = parser.parse_args()

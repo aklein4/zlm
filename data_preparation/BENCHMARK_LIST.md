@@ -19,6 +19,8 @@
  - [x] MATH/Math500
  - [ ] Omni-Math
  - [ ] Olympiad?
- - [ ] math-ai/minervamath
- - [ ] math-ai/amc23
+ - [x] math-ai/minervamath
+ - [x] math-ai/amc23
+ - [x] AIME 2025
+ - [x] AIME 2026
  
