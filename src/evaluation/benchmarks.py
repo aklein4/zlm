@@ -488,6 +488,27 @@ class mmlu_pro(MCQABenchmark):
         )
 
 
+class gpqa(MCQABenchmark):
+
+    name = "GPQA"
+
+    url = "Idavidrein/gpqa"
+    subset = "gpqa_main"
+    split = "test"
+
+    def extract_example(self, example):
+        return (
+            example["Question"],
+            [
+                example["Correct Answer"],
+                example["Incorrect Answer 1"],
+                example["Incorrect Answer 2"],
+                example["Incorrect Answer 3"],
+            ],
+            'A',
+        )
+
+
 class gsm8k(MathBenchmark):
 
     name = "GSM8K"

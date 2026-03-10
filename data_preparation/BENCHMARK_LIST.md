@@ -13,6 +13,8 @@
  - [ ] WinoGrande
  - [x] SciQ
  - [ ] SQuad-v2
+ - [x] Idavidrein/gpqa
+ - [ ] Idavidrein/gpqa subsets
 
 # Math
  - [x] GSM8K
