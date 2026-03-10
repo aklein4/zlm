@@ -64,6 +64,7 @@ class ZLMTrainer(BaseTrainer):
         self,
         mu: torch.FloatTensor,
         pred_mu: torch.FloatTensor,
+        disable_weights=False,
     ):
 
         mu_kl_scale = {}
@@ -77,6 +78,8 @@ class ZLMTrainer(BaseTrainer):
 
         weights = weights * kl.mean() / ((weights * kl).mean() + self.model.config.rms_norm_eps)
         weights = weights.detach()
+        if disable_weights:
+            weights = torch.ones_like(weights)
 
         mu_kl_scale["value"] = weights[None]
 
@@ -173,6 +176,17 @@ class ZLMTrainer(BaseTrainer):
             self.model.uncond_tokens[None], z_for_kl.detach()
         )
 
+        contrast_scale = wait_hook_progress
+        mu_for_contrast = mu.flip(0)
+        z_for_contrast = z.flip(0)
+        for p in self.model.decoder_head.parameters():
+            p.requires_grad_(False)
+        contrast_pred_mu = self.model.uncond_decoder_head(
+            z_states.detach(), z_for_contrast
+        )
+        for p in self.model.decoder_head.parameters():
+            p.requires_grad_(True)
+
         # get kl
         kl, sequence_weights, channel_weights = self.kl_loss(
             mu_for_kl, pred_mu
@@ -182,6 +196,9 @@ class ZLMTrainer(BaseTrainer):
         )
         mean_kl, mean_sequence_weights, mean_channel_weights = self.kl_loss(
             mu_for_kl.detach(), mu_for_kl.detach().mean(0, keepdim=True)
+        )
+        contrast_kl, contrast_sequence_weights, contrast_channel_weights = self.kl_loss(
+            mu_for_contrast, contrast_pred_mu, disable_weights=True
         )
 
         denom = (output_ids != pad_token_id).float().sum() + self.model.config.rms_norm_eps
@@ -200,10 +217,15 @@ class ZLMTrainer(BaseTrainer):
         mean_effective_parties = self.get_effective_parties(mean_sequence_weights)
         mean_channel_parties = self.get_effective_parties(mean_channel_weights)
         
+        contrast_kl_per_token = contrast_kl / denom
+        contrast_effective_parties = self.get_effective_parties(contrast_sequence_weights)
+        contrast_channel_parties = self.get_effective_parties(contrast_channel_weights)
+
         loss = (
             lm_loss +
             self.config.trainer.beta * kl_per_token +
-            self.config.trainer.beta * uncond_kl_per_token
+            self.config.trainer.beta * uncond_kl_per_token +
+            (-self.config.trainer.contrast_weight) * contrast_scale * contrast_kl_per_token
         )
 
         aux = {
@@ -228,6 +250,11 @@ class ZLMTrainer(BaseTrainer):
             "mean_effective_parties": mean_effective_parties,
             "mean_channel_parties": mean_channel_parties,
             
+            "contrast_scale": contrast_scale,
+            "contrast_kl_per_token": contrast_kl_per_token,
+            "contrast_effective_parties": contrast_effective_parties,
+            "contrast_channel_parties": contrast_channel_parties,
+
             "hooked": self.hooked,
             "hook_step": self.hook_step,
             "hook_progress": hook_progress,

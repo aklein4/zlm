@@ -73,3 +73,4 @@ min_lm_loss_scale: 0.05
 
 # loss weighting configuration
 beta: 0.2
+contrast_weight: 0.02
