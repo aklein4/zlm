@@ -102,6 +102,21 @@ class ZLMTrainer(BaseTrainer):
 
         return v.mean().detach()
 
+    
+    def mutual_information(self, mu):
+
+        mu = mu.transpose(0, 1) # [S, B, H]
+        mu = shard_with_gradients(mu)
+
+        dists = torch.cdist(mu, mu, p=2) # [S, B, B]
+
+        scores = -(self.model.scheduler.a[0] * dists).pow(2) / (2 * self.model.scheduler.b[0].pow(2))
+        masked_scores = scores - torch.eye(scores.shape[-1], device=scores.device, dtype=scores.dtype)[None] * 1e9
+
+        mi = -torch.logsumexp(masked_scores, dim=-1).mean()
+
+        return mi
+
 
     def forward(self, input_ids, output_ids):
         pad_token_id = self.model.config.pad_token_id
@@ -249,10 +264,14 @@ class ZLMTrainer(BaseTrainer):
         mean_kl_per_token = mean_kl.sum() / denom
         mean_effective_parties = self.get_effective_parties(mean_kl.sum(-1).sum(0))
 
+        mi = self.mutual_information(mu)
+        mi_scale = wait_hook_progress
+
         loss = (
             lm_loss +
             self.config.trainer.beta * kl_per_token +
-            self.config.trainer.beta * uncond_kl_per_token
+            self.config.trainer.beta * uncond_kl_per_token +
+            (-self.config.trainer.mi_weight) * mi_scale * mi
         )
 
         spectral_parties = self.get_spectral_parties(mu.detach()) if self.model.config.get("once_norm", False) else 1.0
@@ -284,6 +303,9 @@ class ZLMTrainer(BaseTrainer):
 
             "min_eig_val": min_eig_val,
             "spectral_parties": spectral_parties,
+
+            "mi": mi,
+            "mi_scale": mi_scale,
             
             "atom_count": (output_ids != pad_token_id).long().sum(),
         }
