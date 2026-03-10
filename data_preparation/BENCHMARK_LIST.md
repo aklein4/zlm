@@ -3,19 +3,22 @@
  - [ ] Muennighoff/mbpp
 
 # Reasoning
- - [ ] TIGER-Lab/MMLU-Pro
- - [ ] MMLU
+ - [x] TIGER-Lab/MMLU-Pro
+ - [x] MMLU
  - [ ] Boolq
- - [ ] PIQA
+ - [x] PIQA
  - [ ] TriviaQA
- - [ ] ARC
+ - [x] ARC
  - [ ] HellaSwag
  - [ ] WinoGrande
- - [ ] SciQ
+ - [x] SciQ
  - [ ] SQuad-v2
 
 # Math
- - [ ] GSM8K
- - [ ] MATH/Math50
+ - [x] GSM8K
+ - [x] MATH/Math500
  - [ ] Omni-Math
  - [ ] Olympiad?
+ - [ ] math-ai/minervamath
+ - [ ] math-ai/amc23
+ 

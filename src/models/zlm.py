@@ -525,7 +525,7 @@ class ZLMModel(nn.Module):
             elementwise_pad_mask=mask,
         )
 
-        logit_states = hidden_states[:, -(self.output_length+1):-1, :]
+        logit_states = hidden_states[:, -(output_ids.shape[-1]+1):-1, :]
         if logit_grad_scale is not None:
             logit_states = scale_gradient(
                 logit_states, logit_grad_scale
@@ -537,6 +537,35 @@ class ZLMModel(nn.Module):
         return logits, z_states
 
 
+    # @torch.compile(fullgraph=True, mode="reduce-overhead")
+    def diffusion_rollout(
+        self,
+        z_t: torch.FloatTensor,
+        t_iter: torch.LongTensor,
+        z_states: torch.FloatTensor,
+    ) -> torch.FloatTensor:
+        for t in t_iter:
+
+            pred_z_0 = self.diffusion_head(
+                z_t,
+                t,
+                z_states,
+            ) # [B, latent_size]
+            z_t = self.scheduler.ddim_step(
+                z_t,
+                t,
+                pred_z_0,
+            ) # [B, latent_size]
+            # z_t = self.scheduler.step(
+            #     z_t,
+            #     t,
+            #     pred_z_0,
+            #     torch.randn_like(z_t),
+            # ) # [B, latent_size]
+
+        return z_t
+
+
     @torch.no_grad()
     def sample(
         self,
@@ -545,6 +574,8 @@ class ZLMModel(nn.Module):
         noise: torch.FloatTensor=None,
         encoded_z: torch.FloatTensor=None,
         temperature: float | str = "greedy",
+        num_output_tokens: int = None,
+        verbose: bool=False,
     ):
         # TODO: update with correct normalization and pooling
 
@@ -568,12 +599,19 @@ class ZLMModel(nn.Module):
             elementwise_pad_mask=input_mask,
             past_key_values=cache,
         )
+        
+        # initialize the position ids
+        position_ids = torch.zeros(input_ids.shape[0], dtype=torch.long, device=input_ids.device)
+        if input_mask is not None:
+            position_ids += input_mask.sum(dim=-1)
+        else:
+            position_ids += input_ids.shape[1]
 
         # sample each z
         all_z = []
         prev_normed_z = torch.zeros_like(noise[:, 0, :]) # [B, latent_size]
         t_iter = torch.arange(1, self.scheduler.num_timesteps).to(noise.device).flip(0)
-        for i in tqdm(range(self.z_length + 1), desc="sampling z"):
+        for i in tqdm(range(self.z_length + 1), desc="sampling z", disable=(not verbose)):
             
             # pass the previous z token through the decoder
             z_token = (
@@ -583,7 +621,9 @@ class ZLMModel(nn.Module):
             z_states = self.decoder_model(
                 inputs_embeds=z_token[:, None, :],
                 past_key_values=cache,
+                position_ids=position_ids[:, None],
             )[:, -1, :] # [B, hidden_size]
+            position_ids += 1
 
             # we did an extra pass to put the last z in the cache
             if i >= self.z_length:
@@ -593,24 +633,9 @@ class ZLMModel(nn.Module):
             if encoded_z is None:
                 
                 z_t = noise[:, i, :] # [B, latent_size]
-                for t in t_iter:
-
-                    pred_z_0 = self.diffusion_head(
-                        z_t,
-                        t,
-                        z_states,
-                    ) # [B, latent_size]
-                    z_t = self.scheduler.ddim_step(
-                        z_t,
-                        t,
-                        pred_z_0,
-                    ) # [B, latent_size]
-                    # z_t = self.scheduler.step(
-                    #     z_t,
-                    #     t,
-                    #     pred_z_0,
-                    #     torch.randn_like(z_t),
-                    # ) # [B, latent_size]
+                z_t = self.diffusion_rollout(
+                    z_t, t_iter, z_states,
+                )
 
             else:
                 z_t = encoded_z[:, i, :] # [B, latent_size]
@@ -623,16 +648,25 @@ class ZLMModel(nn.Module):
         all_z = torch.stack(all_z, dim=1) # [B, z_length, latent_size]
 
         # sample the output tokens
+        if num_output_tokens is None:
+            num_output_tokens = self.output_length
+
+        if num_output_tokens <= 0:
+            return all_z
+
         output_ids = []
         prev_logit_token = expand_to_batch(
             self.decoder_start_output_token, prev_normed_z[:, None, :]
         )[:, 0, :] # [B, hidden_size]
-        for i in tqdm(range(self.output_length), desc="sampling output"):
+        for i in tqdm(range(self.output_length), desc="sampling output", disable=(not verbose)):
 
             logit_states = self.decoder_model(
                 inputs_embeds=prev_logit_token[:, None, :],
                 past_key_values=cache,
+                position_ids=position_ids[:, None],
             )[:, -1, :] # [B, hidden_size]
+            position_ids += 1
+
             logits = self.lm_head(self.decoder_model.norm(logit_states))
             
             if isinstance(temperature, str):
@@ -653,3 +687,47 @@ class ZLMModel(nn.Module):
         output_ids = torch.stack(output_ids, dim=-1)
 
         return output_ids, all_z
+
+
+    def get_logits(
+        self,
+        input_ids: torch.LongTensor,
+        output_ids: torch.LongTensor,
+        noise: torch.FloatTensor=None,
+        z: torch.FloatTensor=None,
+        verbose: bool=False,
+    ):
+        
+        input_mask = (input_ids != self.config.pad_token_id)
+        output_mask = (output_ids != self.config.pad_token_id)
+
+        input_for_model = torch.where(
+            input_mask,
+            input_ids,
+            torch.zeros_like(input_ids)
+        )
+        output_for_model = torch.where(
+            output_mask,
+            output_ids,
+            torch.zeros_like(output_ids)
+        )
+
+        if z is None:
+            z = self.sample(
+                input_for_model,
+                input_mask=input_mask,
+                noise=noise,
+                num_output_tokens=0,
+                verbose=verbose,
+            )
+        
+        logits, _ = self.decode(
+            input_for_model,
+            output_for_model,
+            z,
+            input_mask=input_mask,
+            output_mask=output_mask,
+        )
+
+        return logits
+    

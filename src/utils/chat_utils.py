@@ -40,12 +40,17 @@ def format_chat(messages):
     raise ValueError(f"Unsupported message roles: {roles}")
 
 
+NO_COT_PREFIX = "\\boxed{"
+def no_cot_format(x):
+    return NO_COT_PREFIX + str(x)
+
+
 def format_no_cot(x, y, answer):
     return format_chat(
         [
             {"role": "system", "content": "Place the final answer to the following question inside of a \\boxed{} command. This must appear at the start of your response before any other text."},
             {"role": "user", "content": x},
-            {"role": "assistant", "content": "\\boxed{"+str(answer)+"}"+f"\n{y}"},
+            {"role": "assistant", "content": NO_COT_PREFIX+str(answer)+"}"+f"\n{y}"},
         ]
     )
 

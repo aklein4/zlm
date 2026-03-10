@@ -12,10 +12,8 @@ import utils.constants as constants
 
 DEVICE = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
-# URL = "aklein4/ZLM-v2_zlm-large-double-wait-cont"
-# STEP = 17000
-URL = "aklein4/ZLM-v2_zlm-large-once-norm"
-STEP = 22000
+URL = "aklein4/ZEBRA_muon-1p7b-cont"
+STEP = 14000
 
 TOKENIZER_PATH = os.path.join(constants.LOCAL_DATA_PATH, "tokenizer")
 
@@ -63,6 +61,7 @@ TEMPERATURE = "greedy"
 
 SEED = 42
 
+
 @torch.no_grad()
 def main():
 
@@ -79,7 +78,7 @@ def main():
         TOKENIZER_PATH,
     )
 
-    input_text, output_text = format_chat(MESSAGES)
+    input_text, output_text = format_no_cot(MESSAGES[0]['content'], MESSAGES[1]['content'], 108)
     input_ids = tokenizer(
         [input_text],
         return_tensors="pt",

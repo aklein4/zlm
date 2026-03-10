@@ -317,9 +317,9 @@ class CustomLlamaModel(nn.Module):
         elementwise_pad_mask: torch.Tensor | None = None,
         past_key_values: Cache | None = None,
     ) -> torch.LongTensor:
-        if past_key_values is not None and elementwise_pad_mask is not None:
+        if past_key_values is not None and past_key_values.get_seq_length(0) > 0 and elementwise_pad_mask is not None:
             raise NotImplementedError(
-                "Passing both `past_key_values` and `elementwise_pad_mask` is not supported."
+                "Passing both non-empty `past_key_values` and `elementwise_pad_mask` is not supported."
             )
 
         if elementwise_pad_mask is not None:
@@ -490,4 +490,29 @@ class CustomLlamaForCausalLM(nn.Module):
             return logits, loss, hidden_states
         
         return logits, loss
+    
+
+    def get_logits(
+        self,
+        input_ids: torch.LongTensor,
+        output_ids: torch.LongTensor,
+    ):
+        
+        all_ids = torch.cat([input_ids, output_ids], dim=1)
+
+        elementwise_pad_mask = (all_ids != self.config.pad_token_id)
+        ids_for_model = torch.where(
+            elementwise_pad_mask,
+            all_ids,
+            torch.zeros_like(all_ids)
+        )
+
+        hidden_states = self.model(
+            input_ids=ids_for_model,
+            elementwise_pad_mask=elementwise_pad_mask,
+        )[:, -(output_ids.shape[1]+1):-1, :]
+
+        logits = self.lm_head(self.model.norm(hidden_states))
+
+        return logits
     

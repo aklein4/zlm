@@ -22,6 +22,12 @@ REPO_PATH = os.path.dirname(BASE_PATH)
 # load environment variables from .env file
 dotenv.load_dotenv(os.path.join(REPO_PATH, ".env"))
 
+# cuda device
+if not XLA_AVAILABLE:
+    DEVICE = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+else:
+    DEVICE = None
+
 # id of the current device
 PROCESS_INDEX = lambda: xr.process_index()
 
