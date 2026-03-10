@@ -320,6 +320,10 @@ class ZLMModel(nn.Module):
                 [self.z_length, self.latent_size],
                 eps=config.rms_norm_eps,
             )
+        if config.get("mu_rms_norm", False):
+            self.mu_rms_norm = LlamaRMSNorm(self.latent_size, eps=config.rms_norm_eps, elementwise_affine=False)
+        else:
+            self.mu_rms_norm = nn.Identity()
         self.z_in_norm = LlamaRMSNorm(self.latent_size, eps=config.rms_norm_eps, elementwise_affine=False)
 
         # create the diffusion components
@@ -453,6 +457,7 @@ class ZLMModel(nn.Module):
 
         # apply spectral normalization
         mu, min_eig_val = self.mu_out_norm(mu)
+        mu = self.mu_rms_norm(mu)
 
         z = self.scheduler.add_noise(
             mu, torch.zeros(1, dtype=torch.long, device=mu.device), noise

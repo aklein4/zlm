@@ -172,8 +172,11 @@ class BaseBenchmark:
                         d[k] = torch.tensor([example[k] for example in batch], device=constants.DEVICE)
                         continue
                 else:
-                    d[k] = torch.tensor([example[k] for example in batch], device=constants.DEVICE)
-                    continue
+                    try:
+                        d[k] = torch.tensor([example[k] for example in batch], device=constants.DEVICE)
+                        continue
+                    except:
+                        pass
 
             d[k] = [example[k] for example in batch]
 
@@ -494,7 +497,7 @@ class gpqa(MCQABenchmark):
 
     url = "Idavidrein/gpqa"
     subset = "gpqa_main"
-    split = "test"
+    split = "train"
 
     def extract_example(self, example):
         return (
