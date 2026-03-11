@@ -32,11 +32,12 @@ def run_benchmarks(
         print(f"  {i+1}. {benchmarks[i]}")
 
     if save_path is None:
-        save_path = os.path.join(constants.LOCAL_DATA_PATH, "evaluation_results")
+        save_path = "evaluation_results"
+    save_path = os.path.join(constants.LOCAL_DATA_PATH, save_path)
     os.makedirs(save_path, exist_ok=True)
-    print(f"\nEvaluation results will be saved to: {save_path}")
+    print(f"\nEvaluation results will be saved to: {save_path}")  
 
-    for i, benchmark_name in enumerate(benchmarks):
+    for i, benchmark_name in enumerate(benchmarks): 
         if benchmark_name not in BENCHMARK_DICT:
             raise ValueError(f"Unsupported benchmark: {benchmark_name}")
         

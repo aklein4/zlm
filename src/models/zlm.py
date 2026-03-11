@@ -548,6 +548,7 @@ class ZLMModel(nn.Module):
         z_t: torch.FloatTensor,
         t_iter: torch.LongTensor,
         z_states: torch.FloatTensor,
+        i
     ) -> torch.FloatTensor:
         noise = torch.randn(
             len(t_iter)+5, *z_t.shape,
@@ -561,6 +562,13 @@ class ZLMModel(nn.Module):
                 t,
                 z_states,
             ) # [B, latent_size]
+            # uncond_pred_z_0 = self.uncond_diffusion_head(
+            #     z_t,
+            #     t,
+            #     expand_to_batch(self.uncond_tokens[i], z_states),
+            # )
+            # pred_z_0 = pred_z_0 + 1.0 * (pred_z_0 - uncond_pred_z_0)
+
             # z_t = self.scheduler.ddim_step(
             #     z_t,
             #     t,
@@ -644,7 +652,7 @@ class ZLMModel(nn.Module):
                 
                 z_t = noise[:, i, :] # [B, latent_size]
                 z_t = self.diffusion_rollout(
-                    z_t, t_iter, z_states,
+                    z_t, t_iter, z_states, i
                 )
 
             else:
