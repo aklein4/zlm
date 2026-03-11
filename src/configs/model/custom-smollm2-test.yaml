@@ -50,6 +50,10 @@ attention_dropout: false
 attention_bias: false
 rms_norm_eps: 1.0e-05
 
+# value added to pad token attention scores
+# only used when elementwise_pad_mask is passed
+pad_attention_bias_value: -100.0
+
 # choose attention_kernel from: [flash_attention, nan_safe_flash_attention, splash_attention, null]
 attention_kernel: flash_attention
 
