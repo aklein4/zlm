@@ -33,7 +33,7 @@ class SeqToSeqLMTrainer(BaseTrainer):
         elementwise_pad_mask = torch.cat(
             [
                 (input_ids != pad_token_id),
-                torch.ones_like(output_ids[:, :1], dtype=torch.bool)
+                torch.ones_like(output_ids[:, :1], dtype=torch.bool),
                 (output_ids != pad_token_id)
             ],
             dim=1
