@@ -467,8 +467,10 @@ class CustomLlamaForCausalLM(nn.Module):
         )
 
         lm_states = self.model.norm(hidden_states)
-        if shift_states:
+        if isinstance(shift_states, slice):
             # Shift the hidden states to the right for causal language modeling
+            lm_states = lm_states[..., slice, :].contiguous()
+        elif shift_states:
             lm_states = lm_states[..., :-1, :].contiguous()
 
         logits = self.lm_head(lm_states)

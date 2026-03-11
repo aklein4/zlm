@@ -512,6 +512,24 @@ class gpqa(MCQABenchmark):
         )
 
 
+class strategy_qa(MCQABenchmark):
+
+    name = "StrategyQA"
+
+    url = "tasksource/strategy-qa" 
+    split = "train"
+
+    def extract_example(self, example):
+
+        prompt = ".".join(example["facts"]) + " " + example["question"]
+
+        return (
+            prompt,
+            ["Yes", "No"],
+            'A' if example["answer"] else 'B',
+        )
+
+
 class gsm8k(MathBenchmark):
 
     name = "GSM8K"
