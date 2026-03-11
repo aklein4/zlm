@@ -1,5 +1,5 @@
 defaults:
-  - smollm-test
+  - smollm2-test
   - _self_  # refers to this config file
   - remat: custom-llama
 

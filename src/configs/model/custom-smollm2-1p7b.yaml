@@ -1,5 +1,5 @@
 defaults:
-  - smollm-1p7b
+  - smollm2-1p7b
   - _self_  # refers to this config file
   - remat: custom-llama
 
