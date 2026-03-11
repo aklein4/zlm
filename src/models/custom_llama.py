@@ -431,7 +431,7 @@ class CustomLlamaForCausalLM(nn.Module):
         Args:
             module: The module whose weights need to be initialized.
         """
-        if self.config.get(gaussian_init, False):
+        if self.config.get("gaussian_init", False):
             return gaussian_init(module)
 
         std = self.config.initializer_range
