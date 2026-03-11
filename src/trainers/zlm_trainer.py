@@ -178,18 +178,18 @@ class ZLMTrainer(BaseTrainer):
         )
 
         contrast_scale = wait_hook_progress
-        mu_for_contrast = mu.flip(0)
-        z_for_contrast = z.flip(0)
+        mu_for_contrast = mu
+        z_for_contrast = z
         contrast_params = {
-            name: p.detach() for name, p in self.model.decoder_head.named_parameters()
+            name: p.detach() for name, p in self.model.uncond_decoder_head.named_parameters()
         }
         contrast_buffers = {
-            name: b.detach() for name, b in self.model.decoder_head.named_buffers()
+            name: b.detach() for name, b in self.model.uncond_decoder_head.named_buffers()
         }
         contrast_pred_mu = functional_call(
-            self.model.decoder_head,
+            self.model.uncond_decoder_head,
             (contrast_params, contrast_buffers),
-            (z_states.detach(), z_for_contrast),
+            (self.model.uncond_tokens[None].detach(), z_for_contrast),
         )
 
         # get kl
