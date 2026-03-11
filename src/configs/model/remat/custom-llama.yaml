@@ -1,0 +1,16 @@
+defaults:
+ - torchprime
+ - _self_
+
+activation_checkpoint_layers:
+ - LlamaDecoderLayer
+
+optimization_barrier_layers:
+ - LlamaDecoderLayer
+
+# Compile the sequence of decoder layers at `model.layers` using scan.
+scan_layers: 'model.layers'
+
+# save memory by offloading these activations to the host RAM
+offload_tensors:
+ - decoder_input

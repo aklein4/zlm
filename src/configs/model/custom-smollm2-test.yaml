@@ -1,6 +1,7 @@
 defaults:
-  - smollm-1p7b
+  - smollm-test
   - _self_  # refers to this config file
+  - remat: custom-llama
 
 
 # Used to import the model from this class
