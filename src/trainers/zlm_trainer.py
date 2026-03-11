@@ -94,10 +94,10 @@ class ZLMTrainer(BaseTrainer):
 
         dists = torch.cdist(mu, mu, p=2) # [S, B, B]
 
-        scores = -dists.pow(2) / 2
+        scores = -dists.pow(2) / (2 * mu.shape[-1])
         masked_scores = scores - torch.eye(scores.shape[-1], device=scores.device, dtype=scores.dtype)[None] * 1e9
 
-        mi = -torch.logsumexp(masked_scores, dim=-1).mean()
+        mi = -torch.logsumexp(masked_scores - np.log(scores.shape[-1] - 1), dim=-1).mean()
 
         return mi
 
