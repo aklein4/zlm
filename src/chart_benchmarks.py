@@ -16,7 +16,9 @@ CHECKPOINTS = {
     "aklein4--ZEBRA_muon-1p7b-mi/000000018000": "ZEBRA",
     "../guidance_evaluation_results": "Guided",
     "../guidance_evaluation_results_2": "Guided-2",
-    "aklein4--ZEBRA_baseline-1p7b/000000010000": "Baseline",
+    "aklein4--ZEBRA_baseline-1p7b/000000020000": "Baseline-20K",
+    "aklein4--ZEBRA_baseline-1p7b/000000015000": "Baseline-15K",
+    "aklein4--ZEBRA_baseline-1p7b/000000010000": "Baseline-10K",
     "aklein4--ZEBRA_baseline-1p7b/000000005000": "Baseline-5K",
 }
 
@@ -66,7 +68,7 @@ def main():
 
         checkpoint_results[name] = ckpt_results
 
-    fig, (ax1, ax2) = plt.subplots(2, 1, figsize=(12, 2.75+len(CHECKPOINTS)*0.25))
+    fig, (ax1, ax2) = plt.subplots(2, 1, figsize=(12, 2.75+len(CHECKPOINTS)*0.35))
     fig.subplots_adjust(hspace=0.4)
 
     checkpoint_names = list(checkpoint_results.keys())
