@@ -15,6 +15,7 @@ BASE_PATH = os.path.join(constants.LOCAL_DATA_PATH, "evaluation_results")
 CHECKPOINTS = {
     "aklein4--ZEBRA_muon-1p7b-mi/000000018000": "ZEBRA",
     "../guidance_evaluation_results": "Guided",
+    "../guidance_evaluation_results_2": "Guided-2",
     "aklein4--ZEBRA_baseline-1p7b/000000010000": "Baseline",
     "aklein4--ZEBRA_baseline-1p7b/000000005000": "Baseline-5K",
 }
