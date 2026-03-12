@@ -3,19 +3,29 @@
  - [ ] Muennighoff/mbpp
 
 # Reasoning
- - [ ] TIGER-Lab/MMLU-Pro
- - [ ] MMLU
+ - [x] TIGER-Lab/MMLU-Pro
+ - [x] MMLU
  - [ ] Boolq
- - [ ] PIQA
+ - [x] PIQA
  - [ ] TriviaQA
- - [ ] ARC
+ - [x] ARC
  - [ ] HellaSwag
  - [ ] WinoGrande
- - [ ] SciQ
+ - [x] SciQ
  - [ ] SQuad-v2
+ - [x] Idavidrein/gpqa
+ - [ ] Idavidrein/gpqa subsets
+ - [x] AR-LSAT
+ - [x] StrategyQA
 
 # Math
- - [ ] GSM8K
- - [ ] MATH/Math50
+ - [x] GSM8K
+ - [x] MATH/Math500
  - [ ] Omni-Math
  - [ ] Olympiad?
+ - [x] math-ai/minervamath
+ - [x] math-ai/amc23
+ - [x] AIME 2025
+ - [x] AIME 2026
+ - [x] SVAMP
+ 
