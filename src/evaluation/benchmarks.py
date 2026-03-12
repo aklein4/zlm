@@ -530,6 +530,25 @@ class strategy_qa(MCQABenchmark):
         )
 
 
+class ar_lsat(MCQABenchmark):
+
+    name = "AR-LSAT"
+
+    url = 'olegbask/AR-LSAT'
+    split = 'test'
+
+
+    def extract_example(self, example):
+        
+        prompt = example["context"] + " " + example["question"]
+
+        return (
+            prompt,
+            example["answers"],
+            string.ascii_uppercase[example["label"]],
+        )
+
+
 class gsm8k(MathBenchmark):
 
     name = "GSM8K"
@@ -606,6 +625,21 @@ class aime2026(aime2025):
     name = "AIME-2026"
 
     url = "MathArena/aime_2026"
+
+
+class svamp(MathBenchmark):
+
+    name = "SVAMP"
+
+    url = "MU-NLPC/Calc-svamp"
+    subset = "default"
+    split = "test"
+
+    def extract_example(self, example):
+        return (
+            example["question"],
+            example["result"].replace("_", "").strip(),
+        )
 
 
 BENCHMARK_DICT = {

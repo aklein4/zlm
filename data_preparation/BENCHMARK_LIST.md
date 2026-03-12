@@ -15,6 +15,8 @@
  - [ ] SQuad-v2
  - [x] Idavidrein/gpqa
  - [ ] Idavidrein/gpqa subsets
+ - [x] AR-LSAT
+ - [x] StrategyQA
 
 # Math
  - [x] GSM8K
@@ -25,4 +27,5 @@
  - [x] math-ai/amc23
  - [x] AIME 2025
  - [x] AIME 2026
+ - [x] SVAMP
  
