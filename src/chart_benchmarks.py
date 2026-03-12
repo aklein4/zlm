@@ -66,7 +66,7 @@ def main():
 
         checkpoint_results[name] = ckpt_results
 
-    fig, (ax1, ax2) = plt.subplots(2, 1, figsize=(12, 3.5))
+    fig, (ax1, ax2) = plt.subplots(2, 1, figsize=(12, 2.75+len(CHECKPOINTS)*0.25))
     fig.subplots_adjust(hspace=0.4)
 
     checkpoint_names = list(checkpoint_results.keys())
