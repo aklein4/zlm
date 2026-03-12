@@ -26,6 +26,7 @@ class ARHead(nn.Module):
     def __init__(
         self,
         config: DictConfig,
+        not_actually_ar: bool = False,
     ):
         super().__init__()
 
@@ -65,6 +66,8 @@ class ARHead(nn.Module):
 
         self.act = ACT2FN[config.hidden_act]
 
+        self.not_actually_ar = not_actually_ar
+
     
     def forward(
         self,
@@ -72,14 +75,20 @@ class ARHead(nn.Module):
         z: torch.FloatTensor,
     ) -> torch.FloatTensor:
 
-        g = (
-            self.states_gate_proj(hidden_states) +
-            self.z_gate_proj(z)
-        )
-        u = (
-            self.states_up_proj(hidden_states) +
-            self.z_up_proj(z)
-        )
+        if self.not_actually_ar:
+            g = self.states_gate_proj(hidden_states)
+            u = self.states_up_proj(hidden_states)
+
+        else:
+            g = (
+                self.states_gate_proj(hidden_states) +
+                self.z_gate_proj(z)
+            )
+            u = (
+                self.states_up_proj(hidden_states) +
+                self.z_up_proj(z)
+            )
+
         h = self.act(g) * u
 
         return (
@@ -211,7 +220,7 @@ class ZLMModel(nn.Module):
         )
 
         # create the heads
-        self.encoder_head = ARHead(config)
+        self.encoder_head = ARHead(config) # , not_actually_ar=True)
         self.decoder_head = ARHead(config)
         
         self.uncond_decoder_head = ARHead(config)
@@ -287,6 +296,7 @@ class ZLMModel(nn.Module):
         input_mask: torch.BoolTensor=None,
         output_mask: torch.BoolTensor=None,
         noise_scale: torch.FloatTensor = None,
+        return_extra: bool = False,
     ):
 
         if noise is None:
@@ -337,14 +347,18 @@ class ZLMModel(nn.Module):
             inputs_embeds=tokens,
             elementwise_pad_mask=mask,
         )
+        z_states = hidden_states[:, -self.z_length:, :]
         
         mu = self.encoder_head(
-            hidden_states[:, -self.z_length:, :],
+            z_states,
             noise,
         )
         mu = self.z_out_norm(mu)
 
         z = self.add_noise(mu, noise, noise_scale)
+
+        if return_extra:
+            return z, mu, z_states
 
         return z, mu
 
