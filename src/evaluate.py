@@ -29,15 +29,15 @@ def main(args):
         args.tokenizer,
     )
 
-    if args.save_path is None:
-        save_path = os.path.join(
-            constants.LOCAL_DATA_PATH,
-            "evaluation_results",
-            args.checkpoint_url.replace("/", "--"),
-            f"{args.checkpoint_step:012d}",
-        )
-    else:
-        save_path = args.save_path
+    save_folder = "evaluation_results"
+    if args.save_folder is not None:
+        save_folder = args.save_folder
+    save_path = os.path.join(
+        constants.LOCAL_DATA_PATH,
+        save_folder,
+        args.checkpoint_url.replace("/", "--"),
+        f"{args.checkpoint_step:012d}",
+    )
     
     print("\nStarting evaluation...")
     run_benchmarks(
@@ -104,10 +104,10 @@ if __name__ == "__main__":
         help="Whether to use NOT autocast for evaluation.",
     )
     parser.add_argument(
-        "--save_path",
+        "--save_folder",
         type=str,
         default=None,
-        help="The path to save the evaluation results. If not specified, saves to a default location.",
+        help="The path to save the evaluation results. If not specified, saves to 'evaluation_results/'.",
     )
     parser.add_argument(
         "--seed",

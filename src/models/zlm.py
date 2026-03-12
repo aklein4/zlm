@@ -434,6 +434,59 @@ class ZLMModel(nn.Module):
         return logits, z_states
 
 
+    def set_ar_cache(self, value):
+        for m in self.modules():
+            if isinstance(m, ARLinear):
+                m.set_cache(value)
+
+
+    def ar_rollout(
+        self,
+        z_states: torch.FloatTensor,
+        noise: torch.FloatTensor,
+        noise_temperature: float = 1.0,
+        guidance_scale: float | None = None,
+        token_index: int | None = None,
+    ):
+        guide = guidance_scale is not None
+        if guide:
+            assert token_index is not None
+
+        g_states = self.decoder_head.states_gate_proj(z_states)
+        u_states = self.decoder_head.states_up_proj(z_states)
+        cross = self.decoder_head.cross_proj(z_states)
+        if guide:
+            uncond_g_states = self.uncond_decoder_head.states_gate_proj(
+                unsqueeze_to_batch(self.uncond_tokens[token_index], z_states)
+            )
+            uncond_u_states = self.uncond_decoder_head.states_up_proj(
+                unsqueeze_to_batch(self.uncond_tokens[token_index], z_states)
+            )
+            uncond_cross = self.uncond_decoder_head.cross_proj(
+                unsqueeze_to_batch(self.uncond_tokens[token_index], z_states)
+            )
+
+        z = torch.zeros_like(noise)
+        for t in range(self.z_ar_steps):
+
+            g = g_states + self.decoder_head.z_gate_proj(z)
+            u = u_states + self.decoder_head.z_up_proj(z)
+            h = self.decoder_head.act(g) * u
+            mu = cross + self.decoder_head.down_proj(h)
+
+            if guide:
+                uncond_g = uncond_g_states + self.uncond_decoder_head.z_gate_proj(z)
+                uncond_u = uncond_u_states + self.uncond_decoder_head.z_up_proj(z)
+                uncond_h = self.uncond_decoder_head.act(uncond_g) * uncond_u
+                uncond_mu = uncond_cross + self.uncond_decoder_head.down_proj(uncond_h)
+
+                mu = mu + guidance_scale * (mu - uncond_mu)
+
+            z = self.add_noise(mu, noise, noise_temperature)
+
+        return z
+
+
     @torch.no_grad()
     def sample(
         self,
@@ -442,8 +495,10 @@ class ZLMModel(nn.Module):
         noise: torch.FloatTensor=None,
         encoded_z: torch.FloatTensor=None,
         temperature: float | str = "greedy",
+        num_output_tokens: int = None,
+        verbose: bool=False,
+        **rollout_kwargs,
     ):
-        # TODO: update this for AR version
 
         from transformers.cache_utils import DynamicCache
         from tqdm import tqdm
@@ -465,22 +520,36 @@ class ZLMModel(nn.Module):
             elementwise_pad_mask=input_mask,
             past_key_values=cache,
         )
+        
+        # initialize the position ids
+        position_ids = torch.zeros(input_ids.shape[0], dtype=torch.long, device=input_ids.device)
+        if input_mask is not None:
+            position_ids += input_mask.sum(dim=-1)
+        else:
+            position_ids += input_ids.shape[1]
+
+        # enable the AR cache
+        self.set_ar_cache(True)
 
         # sample each z
         all_z = []
-        prev_normed_z = torch.zeros_like(noise[:, 0, :]) # [B, latent_size]
-        t_iter = torch.arange(1, self.scheduler.num_timesteps).to(noise.device).flip(0)
-        for i in tqdm(range(self.z_length + 1), desc="sampling z"):
+        prev_z = torch.zeros_like(noise[:, 0, :]) # [B, latent_size]
+        for i in tqdm(range(self.z_length + 1), desc="sampling z", disable=(not verbose)):
             
             # pass the previous z token through the decoder
             z_token = (
-                unsqueeze_to_batch(self.decoder_z_tokens[i], prev_normed_z) +
-                self.decoder_z_proj_in(prev_normed_z)
+                unsqueeze_to_batch(self.decoder_z_tokens[i], prev_z) +
+                self.decoder_z_proj_in(prev_z)
             ) # [B, hidden_size]
             z_states = self.decoder_model(
                 inputs_embeds=z_token[:, None, :],
                 past_key_values=cache,
+                position_ids=position_ids[:, None],
             )[:, -1, :] # [B, hidden_size]
+            z_states = self.decoder_z_states_norm(z_states)
+            
+            # update the position ids
+            position_ids += 1
 
             # we did an extra pass to put the last z in the cache
             if i >= self.z_length:
@@ -489,49 +558,51 @@ class ZLMModel(nn.Module):
             # diffusion loop to sample the next z
             if encoded_z is None:
                 
-                z_t = noise[:, i, :] # [B, latent_size]
-                for t in t_iter:
-
-                    pred_z_0 = self.diffusion_head(
-                        z_t,
-                        t,
-                        z_states,
-                    ) # [B, latent_size]
-                    z_t = self.scheduler.ddim_step(
-                        z_t,
-                        t,
-                        pred_z_0,
-                    ) # [B, latent_size]
-                    # z_t = self.scheduler.step(
-                    #     z_t,
-                    #     t,
-                    #     pred_z_0,
-                    #     torch.randn_like(z_t),
-                    # ) # [B, latent_size]
+                prev_z = self.ar_rollout(
+                    z_states,
+                    noise[:, i, :],
+                    token_index=i,
+                    **rollout_kwargs,
+                )
 
             else:
-                z_t = encoded_z[:, i, :] # [B, latent_size]
+                prev_z = encoded_z[:, i, :] # [B, latent_size]
 
             # handle the sampled z
-            all_z.append(z_t)
-            prev_normed_z = self.z_in_norm(z_t)
+            all_z.append(prev_z)
 
         # save the z
         all_z = torch.stack(all_z, dim=1) # [B, z_length, latent_size]
 
+        # disable the AR cache
+        self.set_ar_cache(False)
+
         # sample the output tokens
+        if num_output_tokens is None:
+            num_output_tokens = self.output_length
+        if num_output_tokens <= 0:
+            return None, all_z
+
+        # sample each output token
         output_ids = []
         prev_logit_token = expand_to_batch(
-            self.decoder_start_output_token, prev_normed_z[:, None, :]
+            self.decoder_start_output_token, prev_z[:, None, :]
         )[:, 0, :] # [B, hidden_size]
-        for i in tqdm(range(self.output_length), desc="sampling output"):
+        for i in tqdm(range(num_output_tokens), desc="sampling output", disable=(not verbose)):
 
+            # pass the previous output token through the decoder
             logit_states = self.decoder_model(
                 inputs_embeds=prev_logit_token[:, None, :],
                 past_key_values=cache,
+                position_ids=position_ids[:, None],
             )[:, -1, :] # [B, hidden_size]
-            logits = self.lm_head(self.decoder_model.norm(logit_states))
+
+            # update the position ids
+            position_ids += 1
+
+            logits = self.lm_head(self.decoder_model.norm(logit_states)).float()
             
+            # sample the next token
             if isinstance(temperature, str):
                 assert temperature == "greedy", "Only 'greedy' temperature string is supported"
                 next_token = torch.argmax(logits, dim=-1) # [B]
@@ -540,6 +611,7 @@ class ZLMModel(nn.Module):
                 probs = F.softmax(logits / temperature, dim=-1) # [B, vocab_size]
                 next_token = torch.multinomial(probs, num_samples=1)[:, 0] # [B]
 
+            # save the token
             output_ids.append(next_token)
             prev_logit_token = (
                 unsqueeze_to_batch(self.decoder_output_embeddings, prev_logit_token) +
@@ -550,3 +622,49 @@ class ZLMModel(nn.Module):
         output_ids = torch.stack(output_ids, dim=-1)
 
         return output_ids, all_z
+
+
+    def get_logits(
+        self,
+        input_ids: torch.LongTensor,
+        output_ids: torch.LongTensor,
+        noise: torch.FloatTensor=None,
+        z: torch.FloatTensor=None,
+        verbose: bool=False,
+        **rollout_kwargs,
+    ):
+        
+        input_mask = (input_ids != self.config.pad_token_id)
+        output_mask = (output_ids != self.config.pad_token_id)
+
+        input_for_model = torch.where(
+            input_mask,
+            input_ids,
+            torch.zeros_like(input_ids)
+        )
+        output_for_model = torch.where(
+            output_mask,
+            output_ids,
+            torch.zeros_like(output_ids)
+        )
+
+        if z is None:
+            _, z = self.sample(
+                input_for_model,
+                input_mask=input_mask,
+                noise=noise,
+                num_output_tokens=0,
+                verbose=verbose,
+                **rollout_kwargs,
+            )
+        
+        logits, _ = self.decode(
+            input_for_model,
+            output_for_model,
+            z,
+            input_mask=input_mask,
+            output_mask=output_mask,
+        )
+
+        return logits
+    

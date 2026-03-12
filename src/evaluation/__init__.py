@@ -19,6 +19,7 @@ def run_benchmarks(
     benchmarks: list[str] | None = None,
     max_examples: int | None = None,
     autocast: bool = False, 
+    model_kwargs: dict = {},
     save_path: str | None = None,
     meta_data: dict = {},
 ):
@@ -69,7 +70,7 @@ def run_benchmarks(
                     logits = model.get_logits(
                         batch["input_ids"],
                         batch["output_ids"],
-                        # verbose=True,
+                        **model_kwargs,
                     )
 
                 grade = bench.grade(batch, logits)
@@ -96,6 +97,7 @@ def run_benchmarks(
                 "batch_size": batch_size,
                 "autocast": autocast,
                 "max_examples": max_examples,
+                "model_kwargs": model_kwargs,
             } | meta_data
         }
         with open(os.path.join(save_path, f"{benchmark_name}.json"), "w") as f:

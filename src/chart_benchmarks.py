@@ -23,6 +23,8 @@ CHECKPOINTS = {
 }
 
 REASONING_BENCHMARKS = [
+    "ARC-E-Train",
+    "ARC-C-Train",
     "ARC-Easy",
     "ARC-Challenge",
     "MMLU",
@@ -68,7 +70,7 @@ def main():
 
         checkpoint_results[name] = ckpt_results
 
-    fig, (ax1, ax2) = plt.subplots(2, 1, figsize=(12, 2.75+len(CHECKPOINTS)*0.35))
+    fig, (ax1, ax2) = plt.subplots(2, 1, figsize=(14, 2.75+len(CHECKPOINTS)*0.4))
     fig.subplots_adjust(hspace=0.4)
 
     checkpoint_names = list(checkpoint_results.keys())

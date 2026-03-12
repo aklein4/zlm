@@ -110,9 +110,21 @@ class ARLinear(nn.Module):
             ).detach()
         )
 
+        self.cache = None
+
+
+    def set_cache(self, on):
+        if on:
+            self.cache = self.weight * self.mask.to(self.weight.dtype)
+        else:
+            self.cache = None
+
     
     def forward(self, x: torch.Tensor) -> torch.Tensor:
-        masked_weight = self.weight * self.mask.to(self.weight.dtype)
+        if self.cache is not None:
+            masked_weight = self.cache
+        else:
+            masked_weight = self.weight * self.mask.to(self.weight.dtype)
 
         if constants.XLA_AVAILABLE:
             return XLAPatchedLinear.apply(x, masked_weight, self.bias)

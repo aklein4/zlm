@@ -317,9 +317,9 @@ class CustomLlamaModel(nn.Module):
         elementwise_pad_mask: torch.Tensor | None = None,
         past_key_values: Cache | None = None,
     ) -> torch.LongTensor:
-        if past_key_values is not None and elementwise_pad_mask is not None:
+        if past_key_values is not None and past_key_values.get_seq_length(0) > 0 and elementwise_pad_mask is not None:
             raise NotImplementedError(
-                "Passing both `past_key_values` and `elementwise_pad_mask` is not supported."
+                "Passing both non-empty `past_key_values` and `elementwise_pad_mask` is not supported."
             )
 
         if elementwise_pad_mask is not None:
@@ -431,7 +431,7 @@ class CustomLlamaForCausalLM(nn.Module):
         Args:
             module: The module whose weights need to be initialized.
         """
-        if self.config.gaussian_init:
+        if self.config.get("gaussian_init", False):
             return gaussian_init(module)
 
         std = self.config.initializer_range
@@ -467,8 +467,10 @@ class CustomLlamaForCausalLM(nn.Module):
         )
 
         lm_states = self.model.norm(hidden_states)
-        if shift_states:
+        if isinstance(shift_states, slice):
             # Shift the hidden states to the right for causal language modeling
+            lm_states = lm_states[..., shift_states, :].contiguous()
+        elif shift_states:
             lm_states = lm_states[..., :-1, :].contiguous()
 
         logits = self.lm_head(lm_states)
@@ -490,4 +492,43 @@ class CustomLlamaForCausalLM(nn.Module):
             return logits, loss, hidden_states
         
         return logits, loss
+    
+
+    def get_logits(
+        self,
+        input_ids: torch.LongTensor,
+        output_ids: torch.LongTensor,
+        **kwargs,
+    ):
+        
+        all_ids = torch.cat(
+            [
+                input_ids,
+                torch.full_like(output_ids[:, :1], self.config.bos_token_id),
+                output_ids
+            ],
+            dim=1
+        )
+        elementwise_pad_mask = torch.cat(
+            [
+                (input_ids != self.config.pad_token_id),
+                torch.ones_like(output_ids[:, :1], dtype=torch.bool),
+                (output_ids != self.config.pad_token_id)
+            ],
+            dim=1
+        )
+        
+        ids_for_model = torch.where(
+            elementwise_pad_mask,
+            all_ids,
+            torch.zeros_like(all_ids)
+        )
+
+        logits, _ = self.forward(
+            input_ids=ids_for_model,
+            shift_states=slice(-(output_ids.shape[-1]+1), -1),
+            elementwise_pad_mask=elementwise_pad_mask
+        )
+
+        return logits
     
