@@ -211,7 +211,12 @@ def plot_slices():
     ref_probs = torch.exp(ref_dist.log_prob(t))
 
     data = torch.load(SAVE_PATH)
-    z = data["z"][:512, -10].to(DEVICE) / np.sqrt(2)
+    z = data["z"][:, 100].to(DEVICE) / np.sqrt(2)
+
+    z = torch.randn_like(z)
+    # z = z.view(z.shape[0], -1, 4)
+    # z = torch.nn.functional.rms_norm(z, [z.shape[-1]], eps=1e-8)
+    # z = z.view(z.shape[0], -1)
 
     w = torch.randn(z.shape[-1], num_checks, device=z.device, dtype=z.dtype)
     w = w / w.norm(dim=0, keepdim=True)

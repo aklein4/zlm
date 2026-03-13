@@ -13,12 +13,14 @@ from utils.torch_utils import (
     shift,
     scale_gradient,
     gaussian_init,
+    slerp
 )
 
 from models.llama import LlamaForCausalLM, LlamaRMSNorm
 from models.custom_llama import CustomLlamaModel, CustomLlamaDecoderLayer
 from models import load_checkpoint_state
-from utils.torch_modules import GroupRMSNorm, ARLinear, UnbiasedEMA
+from utils.torch_modules import ARLinear, UnbiasedEMA
+from distributions.power_spherical import Golden4dPSDistribution, Golden4DKLCalculator
 
 
 class ARHead(nn.Module):
@@ -110,6 +112,8 @@ class DecoderModel(CustomLlamaModel):
 
 class ARZLMModel(nn.Module):
     
+    GROUP_SIZE = 4
+
     def __init__(self, config: DictConfig):
         super().__init__()
         self.config = config
@@ -119,8 +123,8 @@ class ARZLMModel(nn.Module):
         self.input_length = config.input_length
         self.output_length = config.output_length
         self.z_length = config.z_length
-        self.latent_size = config.latent_size
         self.z_ar_steps = config.z_ar_steps
+        self.latent_size = self.z_ar_steps * self.GROUP_SIZE
 
         # craete the transformer backbones
         self.encoder_model = EncoderModel(config)
@@ -214,11 +218,6 @@ class ARZLMModel(nn.Module):
         self.encoder_noise_proj_in = nn.Linear(self.latent_size, self.hidden_size, bias=False)
         self.decoder_z_proj_in = nn.Linear(self.latent_size, self.hidden_size, bias=False)
 
-        self.z_out_norm = GroupRMSNorm(
-            self.latent_size, self.z_ar_steps,
-            eps=config.rms_norm_eps, elementwise_affine=False
-        )
-
         # create the heads
         self.encoder_head = ARHead(config) # , not_actually_ar=True)
         self.decoder_head = ARHead(config)
@@ -230,6 +229,7 @@ class ARZLMModel(nn.Module):
 
         # for training
         self.lm_loss_ema = UnbiasedEMA([1], config.lm_loss_ema_beta, eps=config.rms_norm_eps)
+        self.kl_calculator = Golden4DKLCalculator()
 
         if config.pretrained_llama is None:
             self.apply(gaussian_init)
@@ -258,34 +258,54 @@ class ARZLMModel(nn.Module):
         input_ids: torch.LongTensor,
     ) -> torch.FloatTensor:
 
-        input_tokens = self.embed_tokens(input_ids)
-        
-        # generate the noise
-        noise = torch.randn(
-            *input_ids.shape[:-1],
-            self.z_length,
-            self.latent_size,
-            device=input_tokens.device,
-            dtype=input_tokens.dtype,
+        mu = torch.zeros(
+            input_ids.shape[0], self.z_length, self.z_ar_steps, self.GROUP_SIZE,
+            device=input_ids.device, dtype=self.embed_tokens.weight.dtype,
         )
+        mu[..., 1] = 1.0
 
-        return noise
+        dist = Golden4dPSDistribution(mu, eps=self.config.rms_norm_eps)
+        return dist.sample_noise()
 
     
     def add_noise(
         self,
-        mu: torch.FloatTensor,
-        noise: torch.FloatTensor | None = None,
-        noise_scale: float | None = None,
+        dist: Golden4dPSDistribution,
+        noise: tuple[torch.Tensor, torch.Tensor] | None = None,
+        noise_scale: torch.FloatTensor = None,
     ) -> torch.FloatTensor:
+        
+        if noise is not None:
+            v, Z = noise
+        else:
+            v, Z = dist.sample_noise()
 
-        if noise is None:
-            noise = torch.randn_like(mu)
+        z = dist.rsample(v=v, Z=Z)
 
-        if noise_scale is None:
-            noise_scale = 1.0
+        if noise_scale is not None:
+            z = slerp(dist.mu, z, noise_scale)
 
-        return mu + noise_scale * noise
+        return z
+
+
+    def embed_noise(
+        self,
+        noise: tuple[torch.FloatTensor, torch.FloatTensor]
+    ) -> torch.FloatTensor:
+        v, Z = noise
+
+        t = (2.0 * Z - 1.0).unsqueeze(-1)
+        s = torch.sqrt(1 - t**2)
+
+        return s * v
+    
+
+    def get_kl(
+        self,
+        dist: Golden4dPSDistribution,
+        other: Golden4dPSDistribution,
+    ) -> torch.FloatTensor:
+        return self.kl_calculator(dist, other)
 
 
     def encode(
@@ -300,9 +320,7 @@ class ARZLMModel(nn.Module):
     ):
 
         if noise is None:
-            noise = self.sample_noise(
-                input_ids,
-            ) 
+            noise = self.sample_noise(input_ids)
 
         input_tokens = self.embed_tokens(input_ids) + unsqueeze_to_batch(
             self.encoder_input_embeddings, input_ids
@@ -311,10 +329,13 @@ class ARZLMModel(nn.Module):
             self.encoder_output_embeddings, output_ids
         )
 
+        embedded_noise = self.embed_noise(noise).reshape(
+            noise.shape[0], self.z_length, self.latent_size
+        )
         z_tokens = (
             unsqueeze_to_batch(self.encoder_z_tokens, noise) +
             shift(
-                self.encoder_noise_proj_in(noise),
+                self.encoder_noise_proj_in(embedded_noise),
                 n=1, dim=-2, direction="right", narrow=True
             )
         )
@@ -351,11 +372,14 @@ class ARZLMModel(nn.Module):
         
         mu = self.encoder_head(
             z_states,
-            noise,
+            embedded_noise,
         )
-        mu = self.z_out_norm(mu)
+        mu = mu.reshape(mu.shape[0], mu.shape[1], self.z_ar_steps, self.GROUP_SIZE)
 
-        z = self.add_noise(mu, noise, noise_scale)
+        dist = Golden4dPSDistribution(
+            mu, eps=self.config.rms_norm_eps
+        )
+        z = self.add_noise(dist, noise, noise_scale)
 
         if return_extra:
             return z, mu, z_states
@@ -380,7 +404,9 @@ class ARZLMModel(nn.Module):
             self.decoder_output_embeddings, output_ids
         )
 
-        z_projed = self.decoder_z_proj_in(z)
+        z_projed = self.decoder_z_proj_in(
+            z.reshape(z.shape[0], self.z_length, self.latent_size)
+        )
 
         z_tokens = (
             unsqueeze_to_batch(self.decoder_z_tokens, z) +
@@ -452,6 +478,8 @@ class ARZLMModel(nn.Module):
         normalize_scale: bool = False,
         token_index: int | None = None,
     ):
+        raise NotImplementedError("This method is not fully implemented yet for spherical distributions")
+
         guide = guidance_scale is not None
         if guide:
             assert token_index is not None
@@ -505,6 +533,7 @@ class ARZLMModel(nn.Module):
         verbose: bool=False,
         **rollout_kwargs,
     ):
+        raise NotImplementedError("This method is not fully implemented yet for spherical distributions")
 
         from transformers.cache_utils import DynamicCache
         from tqdm import tqdm
@@ -639,6 +668,7 @@ class ARZLMModel(nn.Module):
         verbose: bool=False,
         **rollout_kwargs,
     ):
+        raise NotImplementedError("This method is not fully implemented yet for spherical distributions")
         
         input_mask = (input_ids != self.config.pad_token_id)
         output_mask = (output_ids != self.config.pad_token_id)

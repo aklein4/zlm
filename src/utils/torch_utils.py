@@ -385,3 +385,73 @@ def safe_repeat(
         [x] * n_repeats,
         dim=dim
     )
+
+
+def slerp(
+    v0: torch.Tensor,
+    v1: torch.Tensor,
+    t: float | torch.Tensor,
+    eps: float = 1e-6,
+) -> torch.Tensor:
+    """
+    Spherical linear interpolation (slerp) between two tensors.
+
+    Interpolates along the great arc between v0 and v1 on the hypersphere.
+
+    Args:
+        v0: Start tensor of shape (..., D).
+        v1: End tensor of shape (..., D).
+        t:  Interpolation weight(s) in [0, 1]. Either a Python float or a
+            tensor broadcastable to the leading axes (...) of v0/v1.
+            t=0 returns a vector aligned with v0, t=1 aligned with v1.
+            
+    Returns:
+        Interpolated tensor of shape (..., D)
+    """
+    with torch.autocast(device_type=v0.device.type, enabled=False):
+        og_dtype = v0.dtype
+
+        v0 = v0.float()
+        v1 = v1.float()
+        if isinstance(t, torch.Tensor):
+            t = t.float()
+        else:
+            t = torch.zeros_like(v0[..., 0]) + t
+        
+        v0_norm = v0.norm(dim=-1, keepdim=True)
+        v1_norm = v1.norm(dim=-1, keepdim=True)
+
+        # normalize
+        v0 = v0 / (v0_norm + eps)
+        v1 = v1 / (v1_norm + eps)
+
+        # dot product along the last axis (...,)
+        dot = (v0 * v1).sum(dim=-1).clamp(-1.0, 1.0)   # clamp for acos safety
+
+        # angle between the vectors (...,)
+        theta = dot.acos()
+        sin_theta = theta.sin()
+
+        # Fall back to normalized lerp when the angle is too small for stable slerp.
+        safe_slerp = sin_theta.abs() > eps
+        c0 = torch.sin((1.0 - t) * theta) / sin_theta.clamp_min(eps)
+        c1 = torch.sin(t * theta) / sin_theta.clamp_min(eps)
+
+        slerp_result = c0.unsqueeze(-1) * v0 + c1.unsqueeze(-1) * v1
+        lerp_result = (1.0 - t).unsqueeze(-1) * v0 + t.unsqueeze(-1) * v1
+
+        result = torch.where(
+            safe_slerp.unsqueeze(-1),
+            slerp_result,
+            lerp_result,
+        )
+
+        # rescale to match the norms of the endpoints
+        result = result / (result.norm(dim=-1, keepdim=True) + eps)
+
+        t = t.unsqueeze(-1)
+        result = result * (
+            (1.0 - t) * v0_norm + t * v1_norm
+        )
+
+        return result.to(og_dtype)

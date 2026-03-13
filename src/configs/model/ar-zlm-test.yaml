@@ -61,8 +61,7 @@ output_length: 512
 z_length: 384
 
 # latent configuration
-latent_size: 64
-z_ar_steps: 4
+z_ar_steps: 8
 
 # head configuration
 head_intermediate_size: 384

@@ -18,10 +18,10 @@ CHECKPOINTS = {
     "../guidance_evaluation_results_2": "Guided-2",
     "aklein4--ZEBRA_ar-1p7b-kernel-strong/000000009000": "AR",
     "../no_noise_scaled_eval_results/aklein4--ZEBRA_ar-1p7b-kernel-strong/000000009000": "AR-NN-Scaled",
-    "aklein4--ZEBRA_baseline-1p7b/000000020000": "Baseline-20K",
-    "aklein4--ZEBRA_baseline-1p7b/000000015000": "Baseline-15K",
+    # "aklein4--ZEBRA_baseline-1p7b/000000020000": "Baseline-20K",
+    # "aklein4--ZEBRA_baseline-1p7b/000000015000": "Baseline-15K",
     "aklein4--ZEBRA_baseline-1p7b/000000010000": "Baseline-10K",
-    "aklein4--ZEBRA_baseline-1p7b/000000005000": "Baseline-5K",
+    # "aklein4--ZEBRA_baseline-1p7b/000000005000": "Baseline-5K",
 }
 
 REASONING_BENCHMARKS = [

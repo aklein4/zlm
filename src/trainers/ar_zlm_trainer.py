@@ -10,6 +10,7 @@ from utils.scheduling_utils import linear_warmup, cosine_warmup
 from utils.torch_utils import scale_gradient
 from utils.loss_utils import lm_loss_fn, lm_acc_fn 
 from utils.sharding_utils import shard_with_gradients
+from distributions.power_spherical import Golden4dPSDistribution
 
 
 class ARZLMTrainer(BaseTrainer):
@@ -71,35 +72,23 @@ class ARZLMTrainer(BaseTrainer):
         mu_kl_scale = {}
         scaled_mu = scale_gradient(mu, mu_kl_scale)
     
-        kl = ((scaled_mu - pred_mu).pow(2) / 2).sum(0) # [S, Z]
+        dist = Golden4dPSDistribution(scaled_mu, eps=self.model.config.rms_norm_eps)
+        pred_dist = Golden4dPSDistribution(pred_mu, eps=self.model.config.rms_norm_eps)
 
-        sequence_weights = kl.mean(-1, keepdim=True)
-        channel_weights = kl.mean(-2, keepdim=True)
-        weights = sequence_weights * channel_weights
+        kl = self.model.get_kl(dist, pred_dist).sum(0)
+
+        weights = kl
+        sequence_weights = kl.mean(-1)
+        channel_weights = kl.mean(-2)
 
         weights = weights * kl.mean() / ((weights * kl).mean() + self.model.config.rms_norm_eps)
         weights = weights.detach()
         if disable_weights:
             weights = torch.ones_like(weights)
 
-        mu_kl_scale["value"] = weights[None]
+        mu_kl_scale["value"] = weights[None, ..., None]
 
-        return kl.sum(), sequence_weights, channel_weights
-
-
-    def mutual_information(self, mu):
-
-        mu = mu.transpose(0, 1) # [S, B, H]
-        mu = shard_with_gradients(mu)
-
-        dists = torch.cdist(mu, mu, p=2) # [S, B, B]
-
-        scores = -dists.pow(2) / (2 * mu.shape[-1])
-        masked_scores = scores - torch.eye(scores.shape[-1], device=scores.device, dtype=scores.dtype)[None] * 1e9
-
-        mi = -torch.logsumexp(masked_scores - np.log(scores.shape[-1] - 1), dim=-1).mean()
-
-        return mi
+        return kl.sum(), weights, sequence_weights, channel_weights
 
 
     def forward(self, input_ids, output_ids):
@@ -188,21 +177,21 @@ class ARZLMTrainer(BaseTrainer):
         pred_mu = self.model.decoder_head(
             z_states_for_kl, z_for_kl
         )
+        pred_mu = pred_mu.reshape(pred_mu.shape[0], pred_mu.shape[1], self.z_ar_steps, self.model.GROUP_SIZE)
+
         uncond_pred_mu = self.model.uncond_decoder_head(
             self.model.uncond_tokens[None], z_for_kl.detach()
         )
-
-        contrast_scale = wait_hook_progress
-        contrast_loss = self.mutual_information(z)
+        uncond_pred_mu = uncond_pred_mu.reshape(uncond_pred_mu.shape[0], uncond_pred_mu.shape[1], self.z_ar_steps, self.model.GROUP_SIZE)
 
         # get kl
-        kl, sequence_weights, channel_weights = self.kl_loss(
+        kl, weights, sequence_weights, channel_weights = self.kl_loss(
             mu_for_kl, pred_mu
         )
-        uncond_kl, uncond_sequence_weights, uncond_channel_weights = self.kl_loss(
+        uncond_kl, uncond_weights, uncond_sequence_weights, uncond_channel_weights = self.kl_loss(
             mu_for_kl.detach(), uncond_pred_mu
         )
-        mean_kl, mean_sequence_weights, mean_channel_weights = self.kl_loss(
+        mean_kl, mean_weights, mean_sequence_weights, mean_channel_weights = self.kl_loss(
             mu_for_kl.detach(), mu_for_kl.detach().mean(0, keepdim=True)
         )
 
@@ -210,23 +199,25 @@ class ARZLMTrainer(BaseTrainer):
 
         # calculate kls per token
         kl_per_token = kl / denom
+        full_parties = self.get_effective_parties(weights)
         effective_parties = self.get_effective_parties(sequence_weights)
         channel_parties = self.get_effective_parties(channel_weights)
         elbo = lm_loss + kl_per_token
 
         uncond_kl_per_token = uncond_kl / denom
+        uncond_full_parties = self.get_effective_parties(uncond_weights)
         uncond_effective_parties = self.get_effective_parties(uncond_sequence_weights)
         uncond_channel_parties = self.get_effective_parties(uncond_channel_weights)
 
         mean_kl_per_token = mean_kl / denom
+        mean_full_parties = self.get_effective_parties(mean_weights)
         mean_effective_parties = self.get_effective_parties(mean_sequence_weights)
         mean_channel_parties = self.get_effective_parties(mean_channel_weights)
 
         loss = (
             lm_loss +
             self.config.trainer.beta * kl_per_token +
-            self.config.trainer.beta * uncond_kl_per_token +
-            (-self.config.trainer.contrast_weight) * contrast_scale * contrast_loss
+            self.config.trainer.beta * uncond_kl_per_token
         )
 
         aux = {
@@ -240,20 +231,20 @@ class ARZLMTrainer(BaseTrainer):
             "full_grad_scale": z_states_kl_grad_scale,
 
             "kl_per_token": kl_per_token,
+            "full_parties": full_parties,
             "effective_parties": effective_parties,
             "channel_parties": channel_parties,
 
             "uncond_kl_per_token": uncond_kl_per_token,
+            "uncond_full_parties": uncond_full_parties,
             "uncond_effective_parties": uncond_effective_parties,
             "uncond_channel_parties": uncond_channel_parties,
 
             "mean_kl_per_token": mean_kl_per_token,
+            "mean_full_parties": mean_full_parties,
             "mean_effective_parties": mean_effective_parties,
             "mean_channel_parties": mean_channel_parties,
             
-            "contrast_scale": contrast_scale,
-            "contrast_loss": contrast_loss,
-
             "hooked": self.hooked,
             "hook_step": self.hook_step,
             "hook_progress": hook_progress,

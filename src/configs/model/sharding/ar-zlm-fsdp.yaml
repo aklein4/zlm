@@ -83,6 +83,12 @@ uncond_decoder_head.cross_proj.weight: [null, fsdp]
 uncond_tokens: [null, fsdp]
 
 
+# calculator
+kl_calculator.lower_coeffs: [null]
+kl_calculator.upper_coeffs: [null]
+kl_calculator.exponents: [null]
+
+
 # external
 encoder_sep_token: [null, fsdp]
 encoder_z_tokens: [null, fsdp]
