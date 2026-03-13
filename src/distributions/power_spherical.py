@@ -5,6 +5,14 @@ from torch.distributions import Beta
 
 import math
 
+try:
+    from utils.constants import XLA_AVAILABLE
+except ImportError:
+    XLA_AVAILABLE = False
+try:
+    from distributions.beta import sample_beta
+except:
+    from beta import sample_beta
 
 def l2_norm(
     x: torch.Tensor,
@@ -23,74 +31,10 @@ def unsqueeze_to_batch(
     return x
 
 
-def lgamma(x: torch.Tensor) -> torch.Tensor:
-    """
-    Compute the log-gamma function using only Python-level PyTorch ops.
-    Uses the Lanczos approximation (g=7, n=9) with the reflection formula
-    for negative non-integer arguments.
-    """
-    with torch.autocast(device_type=x.device.type, enabled=False):
-        x = x.float()
-
-        # Lanczos coefficients (g = 7, n = 9)
-        # These are the same coefficients used by many standard libraries
-        g = 7.0
-        coefs_ = [
-            0.99999999999980993,
-            676.5203681218851,
-            -1259.1392167224028,
-            771.32342877765313,
-            -176.61502916214059,
-            12.507343278686905,
-            -0.13857109526572012,
-            9.9843695780195716e-6,
-            1.5056327351493116e-7,
-        ]
-        coefs = torch.zeros(len(coefs_), dtype=x.dtype, device=x.device)
-        for i in range(len(coefs_)):
-            coefs[i] += coefs_[i] # hacky way to prevent xla graph breaks
-
-        # Reflection formula for x < 0
-        # Γ(z)Γ(1−z) = π / sin(πz)
-        # ⇒ lgamma(z) = ln(π) − ln|sin(πz)| − lgamma(1−z)
-        needs_reflection = x < 0.5
-        # Work with z ≥ 0.5 everywhere; we'll patch the negatives at the end.
-        z = torch.where(needs_reflection, 1.0 - x, x)
-
-        # Lanczos series: Ag(z)
-        # Γ(z) = √(2π) · (z − 1 + g + 0.5)^(z − 0.5) · exp(−(z − 1 + g + 0.5)) · Ag(z−1)
-        # where Ag(t) = c0 + c1/(t+1) + c2/(t+2) + …
-        t = z - 1.0                       # shift so the series is in terms of t ≥ −0.5
-        base = t + g + 0.5                # (t + g + 0.5)
-
-        # Build the rational sum
-        ag = torch.full_like(x, coefs_[0])
-        for i in range(1, len(coefs)):
-            ag = ag + coefs[i] / (t + i)
-
-        # Log-gamma for z ≥ 0.5
-        # lgamma(z) = 0.5·ln(2π) + (t + 0.5)·ln(base) − base + ln(Ag)
-        result_pos = (
-            0.5 * math.log(2.0 * math.pi)
-            + (t + 0.5) * torch.log(base)
-            - base
-            + torch.log(ag)
-        )
-
-        # ── Reflection: lgamma for x < 0.5 ───────────────────────────────
-        sin_pi_x = torch.sin(math.pi * x)
-        result_neg = math.log(math.pi) - torch.log(sin_pi_x.abs()) - result_pos
-
-        result = torch.where(needs_reflection, result_neg, result_pos)
-
-        # Poles at non-positive integers → +inf (matches torch.lgamma convention)
-        is_pole = (x <= 0) & (x == x.floor())
-        result = torch.where(is_pole, torch.tensor(float("inf"), dtype=x.dtype, device=x.device), result)
-
-        return result
-
-
 class PowerSphericalDistribution(nn.Module):
+
+    _custom_beta = False
+
 
     def __init__(
         self,
@@ -200,7 +144,10 @@ class PowerSphericalDistribution(nn.Module):
                 beta = beta.expand(*sample_shape, *beta.shape)
                 mu = mu.expand(*sample_shape, *mu.shape)
 
-            Z = Beta(alpha, beta).rsample()
+            if XLA_AVAILABLE or self._custom_beta:
+                Z = sample_beta(alpha, beta)
+            else:
+                Z = Beta(alpha, beta).rsample()
 
             v = torch.randn(
                 *mu.shape[:-1],
@@ -511,11 +458,107 @@ def test_kl_curve():
     plt.clf()
 
 
+def test_beta():
+
+    import matplotlib.pyplot as plt
+
+    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+
+    base_mu = torch.tensor([[0.0, 1.0]], device=device)
+    base_kappa = torch.tensor([Golden4dPSDistribution.GOLDEN_KAPPA], device=device)
+    dist = PowerSphericalDistribution(base_mu, base_kappa)
+
+    print("KL to uniform:", dist.kl_to_uniform().item())
+
+    z = dist.rsample(sample_shape=(100000,))
+
+    dist._custom_beta = True
+    z_custom = dist.rsample(sample_shape=(100000,))
+
+    print(" === Means ===")
+    print("PyTorch Beta mean:", z.mean().item())
+    print("Custom Beta mean:", z_custom.mean().item())
+    print(" === Stds ===")
+    print("PyTorch Beta std:", z.std().item())
+    print("Custom Beta std:", z_custom.std().item())
+
+    plt.hist(z.flatten().cpu().numpy(), bins=100, alpha=0.5, label="PyTorch Beta")
+    plt.hist(z_custom.flatten().cpu().numpy(), bins=100, alpha=0.5, label="Custom Beta")
+
+    plt.legend()
+    plt.grid()
+
+    plt.savefig("beta_samples.png")
+    plt.clf()
+
+
+def plot_circle():
+
+    base_mu = torch.tensor([1.0, 0.0])
+    base_kappa = torch.tensor(Golden4dPSDistribution.GOLDEN_KAPPA)
+    dist = PowerSphericalDistribution(base_mu, base_kappa)
+
+    print("KL to uniform:", dist.kl_to_uniform().item())
+
+    thetas = torch.linspace(0, 2*math.pi, 1000)
+
+    samples = torch.stack([torch.cos(thetas), torch.sin(thetas)], dim=-1)
+    
+    log_probs = dist.log_prob(samples)
+    probs = torch.softmax(log_probs, dim=0)
+    probs = probs / probs.max()
+
+    import matplotlib.pyplot as plt
+    import numpy as np
+
+    plt.plot(samples[:, 0].cpu().numpy(), samples[:, 1].cpu().numpy(), "k--")
+
+    rad = 1.0 + 0.5 * probs
+    plt.plot(
+        (rad * samples[:, 0]).cpu().numpy(),
+        (rad * samples[:, 1]).cpu().numpy(),
+        "b-",
+    )
+
+    plt.axis("equal")
+    plt.grid()
+
+    samples = dist.rsample(sample_shape=(10000,))
+    thetas = torch.atan2(samples[:, 1], samples[:, 0])
+
+    vals, bins = np.histogram(thetas.cpu().numpy(), bins=100)
+    vecs = np.stack([np.cos((bins[:-1] + bins[1:]) / 2), np.sin((bins[:-1] + bins[1:]) / 2)], axis=-1)
+    rad = 1.0 + 0.5 * vals / vals.max()
+
+    plt.plot(
+        (rad * vecs[:, 0]),
+        (rad * vecs[:, 1]),
+        "r-",
+    )
+    
+    plt.savefig("power_spherical_circle.png")
+    plt.clf()
+
+    dots = (dist.mu * samples).sum(dim=-1)
+    thetas = torch.acos(dots.clamp(-1.0, 1.0))
+
+    plt.hist(thetas.cpu().numpy(), bins=100)
+    plt.grid()
+    plt.xlabel("Angle from mean direction (radians)")
+    plt.ylabel("Frequency")
+    plt.title("Histogram of angles from mean direction for PowerSpherical samples")
+    plt.savefig("power_spherical_angles.png")
+    plt.clf()
+
+
 if __name__ == "__main__":
     
     # get_kl_curve()
 
     # fit_kl_curve()
 
-    test_kl_curve()
+    # test_kl_curve()
     
+    # test_beta()
+
+    plot_circle()
