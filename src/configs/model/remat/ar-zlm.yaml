@@ -1,0 +1,31 @@
+
+advanced:
+
+ -  name: self
+    settings:
+        activation_checkpoint_layers:
+         - ARHead
+        optimization_barrier_layers:
+         - ARHead
+
+ -  name: encoder_model
+    settings:
+        activation_checkpoint_layers:
+         - EncoderModelLayer
+        optimization_barrier_layers:
+         - EncoderModelLayer
+        scan_layers: layers
+        # is_layer_pure: true
+        offload_tensors:
+         - encoder_model_input
+
+ -  name: decoder_model
+    settings:
+        activation_checkpoint_layers:
+         - DecoderModelLayer
+        optimization_barrier_layers:
+         - DecoderModelLayer
+        scan_layers: layers
+        # is_layer_pure: true
+        offload_tensors:
+         - decoder_model_input

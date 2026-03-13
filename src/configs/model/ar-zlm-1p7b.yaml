@@ -1,0 +1,74 @@
+defaults:
+  - _self_  # refers to this config file
+  - sharding: ar-zlm-fsdp  # refers to sharding/llama-fsdp.yaml
+  - remat: ar-zlm  # refers to remat/llama-scan.yaml
+
+
+# Used to import the model from this class
+type: ar_zlm.ARZLMModel
+
+# Information about loading from a checkpoint
+pretrained_url: null
+pretrained_step: null
+pretrained_strict: null
+
+# torch information
+torch_dtype: float32
+
+# vocab information
+vocab_size: 49152
+bos_token_id: 0
+eos_token_id: 0
+pad_token_id: 49152
+
+# architecture size
+hidden_size: 2048
+num_hidden_layers: 24
+
+# attention configuration
+num_attention_heads: 32
+num_key_value_heads: 32
+
+# MLP configuration
+intermediate_size: 8192
+hidden_act: silu
+
+# rope configuration
+max_position_embeddings: 8192
+rope_theta: 130000
+
+# initialization
+initializer_range: 0.02 # should not be used
+
+# misc
+attention_dropout: false
+attention_bias: false
+rms_norm_eps: 1.0e-05
+
+# value added to pad token attention scores
+# only used when elementwise_pad_mask is passed
+pad_attention_bias_value: -100.0
+
+# choose attention_kernel from: [flash_attention, splash_attention, null]
+attention_kernel: flash_attention
+
+# pretrained model to use as base
+pretrained_llama: aklein4/SmolLM2-1.7B-TPU
+
+# lengths
+input_length: 256
+output_length: 512
+z_length: 384
+
+# latent configuration
+latent_size: 64
+z_ar_steps: 16
+
+# head configuration
+head_intermediate_size: 8192
+
+# training configuration
+lm_loss_ema_beta: 0.75
+
+pure_modules: []
+  
