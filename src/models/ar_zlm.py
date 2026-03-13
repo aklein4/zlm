@@ -261,7 +261,7 @@ class ARZLMModel(nn.Module):
 
         mu = torch.zeros(
             input_ids.shape[0], self.z_length, self.z_ar_steps, self.GROUP_SIZE,
-            device=input_ids.device, dtype=self.embed_tokens.weight.dtype,
+            device=input_ids.device, dtype=self.embed_tokens(input_ids).dtype,
         )
         mu[..., 1] = 1.0
 
