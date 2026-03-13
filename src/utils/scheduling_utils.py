@@ -1,5 +1,27 @@
 import torch
 
+import math
+
+
+def cosine_warmup(
+    step: torch.Tensor | int,
+    warmup_steps: int,
+) -> torch.Tensor | float:
+    """ Cosine warmup function.
+
+    Args:
+        step (torch.Tensor | int): current step
+        warmup_steps (int): number of warmup steps
+
+    Returns:
+        torch.Tensor | float: value between 0.0 and 1.0 representing progress through warmup
+    """
+    t = linear_warmup(step, warmup_steps)
+
+    if isinstance(t, torch.Tensor):
+        return 0.5 * (1 - torch.cos(t * math.pi))
+    return 0.5 * (1 - math.cos(t * math.pi))
+
 
 def linear_warmup(
     step: torch.Tensor | int,

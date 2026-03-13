@@ -4,9 +4,133 @@ import torch.nn.functional as F
 
 import numpy as np
 
-from utils.torch_utils import attach_gradient
+import utils.constants as constants
+if constants.XLA_AVAILABLE:
+    from torch_xla.distributed.spmd.xla_sharding import XLAPatchedLinear
+
+from utils.torch_utils import attach_gradient, unsqueeze_to_batch
 from utils.sharding_utils import maybe_shard_with_gradients
 
+
+class GroupRMSNorm(nn.Module):
+
+    def __init__(
+        self,
+        hidden_size: int,
+        num_groups: int,
+        eps: float=1e-6,
+        elementwise_affine: bool=True,
+    ):
+        super().__init__()
+
+        assert hidden_size % num_groups == 0, f"hidden_size {hidden_size} must be divisible by num_groups {num_groups}"
+
+        self.hidden_size = hidden_size
+        self.num_groups = num_groups
+        self.group_size = hidden_size // num_groups
+        self.eps = eps
+        self.elementwise_affine = elementwise_affine
+
+        if self.elementwise_affine:
+            self.weight = nn.Parameter(torch.zeros(hidden_size))
+        else:
+            self.register_parameter("weight", None)
+
+
+    def forward(self, x: torch.Tensor) -> torch.Tensor:
+        assert x.shape[-1] == self.hidden_size, f"Input hidden size {x.shape[-1]} does not match expected hidden size {self.hidden_size}"
+
+        input_dtype = x.dtype
+        x = x.to(torch.float32)
+        
+        input_shape = x.shape
+        x = x.reshape(*x.shape[:-1], self.num_groups, self.group_size)
+
+        x = F.rms_norm(
+            x, [self.group_size], eps=self.eps
+        )
+
+        x = x.reshape(input_shape)
+        if self.elementwise_affine:
+            x = x * (1.0 + unsqueeze_to_batch(self.weight, x))
+        
+        return x.to(input_dtype)
+    
+
+class ARLinear(nn.Module):
+
+    def __init__(
+        self,
+        in_features: int,
+        out_features: int,
+        num_steps: int,
+        self_attend: bool,
+        bias: bool=True,
+    ):
+        """ An autoregressive linear layer.
+        
+        Args:
+            in_features (int): The number of input features.
+            out_features (int): The number of output features.
+            num_steps (int): The number of autoregressive steps.
+            self_attend (bool): Whether to allow the current step to see itself.
+            bias (bool): Whether to include a bias term.
+        """
+        super().__init__()
+
+        self.in_features = in_features
+        self.out_features = out_features
+        self.num_steps = num_steps
+        self.self_attend = self_attend
+
+        assert self.in_features % self.num_steps == 0, f"in_features {in_features} must be divisible by num_steps {num_steps}"
+        assert self.out_features % self.num_steps == 0, f"out_features {out_features} must be divisible by num_steps {num_steps}"
+
+        self.weight = nn.Parameter(
+            torch.randn(self.out_features, self.in_features)
+        )
+        if bias:
+            self.bias = nn.Parameter(
+                torch.zeros(self.out_features)
+            )
+        else:
+            self.register_parameter('bias', None)
+
+        n = self.num_steps
+        mask = torch.ones(n, n)
+        mask = torch.tril(mask, diagonal=0 if self.self_attend else -1)
+        mask = mask.repeat_interleave(self.out_features // n, dim=0).repeat_interleave(self.in_features // n, dim=1)
+        self.register_buffer('mask', mask, persistent=True)
+
+        self.weight.data.copy_(
+            (
+                self.mask *
+                torch.randn_like(self.weight) /
+                (torch.sqrt(self.mask.sum(dim=-1, keepdim=True)) + 1e-6)
+            ).detach()
+        )
+
+        self.cache = None
+
+
+    def set_cache(self, on):
+        if on:
+            self.cache = self.weight * self.mask.to(self.weight.dtype)
+        else:
+            self.cache = None
+
+    
+    def forward(self, x: torch.Tensor) -> torch.Tensor:
+        if self.cache is not None:
+            masked_weight = self.cache
+        else:
+            masked_weight = self.weight * self.mask.to(self.weight.dtype)
+
+        if constants.XLA_AVAILABLE:
+            return XLAPatchedLinear.apply(x, masked_weight, self.bias)
+        else:
+            return F.linear(x, masked_weight, self.bias)
+        
 
 class ContinuousEmbedding(nn.Module):
 

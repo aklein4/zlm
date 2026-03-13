@@ -498,23 +498,37 @@ class CustomLlamaForCausalLM(nn.Module):
         self,
         input_ids: torch.LongTensor,
         output_ids: torch.LongTensor,
+        **kwargs,
     ):
         
-        all_ids = torch.cat([input_ids, output_ids], dim=1)
-
-        elementwise_pad_mask = (all_ids != self.config.pad_token_id)
+        all_ids = torch.cat(
+            [
+                input_ids,
+                torch.full_like(output_ids[:, :1], self.config.bos_token_id),
+                output_ids
+            ],
+            dim=1
+        )
+        elementwise_pad_mask = torch.cat(
+            [
+                (input_ids != self.config.pad_token_id),
+                torch.ones_like(output_ids[:, :1], dtype=torch.bool),
+                (output_ids != self.config.pad_token_id)
+            ],
+            dim=1
+        )
+        
         ids_for_model = torch.where(
             elementwise_pad_mask,
             all_ids,
             torch.zeros_like(all_ids)
         )
 
-        hidden_states = self.model(
+        logits, _ = self.forward(
             input_ids=ids_for_model,
-            elementwise_pad_mask=elementwise_pad_mask,
-        )[:, -(output_ids.shape[1]+1):-1, :]
-
-        logits = self.lm_head(self.model.norm(hidden_states))
+            shift_states=slice(-(output_ids.shape[-1]+1), -1),
+            elementwise_pad_mask=elementwise_pad_mask
+        )
 
         return logits
     

@@ -418,6 +418,17 @@ class arc_c(arc_e):
     subset = "ARC-Challenge"
 
 
+class arc_e_train(arc_e):
+
+    name = "ARC-E-Train"
+    split = "train"
+
+class arc_c_train(arc_c):
+
+    name = "ARC-C-Train"
+    split = "train"
+
+
 class sciq(MCQABenchmark):
     
     name = "SciQ"
