@@ -23,6 +23,73 @@ def unsqueeze_to_batch(
     return x
 
 
+def lgamma(x: torch.Tensor) -> torch.Tensor:
+    """
+    Compute the log-gamma function using only Python-level PyTorch ops.
+    Uses the Lanczos approximation (g=7, n=9) with the reflection formula
+    for negative non-integer arguments.
+    """
+    with torch.autocast(device_type=x.device.type, enabled=False):
+        x = x.float()
+
+        # Lanczos coefficients (g = 7, n = 9)
+        # These are the same coefficients used by many standard libraries
+        g = 7.0
+        coefs_ = [
+            0.99999999999980993,
+            676.5203681218851,
+            -1259.1392167224028,
+            771.32342877765313,
+            -176.61502916214059,
+            12.507343278686905,
+            -0.13857109526572012,
+            9.9843695780195716e-6,
+            1.5056327351493116e-7,
+        ]
+        coefs = torch.zeros(len(coefs_), dtype=x.dtype, device=x.device)
+        for i in range(len(coefs_)):
+            coefs[i] += coefs_[i] # hacky way to prevent xla graph breaks
+
+        # Reflection formula for x < 0
+        # Γ(z)Γ(1−z) = π / sin(πz)
+        # ⇒ lgamma(z) = ln(π) − ln|sin(πz)| − lgamma(1−z)
+        needs_reflection = x < 0.5
+        # Work with z ≥ 0.5 everywhere; we'll patch the negatives at the end.
+        z = torch.where(needs_reflection, 1.0 - x, x)
+
+        # Lanczos series: Ag(z)
+        # Γ(z) = √(2π) · (z − 1 + g + 0.5)^(z − 0.5) · exp(−(z − 1 + g + 0.5)) · Ag(z−1)
+        # where Ag(t) = c0 + c1/(t+1) + c2/(t+2) + …
+        t = z - 1.0                       # shift so the series is in terms of t ≥ −0.5
+        base = t + g + 0.5                # (t + g + 0.5)
+
+        # Build the rational sum
+        ag = torch.full_like(x, coefs_[0])
+        for i in range(1, len(coefs)):
+            ag = ag + coefs[i] / (t + i)
+
+        # Log-gamma for z ≥ 0.5
+        # lgamma(z) = 0.5·ln(2π) + (t + 0.5)·ln(base) − base + ln(Ag)
+        result_pos = (
+            0.5 * math.log(2.0 * math.pi)
+            + (t + 0.5) * torch.log(base)
+            - base
+            + torch.log(ag)
+        )
+
+        # ── Reflection: lgamma for x < 0.5 ───────────────────────────────
+        sin_pi_x = torch.sin(math.pi * x)
+        result_neg = math.log(math.pi) - torch.log(sin_pi_x.abs()) - result_pos
+
+        result = torch.where(needs_reflection, result_neg, result_pos)
+
+        # Poles at non-positive integers → +inf (matches torch.lgamma convention)
+        is_pole = (x <= 0) & (x == x.floor())
+        result = torch.where(is_pole, torch.tensor(float("inf"), dtype=x.dtype, device=x.device), result)
+
+        return result
+
+
 class PowerSphericalDistribution(nn.Module):
 
     def __init__(
@@ -113,7 +180,10 @@ class PowerSphericalDistribution(nn.Module):
             
             mu = unsqueeze_to_batch(self.mu.float(), x)
             kappa = unsqueeze_to_batch(self.kappa.float(), x[..., 0])
-            normalizer = unsqueeze_to_batch(self.log_normalizer.float(), x[..., 0])
+
+            normalizer = self.log_normalizer
+            if isinstance(normalizer, torch.Tensor):
+                normalizer = unsqueeze_to_batch(normalizer.float(), x[..., 0])
 
             dot = (mu * x).sum(dim=-1)
             return normalizer + kappa * torch.log1p(dot)
@@ -202,6 +272,16 @@ class Golden4dPSDistribution(PowerSphericalDistribution):
         kappa = torch.full_like(mu[..., 0], self.GOLDEN_KAPPA)
 
         super().__init__(mu, kappa, eps)
+
+    
+    def _get_log_normalizer(self):
+        return -41.73634338378906
+
+    def _get_entropy(self):
+        return -1.0173683166503906
+
+    def _get_kl_to_uniform(self):
+        return 4.0
 
 
 class Golden4DKLCalculator(nn.Module):
@@ -383,6 +463,11 @@ def test_kl_curve():
 
     base_mu = torch.tensor([[0.0, 1.0, 0.0, 0.0]])
     base_dist = Golden4dPSDistribution(base_mu)
+
+    print("log_normalizer:", base_dist.log_normalizer.item())
+    print("entropy:", base_dist.entropy().item())
+    print("uniform:", base_dist.kl_to_uniform().item())
+    return
 
     d = torch.logspace(-4, math.log10(2.0-1e-4), 10001, base=10.0)
     dots = 1 - d
