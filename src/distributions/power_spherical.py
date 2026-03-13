@@ -207,13 +207,13 @@ class Golden4dPSDistribution(PowerSphericalDistribution):
 class Golden4DKLCalculator(nn.Module):
 
     # KL curve fit for dot >= 0.0
-    lower_coeffs = [
+    est_lower_coeffs = [
         5.24411214e-01, -2.96590039e-01, 1.21247993e-01, 1.26576863e+00,
         2.77426800e+00, 7.62221589e+00, 3.17313031e+01, 1.38956018e-03
     ]
 
     # KL curve fit for dot < 0.0
-    upper_coeffs = [
+    est_upper_coeffs = [
         18.95245979, -34.8507762, -52.2592189, 36.06428744,
         194.84618774, 86.81489707, -547.88970628, 344.09985189,
     ]
@@ -222,9 +222,9 @@ class Golden4DKLCalculator(nn.Module):
     def __init__(self):
         super().__init__()
 
-        lower_coeffs = torch.tensor(self.lower_coeffs, dtype=torch.float32)
-        upper_coeffs = torch.tensor(self.upper_coeffs, dtype=torch.float32)
-        exponents = torch.arange(len(self.lower_coeffs), dtype=torch.float32).flip(0)
+        lower_coeffs = torch.tensor(self.est_lower_coeffs, dtype=torch.float32)
+        upper_coeffs = torch.tensor(self.est_upper_coeffs, dtype=torch.float32)
+        exponents = torch.arange(len(self.est_lower_coeffs), dtype=torch.float32).flip(0)
 
         self.register_buffer("lower_coeffs", lower_coeffs, persistent=True)
         self.register_buffer("upper_coeffs", upper_coeffs, persistent=True)
