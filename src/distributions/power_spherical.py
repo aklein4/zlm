@@ -32,12 +32,14 @@ class PowerSphericalDistribution(nn.Module):
         eps: float = 1e-7
     ):
         super().__init__()
-        self.eps: float = eps
 
         # [..., m]
         self.mu: torch.Tensor = l2_norm(mu, eps)
         # [...,]
         self.kappa: torch.Tensor = torch.clamp(kappa, min=0.0)
+
+        self.eps: float = eps
+        self.device_type = self.mu.device.type
 
         self.m: int = self.mu.shape[-1]
         self.d: int = self.m - 1
@@ -59,8 +61,6 @@ class PowerSphericalDistribution(nn.Module):
 
         # [...,]
         self._kl_to_uniform = self._get_kl_to_uniform()
-
-        self.device_type = self.mu.device.type
 
 
     def _get_log_normalizer(self) -> torch.Tensor:
