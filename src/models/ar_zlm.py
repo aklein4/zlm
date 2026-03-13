@@ -28,6 +28,7 @@ class ARHead(nn.Module):
     def __init__(
         self,
         config: DictConfig,
+        latent_size: int,
         not_actually_ar: bool = False,
     ):
         super().__init__()
@@ -40,14 +41,14 @@ class ARHead(nn.Module):
         )
 
         self.z_gate_proj = ARLinear(
-            config.latent_size,
+            latent_size,
             config.head_intermediate_size,
             config.z_ar_steps,
             self_attend=False,
             bias=False
         )
         self.z_up_proj = ARLinear(
-            config.latent_size,
+            latent_size,
             config.head_intermediate_size,
             config.z_ar_steps,
             self_attend=False,
@@ -56,14 +57,14 @@ class ARHead(nn.Module):
 
         self.down_proj = ARLinear(
             config.head_intermediate_size,
-            config.latent_size,
+            latent_size,
             config.z_ar_steps,
             self_attend=True,
             bias=False
         )
         
         self.cross_proj = nn.Linear(
-            config.hidden_size, config.latent_size, bias=False
+            config.hidden_size, latent_size, bias=False
         )
 
         self.act = ACT2FN[config.hidden_act]
@@ -219,10 +220,10 @@ class ARZLMModel(nn.Module):
         self.decoder_z_proj_in = nn.Linear(self.latent_size, self.hidden_size, bias=False)
 
         # create the heads
-        self.encoder_head = ARHead(config) # , not_actually_ar=True)
-        self.decoder_head = ARHead(config)
+        self.encoder_head = ARHead(config, self.latent_size) # , not_actually_ar=True)
+        self.decoder_head = ARHead(config, self.latent_size)
         
-        self.uncond_decoder_head = ARHead(config)
+        self.uncond_decoder_head = ARHead(config, self.latent_size)
         self.uncond_tokens = nn.Parameter(
             torch.randn(self.z_length, self.hidden_size)
         )
