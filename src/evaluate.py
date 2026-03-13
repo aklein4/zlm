@@ -2,6 +2,7 @@ import torch
 
 import argparse
 import os
+import json
 
 from transformers import AutoTokenizer
 
@@ -52,7 +53,8 @@ def main(args):
         save_path=save_path,
         meta_data={
             "seed": args.seed,
-        }
+        },
+        model_kwargs=args.model_kwargs,
     )
 
 
@@ -114,6 +116,12 @@ if __name__ == "__main__":
         type=int,
         default=42,
         help="The random seed to use for evaluation.",
+    )
+    parser.add_argument(
+        "--model_kwargs",
+        type=json.loads,
+        default="{}",
+        help="A JSON string representing a dictionary of additional keyword arguments to pass to the model during evaluation.",
     )
     parser.add_argument(
         "--benchmarks",

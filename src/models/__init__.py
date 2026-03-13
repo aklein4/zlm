@@ -58,6 +58,11 @@ def load_checkpoint(
 
     if model_type is None:
         model_type = config.type
+    
+        # backwards compatibility
+        if "z_ar_steps" in config.keys():
+            model_type = "ar_zlm.ARZLMModel"
+
     model = import_model(model_type)(config)
 
     # load the weights

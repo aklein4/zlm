@@ -449,6 +449,7 @@ class ARZLMModel(nn.Module):
         noise: torch.FloatTensor,
         noise_temperature: float = 1.0,
         guidance_scale: float | None = None,
+        normalize_scale: bool = False,
         token_index: int | None = None,
     ):
         guide = guidance_scale is not None
@@ -486,6 +487,8 @@ class ARZLMModel(nn.Module):
                 mu = mu + guidance_scale * (mu - uncond_mu)
 
             z = self.add_noise(mu, noise, noise_temperature)
+            if normalize_scale:
+                z = self.z_out_norm(z) * math.sqrt(2.0)
 
         return z
 
