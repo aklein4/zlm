@@ -498,7 +498,6 @@ class CustomLlamaForCausalLM(nn.Module):
         self,
         input_ids: torch.LongTensor,
         output_ids: torch.LongTensor,
-        **kwargs,
     ):
         
         all_ids = torch.cat(
