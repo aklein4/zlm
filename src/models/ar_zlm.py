@@ -421,14 +421,17 @@ class ARZLMModel(nn.Module):
             elementwise_pad_mask=mask,
         )
 
-        logit_states = hidden_states[:, -(self.output_length+1):-1, :]
+        input_length = input_ids.shape[-1]
+        output_length = output_ids.shape[-1]
+
+        logit_states = hidden_states[:, -(output_length+1):-1, :]
         if logit_grad_scale is not None:
             logit_states = scale_gradient(
                 logit_states, logit_grad_scale
             )
         logits = self.lm_head(self.decoder_model.norm(logit_states)).float()
 
-        z_states = hidden_states[:, self.input_length:self.input_length + self.z_length]
+        z_states = hidden_states[:, input_length:input_length + self.z_length]
         z_states = self.decoder_z_states_norm(z_states)
 
         return logits, z_states
