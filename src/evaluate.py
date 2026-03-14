@@ -21,6 +21,7 @@ def main(args):
     print(f"\nLoading model {args.checkpoint_url} at step {args.checkpoint_step}...")
     model = load_checkpoint(
         args.checkpoint_url, args.checkpoint_step,
+        strict=(not args.checkpoint_not_strict),
         attention_kernel="gpu_flash_attention",
     ).to(constants.DEVICE)
     model.eval()
@@ -70,6 +71,11 @@ if __name__ == "__main__":
         "--checkpoint_step",
         type=int,
         help="The training step of the model checkpoint to evaluate.",
+    )
+    parser.add_argument(
+        "--checkpoint_not_strict",
+        action="store_true",
+        help="Whether to NOT use strict loading when loading the model checkpoint.",
     )
     parser.add_argument(
         "--tokenizer",
