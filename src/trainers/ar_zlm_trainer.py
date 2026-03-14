@@ -257,13 +257,13 @@ class ARZLMTrainer(BaseTrainer):
 
         # get the regularization loss
         regularize_scale = hook_progress
-        regularize_loss = self.SIGReg(z / np.sqrt(2))
+        regularize_loss = self.SIGReg(z / torch.sqrt(1 + noise_scale.pow(2)))
 
         loss = (
             lm_loss +
             self.config.trainer.beta * kl_per_token +
             self.config.trainer.beta * uncond_kl_per_token +
-            (-self.config.trainer.regularize_weight) * regularize_scale * regularize_loss
+            self.config.trainer.regularize_weight * regularize_scale * regularize_loss
         )
 
         aux = {
