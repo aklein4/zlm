@@ -19,6 +19,7 @@ CHECKPOINTS = {
     # "../guidance_evaluation_results": "Guided",
     # "../guidance_evaluation_results_2": "Guided-2",
     "aklein4--ZEBRA_ar-1p7b-kernel-strong/000000009000": "AR-09K",
+    "aklein4--ZEBRA_ar-1p7b-sigreg/000000007000": "SIGReg-07K",
     "../no_noise_scaled_eval_results/aklein4--ZEBRA_ar-1p7b-kernel-strong/000000009000": "AR-NN-09K",
     "aklein4--ZEBRA_baseline-1p7b/000000050000": "Baseline-50K",
     # "aklein4--ZEBRA_baseline-1p7b/000000020000": "Baseline-20K",

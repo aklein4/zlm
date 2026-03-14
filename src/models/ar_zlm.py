@@ -242,7 +242,7 @@ class ARZLMModel(nn.Module):
 
         # for training
         self.lm_loss_ema = UnbiasedEMA([1], config.lm_loss_ema_beta, eps=config.rms_norm_eps)
-        self.uncond_kl_ema = UnbiasedEMA([1], config.uncond_kl_ema_beta, eps=config.rms_norm_eps)
+        self.uncond_kl_ema = UnbiasedEMA([1], config.get("uncond_kl_ema_beta", config.lm_loss_ema_beta), eps=config.rms_norm_eps)
 
         if config.pretrained_llama is None:
             self.apply(gaussian_init)

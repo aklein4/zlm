@@ -11,19 +11,17 @@ TOKENIZER_URL = "HuggingFaceTB/SmolLM2-135M" # "TinyLlama/TinyLlama_v1.1"
 
 DATASETS = [
     # ("HuggingFaceFW/fineweb", "sample-10BT"),
-    # ("HuggingFaceFW/fineweb-edu", "sample-10BT"),
-    ("caskcsg/entropylong_128k",)
+    ("HuggingFaceFW/fineweb-edu", "sample-100BT"),
 ]
 
 BS = 1024
 
 LENGTHS = [
     # 1024,
-    # 2048
-    1024 * 64,
+    2048
 ]
 
-SAVE_URL = "aklein4/entropylong-SmolLM2"
+SAVE_URL = "aklein4/fineweb-edu-SmolLM2"
 
 
 def tokenize_example(
@@ -78,11 +76,11 @@ def main():
     tokenizer = AutoTokenizer.from_pretrained(TOKENIZER_URL)
     tokenizer.add_special_tokens({'pad_token': '[PAD]'})
 
-    tokenizer.push_to_hub(
-        SAVE_URL,
-        private=False,
-        repo_type="dataset",
-    )
+    # tokenizer.push_to_hub(
+    #     SAVE_URL,
+    #     private=False,
+    #     repo_type="dataset",
+    # )
 
     for length in LENGTHS:
 
@@ -106,3 +104,4 @@ def main():
 
 if __name__ == "__main__":
     main()
+    
