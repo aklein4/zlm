@@ -61,9 +61,9 @@ output_length: 512
 z_length: 384
 
 # latent configuration
-latent_size: 128
-z_ar_steps: 32
-mu_scale: 1.414
+latent_size: 64
+z_ar_steps: 16
+mu_scale: 1.0
 
 # norm config
 use_z_in_norm: true
