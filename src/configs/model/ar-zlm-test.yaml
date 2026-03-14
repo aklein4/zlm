@@ -61,14 +61,19 @@ output_length: 512
 z_length: 384
 
 # latent configuration
-latent_size: 64
+latent_size: 128
 z_ar_steps: 4
+mu_scale: 1.414
+
+# norm config
+use_z_in_norm: true
 
 # head configuration
 head_intermediate_size: 384
 
 # training configuration
 lm_loss_ema_beta: 0.75
+uncond_kl_ema_beta: 0.75
 
 pure_modules: []
   

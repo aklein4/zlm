@@ -19,6 +19,7 @@ CHECKPOINTS = {
     # "../guidance_evaluation_results_2": "Guided-2",
     "aklein4--ZEBRA_ar-1p7b-kernel-strong/000000009000": "AR-09K",
     "../no_noise_scaled_eval_results/aklein4--ZEBRA_ar-1p7b-kernel-strong/000000009000": "AR-NN-09K",
+    "aklein4--ZEBRA_baseline-1p7b/000000050000": "Baseline-50K",
     # "aklein4--ZEBRA_baseline-1p7b/000000020000": "Baseline-20K",
     # "aklein4--ZEBRA_baseline-1p7b/000000015000": "Baseline-15K",
     "aklein4--ZEBRA_baseline-1p7b/000000010000": "Baseline-10K",
@@ -26,8 +27,8 @@ CHECKPOINTS = {
 }
 
 REASONING_BENCHMARKS = [
-    "ARC-E-Train",
-    "ARC-C-Train",
+    # "ARC-E-Train",
+    # "ARC-C-Train",
     "ARC-Easy",
     "ARC-Challenge",
     "MMLU",
@@ -73,14 +74,54 @@ def main():
 
         checkpoint_results[name] = ckpt_results
 
-    fig, (ax1, ax2) = plt.subplots(2, 1, figsize=(14, 2.5+len(CHECKPOINTS)*0.5))
+    benchmarks_mean = {}
+    benchmarks_std = {}
+    for b in all_benchmarks:
+        vals = [v[b] for v in checkpoint_results.values() if v[b] is not None]
+
+        benchmarks_mean[b] = np.mean(vals)
+        benchmarks_std[b] = np.std(vals)
+
+    for results in checkpoint_results.values():
+        
+        reasoning_results = [
+            v for k, v in results.items() if k in REASONING_BENCHMARKS
+        ]
+        math_results = [
+            v for k, v in results.items() if k in MATH_BENCHMARKS
+        ]
+
+        reasoning_scores = [
+            (v - benchmarks_mean[k]) / benchmarks_std[k] if v is not None else None
+            for k, v in results.items() if k in REASONING_BENCHMARKS
+        ]
+        math_scores = [
+            (v - benchmarks_mean[k]) / (benchmarks_std[k]+1e-5) if v is not None else None
+            for k, v in results.items() if k in MATH_BENCHMARKS
+        ]
+
+        if None in reasoning_results:
+            results["Reasoning Avg"] = None
+            results["Reasoning Score"] = None
+        else:
+            results["Reasoning Avg"] = round(np.mean(reasoning_results), 1)
+            results["Reasoning Score"] = round(np.mean(reasoning_scores), 2)
+            
+        if None in math_results:
+            results["Math Avg"] = None
+            results["Math Score"] = None
+        else:
+            results["Math Avg"] = round(np.mean(math_results), 1)
+            results["Math Score"] = round(np.mean(math_scores), 2)
+
+    fig, (ax1, ax2) = plt.subplots(2, 1, figsize=(15.5, 2.5+len(CHECKPOINTS)*0.5))
     fig.subplots_adjust(hspace=0.4)
 
     checkpoint_names = list(checkpoint_results.keys())
 
     for ax, benchmarks, title in [
-        (ax1, REASONING_BENCHMARKS, "Reasoning"),
-        (ax2, MATH_BENCHMARKS, "Math"),
+        (ax1, REASONING_BENCHMARKS + ["Reasoning Avg", "Reasoning Score"], "Reasoning"),
+        (ax2, MATH_BENCHMARKS + ["Math Avg", "Math Score"], "Math"),
     ]:
         ax.set_title(title, fontsize=14, fontweight='bold', pad=10)
         ax.axis('off')

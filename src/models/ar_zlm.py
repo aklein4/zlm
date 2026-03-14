@@ -26,9 +26,14 @@ class ARHead(nn.Module):
     def __init__(
         self,
         config: DictConfig,
+        ar_steps: int = None,
         not_actually_ar: bool = False,
     ):
         super().__init__()
+
+        self.ar_steps = ar_steps
+        if self.ar_steps is None:
+            self.ar_steps = config.z_ar_steps
 
         self.states_gate_proj = nn.Linear(
             config.hidden_size, config.head_intermediate_size, bias=False
@@ -40,14 +45,14 @@ class ARHead(nn.Module):
         self.z_gate_proj = ARLinear(
             config.latent_size,
             config.head_intermediate_size,
-            config.z_ar_steps,
+            self.ar_steps,
             self_attend=False,
             bias=False
         )
         self.z_up_proj = ARLinear(
             config.latent_size,
             config.head_intermediate_size,
-            config.z_ar_steps,
+            self.ar_steps,
             self_attend=False,
             bias=False
         )
@@ -55,7 +60,7 @@ class ARHead(nn.Module):
         self.down_proj = ARLinear(
             config.head_intermediate_size,
             config.latent_size,
-            config.z_ar_steps,
+            self.ar_steps,
             self_attend=True,
             bias=False
         )
@@ -121,6 +126,7 @@ class ARZLMModel(nn.Module):
         self.z_length = config.z_length
         self.latent_size = config.latent_size
         self.z_ar_steps = config.z_ar_steps
+        self.mu_scale = config.get("mu_scale", 1.0)
 
         # craete the transformer backbones
         self.encoder_model = EncoderModel(config)
@@ -218,18 +224,25 @@ class ARZLMModel(nn.Module):
             self.latent_size, self.z_ar_steps,
             eps=config.rms_norm_eps, elementwise_affine=False
         )
+        if self.config.get("use_z_in_norm", False):
+            self.z_in_norm = LlamaRMSNorm(
+                self.latent_size, eps=config.rms_norm_eps, elementwise_affine=False
+            )
+        else:
+            self.z_in_norm = nn.Identity()
 
         # create the heads
         self.encoder_head = ARHead(config) # , not_actually_ar=True)
         self.decoder_head = ARHead(config)
         
-        self.uncond_decoder_head = ARHead(config)
+        self.uncond_decoder_head = ARHead(config, ar_steps=self.latent_size)
         self.uncond_tokens = nn.Parameter(
             torch.randn(self.z_length, self.hidden_size)
         )
 
         # for training
         self.lm_loss_ema = UnbiasedEMA([1], config.lm_loss_ema_beta, eps=config.rms_norm_eps)
+        self.uncond_kl_ema = UnbiasedEMA([1], config.uncond_kl_ema_beta, eps=config.rms_norm_eps)
 
         if config.pretrained_llama is None:
             self.apply(gaussian_init)
@@ -353,7 +366,7 @@ class ARZLMModel(nn.Module):
             z_states,
             noise,
         )
-        mu = self.z_out_norm(mu)
+        mu = self.z_out_norm(mu) * self.mu_scale
 
         z = self.add_noise(mu, noise, noise_scale)
 
@@ -380,7 +393,9 @@ class ARZLMModel(nn.Module):
             self.decoder_output_embeddings, output_ids
         )
 
-        z_projed = self.decoder_z_proj_in(z)
+        z_projed = self.decoder_z_proj_in(
+            self.z_in_norm(z)
+        )
 
         z_tokens = (
             unsqueeze_to_batch(self.decoder_z_tokens, z) +

@@ -71,9 +71,13 @@ upper_loss_threshold: 0.75
 lower_loss_threshold: 0.50
 min_lm_loss_scale: 0.05
 
+upper_reg_threshold: 220.0
+lower_reg_threshold: 200.0
+min_reg_loss_gate: 0.001
+
 # auxiliary loss configuration
-num_slices: 128
+num_slices: 256
 
 # loss weighting configuration
 beta: 0.2
-regularize_weight: 0.2
+regularize_weight: 2.0

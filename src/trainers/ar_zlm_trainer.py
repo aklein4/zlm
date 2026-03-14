@@ -237,33 +237,47 @@ class ARZLMTrainer(BaseTrainer):
         )
 
         denom = (output_ids != pad_token_id).float().sum() + self.model.config.rms_norm_eps
+        l_denom = mu.shape[0] * mu.shape[1]
 
         # calculate kls per token
         kl_per_token = kl / denom
+        kl_per_latent = kl / l_denom
         full_parties = self.get_effective_parties(full_weights)
         effective_parties = self.get_effective_parties(sequence_weights)
         channel_parties = self.get_effective_parties(channel_weights)
         elbo = lm_loss + kl_per_token
 
         uncond_kl_per_token = uncond_kl / denom
+        uncond_kl_per_latent = uncond_kl / l_denom
         uncond_full_parties = self.get_effective_parties(uncond_full_weights)
         uncond_effective_parties = self.get_effective_parties(uncond_sequence_weights)
         uncond_channel_parties = self.get_effective_parties(uncond_channel_weights)
 
         mean_kl_per_token = mean_kl / denom
+        mean_kl_per_latent = mean_kl / l_denom
         mean_full_parties = self.get_effective_parties(mean_full_weights)
         mean_effective_parties = self.get_effective_parties(mean_sequence_weights)
         mean_channel_parties = self.get_effective_parties(mean_channel_weights)
 
         # get the regularization loss
         regularize_scale = hook_progress
-        regularize_loss = self.SIGReg(z / torch.sqrt(1 + noise_scale.pow(2)))
+
+        self.model.uncond_kl_ema.update(uncond_kl_per_latent.detach().reshape(1))
+        reg_loss_gate = 1 - linear_warmup(
+            self.model.uncond_kl_ema.retrieve() - self.config.trainer.lower_reg_threshold,
+            self.config.trainer.upper_reg_threshold - self.config.trainer.lower_reg_threshold,
+        )
+        reg_loss_gate = self.config.trainer.min_reg_loss_gate + (1 - self.config.trainer.min_reg_loss_gate) * reg_loss_gate
+
+        regularize_loss = self.SIGReg(
+            z / torch.sqrt(self.model.mu_scale**2 + noise_scale.pow(2))
+        )
 
         loss = (
             lm_loss +
             self.config.trainer.beta * kl_per_token +
             self.config.trainer.beta * uncond_kl_per_token +
-            self.config.trainer.regularize_weight * regularize_scale * regularize_loss
+            self.config.trainer.regularize_weight * regularize_scale * reg_loss_gate * regularize_loss
         )
 
         aux = {
@@ -277,21 +291,25 @@ class ARZLMTrainer(BaseTrainer):
             "full_grad_scale": z_states_kl_grad_scale,
 
             "kl_per_token": kl_per_token,
+            "kl_per_latent": kl_per_latent,
             "full_parties": full_parties,
             "effective_parties": effective_parties,
             "channel_parties": channel_parties,
 
             "uncond_kl_per_token": uncond_kl_per_token,
+            "uncond_kl_per_latent": uncond_kl_per_latent,
             "uncond_full_parties": uncond_full_parties,
             "uncond_effective_parties": uncond_effective_parties,
             "uncond_channel_parties": uncond_channel_parties,
 
             "mean_kl_per_token": mean_kl_per_token,
+            "mean_kl_per_latent": mean_kl_per_latent,
             "mean_full_parties": mean_full_parties,
             "mean_effective_parties": mean_effective_parties,
             "mean_channel_parties": mean_channel_parties,
             
             "regularize_scale": regularize_scale,
+            "reg_loss_gate": reg_loss_gate,
             "regularize_loss": regularize_loss,
 
             "hooked": self.hooked,

@@ -104,6 +104,9 @@ decoder_z_proj_in.weight: [fsdp, null]
 lm_loss_ema.num_updates: [null]
 lm_loss_ema.weight: [null]
 
+uncond_kl_ema.num_updates: [null]
+uncond_kl_ema.weight: [null]
+
 
 # === Activations ===
 
