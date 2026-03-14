@@ -22,6 +22,8 @@ class BaseBenchmark:
     subset: str = None
     split: str = None
 
+    is_train = False
+
 
     def __init__(
         self,
@@ -423,10 +425,14 @@ class arc_e_train(arc_e):
     name = "ARC-E-Train"
     split = "train"
 
+    is_train = True
+
 class arc_c_train(arc_c):
 
     name = "ARC-C-Train"
     split = "train"
+
+    is_train = True
 
 
 class sciq(MCQABenchmark):
@@ -656,5 +662,11 @@ class svamp(MathBenchmark):
 BENCHMARK_DICT = {
     cls[1].name: cls[1]
     for cls in inspect.getmembers(sys.modules[__name__], inspect.isclass)
-    if issubclass(cls[1], BaseBenchmark) and cls[1].name is not None
+    if issubclass(cls[1], BaseBenchmark) and cls[1].name is not None and not cls[1].is_train
+}
+
+TRAIN_BENCHMARK_DICT = {
+    cls[1].name: cls[1]
+    for cls in inspect.getmembers(sys.modules[__name__], inspect.isclass)
+    if issubclass(cls[1], BaseBenchmark) and cls[1].name is not None and cls[1].is_train
 }
