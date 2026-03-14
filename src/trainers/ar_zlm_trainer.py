@@ -7,7 +7,7 @@ import numpy as np
 from trainers.base_trainer import BaseTrainer
 from models.ar_zlm import ARZLMModel
 from utils.scheduling_utils import linear_warmup, cosine_warmup
-from utils.torch_utils import scale_gradient
+from utils.torch_utils import scale_gradient, unsqueeze_to_batch
 from utils.loss_utils import lm_loss_fn, lm_acc_fn 
 from utils.sharding_utils import shard_with_gradients
 
@@ -73,9 +73,9 @@ class ARZLMTrainer(BaseTrainer):
     
         kl = ((scaled_mu - pred_mu).pow(2) / 2).sum(0) # [S, Z]
 
+        weights = kl
         sequence_weights = kl.mean(-1, keepdim=True)
         channel_weights = kl.mean(-2, keepdim=True)
-        weights = sequence_weights * channel_weights
 
         weights = weights * kl.mean() / ((weights * kl).mean() + self.model.config.rms_norm_eps)
         weights = weights.detach()
@@ -84,22 +84,55 @@ class ARZLMTrainer(BaseTrainer):
 
         mu_kl_scale["value"] = weights[None]
 
-        return kl.sum(), sequence_weights, channel_weights
+        return kl.sum(), weights, sequence_weights, channel_weights
 
 
-    def mutual_information(self, mu):
+    def SIGReg(self, x):
 
-        mu = mu.transpose(0, 1) # [S, B, H]
-        mu = shard_with_gradients(mu)
+        dev = dict(device=x.device, dtype=x.dtype)
 
-        dists = torch.cdist(mu, mu, p=2) # [S, B, B]
+        # [S, B, D]
+        x = x.transpose(0, 1)
+        x = shard_with_gradients(x)
 
-        scores = -dists.pow(2) / (2 * mu.shape[-1])
-        masked_scores = scores - torch.eye(scores.shape[-1], device=scores.device, dtype=scores.dtype)[None] * 1e9
+        # [S, D, N]
+        w = torch.randn(
+            x.shape[0], x.shape[-1], self.config.trainer.num_slices,
+            **dev
+        )
+        w = shard_with_gradients(w)
 
-        mi = -torch.logsumexp(masked_scores - np.log(scores.shape[-1] - 1), dim=-1).mean()
+        w = w / (w.norm(dim=1, keepdim=True) + self.model.config.rms_norm_eps)
+        
+        # [S, B, N]
+        z = x @ w
 
-        return mi
+        # [T]
+        t = torch.linspace(0.0, 4.0, 16, **dev)
+        
+        # theoretical CF for N(0, 1) and Gauss. window
+        exp_f = torch.exp(-0.5 * t**2)
+
+        # empirical CF [S, B, N, T]
+        z_t = z[..., None] * unsqueeze_to_batch(t, z[..., None])
+
+        # [S, N, T]
+        real = torch.cos(z_t).mean(1)
+        imag = torch.sin(z_t).mean(1)
+
+        # weighted L2 distance [S, N, T]
+        real_err = (real - unsqueeze_to_batch(exp_f, real))
+        imag_err = (imag - 0.0)
+        err = real_err**2 + imag_err**2
+
+        # weight by theoretical CF
+        # multiply by 2 since we only integrate over positive frequencies
+        w_err = err * 2.0 * unsqueeze_to_batch(exp_f, err)
+
+        # [S, N]
+        out = torch.trapz(w_err, t , dim=-1) * x.shape[-2]
+
+        return out.mean()
 
 
     def forward(self, input_ids, output_ids):
@@ -192,17 +225,14 @@ class ARZLMTrainer(BaseTrainer):
             self.model.uncond_tokens[None], z_for_kl.detach()
         )
 
-        contrast_scale = wait_hook_progress
-        contrast_loss = self.mutual_information(z)
-
         # get kl
-        kl, sequence_weights, channel_weights = self.kl_loss(
+        kl, full_weights, sequence_weights, channel_weights = self.kl_loss(
             mu_for_kl, pred_mu
         )
-        uncond_kl, uncond_sequence_weights, uncond_channel_weights = self.kl_loss(
+        uncond_kl, uncond_full_weights, uncond_sequence_weights, uncond_channel_weights = self.kl_loss(
             mu_for_kl.detach(), uncond_pred_mu
         )
-        mean_kl, mean_sequence_weights, mean_channel_weights = self.kl_loss(
+        mean_kl, mean_full_weights, mean_sequence_weights, mean_channel_weights = self.kl_loss(
             mu_for_kl.detach(), mu_for_kl.detach().mean(0, keepdim=True)
         )
 
@@ -210,23 +240,30 @@ class ARZLMTrainer(BaseTrainer):
 
         # calculate kls per token
         kl_per_token = kl / denom
+        full_parties = self.get_effective_parties(full_weights)
         effective_parties = self.get_effective_parties(sequence_weights)
         channel_parties = self.get_effective_parties(channel_weights)
         elbo = lm_loss + kl_per_token
 
         uncond_kl_per_token = uncond_kl / denom
+        uncond_full_parties = self.get_effective_parties(uncond_full_weights)
         uncond_effective_parties = self.get_effective_parties(uncond_sequence_weights)
         uncond_channel_parties = self.get_effective_parties(uncond_channel_weights)
 
         mean_kl_per_token = mean_kl / denom
+        mean_full_parties = self.get_effective_parties(mean_full_weights)
         mean_effective_parties = self.get_effective_parties(mean_sequence_weights)
         mean_channel_parties = self.get_effective_parties(mean_channel_weights)
+
+        # get the regularization loss
+        regularize_scale = hook_progress
+        regularize_loss = self.SIGReg(z / np.sqrt(2))
 
         loss = (
             lm_loss +
             self.config.trainer.beta * kl_per_token +
             self.config.trainer.beta * uncond_kl_per_token +
-            (-self.config.trainer.contrast_weight) * contrast_scale * contrast_loss
+            (-self.config.trainer.regularize_weight) * regularize_scale * regularize_loss
         )
 
         aux = {
@@ -240,19 +277,22 @@ class ARZLMTrainer(BaseTrainer):
             "full_grad_scale": z_states_kl_grad_scale,
 
             "kl_per_token": kl_per_token,
+            "full_parties": full_parties,
             "effective_parties": effective_parties,
             "channel_parties": channel_parties,
 
             "uncond_kl_per_token": uncond_kl_per_token,
+            "uncond_full_parties": uncond_full_parties,
             "uncond_effective_parties": uncond_effective_parties,
             "uncond_channel_parties": uncond_channel_parties,
 
             "mean_kl_per_token": mean_kl_per_token,
+            "mean_full_parties": mean_full_parties,
             "mean_effective_parties": mean_effective_parties,
             "mean_channel_parties": mean_channel_parties,
             
-            "contrast_scale": contrast_scale,
-            "contrast_loss": contrast_loss,
+            "regularize_scale": regularize_scale,
+            "regularize_loss": regularize_loss,
 
             "hooked": self.hooked,
             "hook_step": self.hook_step,

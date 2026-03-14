@@ -69,8 +69,11 @@ hook_wait_steps: 1000
 # threshold configuration
 upper_loss_threshold: 0.75
 lower_loss_threshold: 0.50
-min_lm_loss_scale: 0.01
+min_lm_loss_scale: 0.05
+
+# auxiliary loss configuration
+num_slices: 128
 
 # loss weighting configuration
 beta: 0.2
-contrast_weight: 0.02
+regularize_weight: 0.2

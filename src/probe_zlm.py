@@ -184,6 +184,7 @@ def SIGReg(x):
     # multiply by 2 since we only integrate over positive frequencies
     w_err = err * 2.0 * exp_f[None]
 
+    # [D]
     out = torch.trapz(w_err, t , dim=1) * x.shape[0]
 
     return out
