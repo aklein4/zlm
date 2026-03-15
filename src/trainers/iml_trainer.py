@@ -67,6 +67,9 @@ class IMLTrainer(BaseTrainer):
 
         self.optimizers['main'].step()
         self.model.zero_grad(set_to_none=False)
+        
+        aux['main_lr'] = self.lr_schedulers['main'].get_last_lr()[0]
+        self.lr_schedulers['main'].step()
 
         return loss, aux, grad_norm
 
