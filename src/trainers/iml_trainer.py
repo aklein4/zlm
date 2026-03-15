@@ -63,13 +63,15 @@ class IMLTrainer(BaseTrainer):
         aux.update({f"extrapolated_{k}": v for k, v in extrapolated_aux.items()})
 
         extrapolated_loss.backward()
-        grad_norm = (self.clip_gradients() + grad_norm) / 2
+        aux['extrapolated_grad_norm'] = self.clip_gradients()
 
         self.optimizers['main'].step()
         self.model.zero_grad(set_to_none=False)
         
         aux['main_lr'] = self.lr_schedulers['main'].get_last_lr()[0]
         self.lr_schedulers['main'].step()
+
+        aux['atom_count'] = aux['atom_count'] + extrapolated_aux['atom_count']
 
         return loss, aux, grad_norm
 
