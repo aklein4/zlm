@@ -5,6 +5,7 @@ import torch_xla
 from models.llama import LlamaForCausalLM
 from trainers.base_trainer import BaseTrainer
 from utils.loss_utils import lm_loss_fn, lm_acc_fn
+from utils.sharding_utils import shard_with_gradients
 
 
 class IMLTrainer(BaseTrainer):
@@ -25,6 +26,10 @@ class IMLTrainer(BaseTrainer):
     def train_step(self, batch: dict) -> tuple[torch.Tensor, dict, torch.Tensor]:
         input_ids = batch["input_ids"]
 
+        if True: # backward compatibility with old batch sizes
+            input_ids = input_ids[:input_ids.shape[0] // 2]
+            input_ids = shard_with_gradients(input_ids)
+
         input_ids_a, input_ids_b = input_ids.chunk(2, dim=-1)
         coin = torch.rand(input_ids.shape[0], device=input_ids.device) < 0.5
 
@@ -43,35 +48,25 @@ class IMLTrainer(BaseTrainer):
             loss, aux = self.forward(first_ids)
 
         loss.backward()
-        
         grad_norm = self.clip_gradients()
 
-        key_name = lambda key, x: f"{key}_{x}" if len(self.optimizers) > 1 else x
-
-        for key, optimizer in self.optimizers.items():
-
-            opt_aux = optimizer.step()
-            if opt_aux is not None:
-                aux.update(
-                    {key_name(key, k): v for k, v in opt_aux.items()}
-                )
-
-        for key, lr_scheduler in self.lr_schedulers.items():
-            
-            lr = lr_scheduler.get_last_lr()[0]
-            aux.update({key_name(key, "lr"): lr})
-            lr_scheduler.step()
-        
+        self.optimizers['main'].step()        
         self.model.zero_grad(set_to_none=False)
 
-        with torch.no_grad():
-            with torch.autocast('xla', dtype=torch.bfloat16, enabled=self.config.trainer.use_autocast):
-                
-                _, first_aux = self.forward(first_ids)
-                _, second_aux = self.forward(second_ids)
+        with torch.autocast('xla', dtype=torch.bfloat16, enabled=self.config.trainer.use_autocast):
+            
+            with torch.no_grad():
+                _, memorized_aux = self.forward(first_ids)
+            extrapolated_loss, extrapolated_aux = self.forward(second_ids)
 
-        aux.update({f"memorized_{k}": v for k, v in first_aux.items()})
-        aux.update({f"extrapolated_{k}": v for k, v in second_aux.items()})
+        aux.update({f"memorized_{k}": v for k, v in memorized_aux.items()})
+        aux.update({f"extrapolated_{k}": v for k, v in extrapolated_aux.items()})
+
+        extrapolated_loss.backward()
+        grad_norm = (self.clip_gradients() + grad_norm) / 2
+
+        self.optimizers['main'].step()
+        self.model.zero_grad(set_to_none=False)
 
         return loss, aux, grad_norm
 
