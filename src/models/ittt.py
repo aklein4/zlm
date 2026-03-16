@@ -57,8 +57,7 @@ class ItttFunction(torch.autograd.Function):
         ) / math.sqrt(x.shape[-2]) # approx 1 std
 
         mod.momentum.lerp_(
-            mod.momentum,
-            update,
+            update.detach(),
             1 - mod.momentum_beta
         )
 
@@ -66,7 +65,7 @@ class ItttFunction(torch.autograd.Function):
             -newton_schulz(
                 mod.momentum,
                 eps=mod.eps
-            )
+            ).detach()
         )
 
         return None, og_grad, None
