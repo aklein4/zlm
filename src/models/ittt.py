@@ -70,7 +70,7 @@ class ItttFunction(torch.autograd.Function):
             ).detach()
         )
 
-        return None, og_grad, None
+        return None, og_grad, None, None, None
 
         
 class ItttLinear(nn.Module):
