@@ -24,10 +24,10 @@ class ItttFunction(torch.autograd.Function):
         x: torch.FloatTensor,
         z: torch.FloatTensor,
         mod: "ItttLinear",
-        momentum_data: torch.FloatTensor,
-        delta_data: torch.FloatTensor,
+        momentum: torch.FloatTensor,
+        delta: torch.FloatTensor,
     ) -> torch.FloatTensor:
-        ctx.save_for_backward(x, momentum_data, delta_data)
+        ctx.save_for_backward(x, momentum, delta)
         ctx.mod = mod
         return z.clone()
 
@@ -41,7 +41,7 @@ class ItttFunction(torch.autograd.Function):
 
         og_grad = grad.clone()
 
-        x, momentum_data, delta_data, = ctx.saved_tensors
+        x, momentum, delta, = ctx.saved_tensors
         mod: ItttLinear = ctx.mod
 
         x: torch.FloatTensor = x.float()
@@ -58,12 +58,12 @@ class ItttFunction(torch.autograd.Function):
             g.transpose(-2, -1) @ x
         ) / math.sqrt(x.shape[-2]) # approx 1 std
 
-        momentum_data.lerp_(
+        momentum.lerp_(
             update.detach(),
             1 - mod.momentum_beta
         )
 
-        delta_data.copy_(
+        delta.copy_(
             -newton_schulz(
                 momentum_data,
                 eps=mod.eps
@@ -153,7 +153,7 @@ class ItttLinear(nn.Module):
         s = lr[None] * self.state
 
         z = torch.einsum("boi,bsi->bso", s, x)
-        z = ItttFunction.apply(x, z, self, self.momentum.data, self.delta.data)
+        z = ItttFunction.apply(x, z, self, self.momentum, self.delta)
 
         z = z + self.base_state_proj(x)
 
