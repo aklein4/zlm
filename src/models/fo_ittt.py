@@ -26,9 +26,10 @@ class FoItttFunction(torch.autograd.Function):
         mod: "ItttLinear",
         state: torch.FloatTensor,
         grad_buffer: torch.FloatTensor,
+        curr_grad: torch.FloatTensor,
     ) -> torch.FloatTensor:
         
-        ctx.save_for_backward(x, state, grad_buffer)
+        ctx.save_for_backward(x, state, grad_buffer, curr_grad)
         ctx.mod = mod
 
         return z.clone()
@@ -50,7 +51,7 @@ class FoItttFunction(torch.autograd.Function):
 def first_backward(ctx, grad, x_kwarg=None):
     og_grad = grad.clone()
 
-    x, state, grad_buffer = ctx.saved_tensors
+    x, state, grad_buffer, curr_grad = ctx.saved_tensors
     if x_kwarg is not None:
         x = x_kwarg
     mod: FoItttLinear = ctx.mod
@@ -80,13 +81,13 @@ def first_backward(ctx, grad, x_kwarg=None):
         update / math.sqrt(mod.in_features)
     ).to(state.dtype)
 
-    return None, og_grad, None, update, raw_G
+    return None, og_grad, None, update, raw_G, None
 
 
 def second_backward(ctx, grad):
     og_grad = grad.clone()
 
-    x, state, grad_buffer = ctx.saved_tensors
+    x, state, grad_buffer, curr_grad = ctx.saved_tensors
     mod: FoItttLinear = ctx.mod
 
     x_dtype = x.dtype
@@ -102,7 +103,7 @@ def second_backward(ctx, grad):
     _, __, ___, update_lm, raw_G_lm = first_backward(ctx, g_lm, x_kwarg=x)
 
     # calculate the future first-order gradients
-    G_so_far = grad_buffer.grad + raw_G_lm
+    G_so_far = curr_grad + raw_G_lm
     G_future = grad_buffer - G_so_far
 
     with torch.set_grad_enabled(True):
@@ -146,7 +147,7 @@ def second_backward(ctx, grad):
     ).to(x_dtype)
     x_grad = maybe_shard_with_gradients(x_grad).detach()
 
-    return x_grad, og_grad, None, update_lm, raw_G_lm
+    return x_grad, og_grad, None, update_lm, raw_G_lm, None
 
         
 class FoItttLinear(nn.Module):
@@ -219,7 +220,7 @@ class FoItttLinear(nn.Module):
             s = maybe_shard_with_gradients(s)
 
         z = torch.einsum("boi,bsi->bso", s, x)
-        z = FoItttFunction.apply(x, z, self, self.state, self.grad_buffer)
+        z = FoItttFunction.apply(x, z, self, self.state, self.grad_buffer, self.grad_buffer.grad.clone())
 
         z = z + self.base_state_proj(x)
 
