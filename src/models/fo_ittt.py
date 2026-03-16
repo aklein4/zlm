@@ -27,9 +27,10 @@ class FoItttFunction(torch.autograd.Function):
         state: torch.FloatTensor,
         grad_buffer: torch.FloatTensor,
         final_grad_buffer: torch.FloatTensor,
+        lr: torch.FloatTensor,
     ) -> torch.FloatTensor:
         
-        ctx.save_for_backward(x, state, grad_buffer, final_grad_buffer)
+        ctx.save_for_backward(x, state, grad_buffer, final_grad_buffer, lr)
         ctx.mod = mod
 
         return z.clone()
@@ -51,7 +52,7 @@ class FoItttFunction(torch.autograd.Function):
 def first_backward(ctx, grad, x_kwarg=None):
     og_grad = grad.clone()
 
-    x, state, grad_buffer, final_grad_buffer = ctx.saved_tensors
+    x, state, grad_buffer, final_grad_buffer, lr = ctx.saved_tensors
     if x_kwarg is not None:
         x = x_kwarg
     mod: FoItttLinear = ctx.mod
@@ -81,13 +82,13 @@ def first_backward(ctx, grad, x_kwarg=None):
         update / math.sqrt(mod.in_features)
     ).to(state.dtype)
 
-    return None, og_grad, None, update, raw_G, None
+    return None, og_grad, None, update, raw_G, None, None
 
 
 def second_backward(ctx, grad):
     og_grad = grad.clone()
 
-    x, state, grad_buffer, final_grad_buffer = ctx.saved_tensors
+    x, state, grad_buffer, final_grad_buffer, lr = ctx.saved_tensors
     mod: FoItttLinear = ctx.mod
 
     x_dtype = x.dtype
@@ -100,7 +101,7 @@ def second_backward(ctx, grad):
     g_lm = maybe_shard_with_gradients(g_lm.clone())
 
     # do a regular backwards with the lm components
-    _, __, ___, update_lm, raw_G_lm, ____ = first_backward(ctx, g_lm, x_kwarg=x)
+    _, __, ___, update_lm, raw_G_lm, ____, _____ = first_backward(ctx, g_lm, x_kwarg=x)
 
     # calculate the future first-order gradients
     G_so_far = grad_buffer + raw_G_lm
@@ -131,7 +132,7 @@ def second_backward(ctx, grad):
 
         delta = (
             update *
-            mod.get_lr()[None].detach().to(update.dtype)
+            lr[None].detach().to(update.dtype)
         ).to(G_future.dtype)
 
         x_grad_fo = torch.autograd.grad(
@@ -147,7 +148,7 @@ def second_backward(ctx, grad):
     ).to(x_dtype)
     x_grad = maybe_shard_with_gradients(x_grad).detach()
 
-    return x_grad, og_grad, None, update_lm, raw_G_lm, None
+    return x_grad, og_grad, None, update_lm, raw_G_lm, None, None
 
         
 class FoItttLinear(nn.Module):
@@ -221,7 +222,7 @@ class FoItttLinear(nn.Module):
             s = maybe_shard_with_gradients(s)
 
         z = torch.einsum("boi,bsi->bso", s, x)
-        z = FoItttFunction.apply(x, z, self, self.state, self.grad_buffer, self.final_grad_buffer)
+        z = FoItttFunction.apply(x, z, self, self.state, self.grad_buffer, self.final_grad_buffer, lr)
 
         z = z + self.base_state_proj(x)
 
