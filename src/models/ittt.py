@@ -182,9 +182,11 @@ class ItttLinear(nn.Module):
         
         self.state.requires_grad_(True)
         self.state.grad = torch.zeros_like(self.state)
+        self.state.grad = maybe_shard_with_gradients(self.state.grad)
 
         self.momentum.requires_grad_(True)
         self.momentum.grad = torch.zeros_like(self.momentum)
+        self.momentum.grad = maybe_shard_with_gradients(self.momentum.grad)
 
 
     @torch.no_grad()
