@@ -122,6 +122,9 @@ class ItttLinear(nn.Module):
 
         # self.svd_init()
 
+        # for baselines
+        self.disable_ittt = config.get("disable_ittt", False)
+
     
     # @torch.no_grad()
     # def svd_init(self):
@@ -145,6 +148,9 @@ class ItttLinear(nn.Module):
         self,
         x: torch.FloatTensor,
     ) -> torch.FloatTensor:
+        if self.disable_ittt:
+            return self.linear(x)
+
         assert x.ndim == 3, "x must be 3D (batch, seq_len, dim)"
 
         lr = self.get_lr()
@@ -165,6 +171,8 @@ class ItttLinear(nn.Module):
 
     @torch.no_grad()
     def init_state(self, bs: int, device: torch.device):
+        if self.disable_ittt:
+            return
 
         state = torch.zeros(
             bs, self.rank, self.in_features,
@@ -191,6 +199,9 @@ class ItttLinear(nn.Module):
 
     @torch.no_grad()
     def empty_state(self):
+        if self.disable_ittt:
+            return
+
         self.state.zero_()
         self.state.grad.zero_()
 
@@ -200,6 +211,8 @@ class ItttLinear(nn.Module):
     
     @torch.no_grad()
     def update_state(self):
+        if self.disable_ittt:
+            return
         
         self.state.add_(self.state.grad)
         self.state.grad.zero_()
