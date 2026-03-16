@@ -1,6 +1,6 @@
 dataset:
 
-    name: aklein4/longattn-SmolLM2
+    url: aklein4/longattn-SmolLM2
 
     kwargs:
 
