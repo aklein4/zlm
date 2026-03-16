@@ -103,7 +103,7 @@ class ItttLinear(nn.Module):
         
         # ittt params
         self.log_lr = nn.Parameter(
-            torch.zeros(rank, self.in_features)
+            torch.zeros(self.rank, self.in_features)
         )
         self.base_state_proj = nn.Linear(
             self.in_features, self.rank, bias=False
