@@ -175,10 +175,10 @@ class ItttLinear(nn.Module):
             device=device, dtype=self.state_dtype,
         )
         delta = torch.zeros_like(
-            self.state, dtype=self.momentum_dtype
+            state, dtype=self.momentum_dtype
         )
         momentum = torch.zeros_like(
-            self.state, dtype=self.momentum_dtype
+            state, dtype=self.momentum_dtype
         )
 
         state = maybe_shard_with_gradients(state)
