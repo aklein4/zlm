@@ -5,13 +5,13 @@ type: ittt_trainer.ItttTrainer  # Used to import the trainer from this class
 # This config is similar to the hyperparameters of GPT-3 XL which had 1.3B parameters.
 
 # total batch size across all devices
-global_batch_size: 32 # 1M tokens total
+global_batch_size: 128 # 4M tokens total
 
 # run for N steps
 max_steps: 1000000
 
 # Save a checkpoint every N steps
-checkpoint_interval: 1000
+checkpoint_interval: 250
 
 
 # whether to autocast the forward pass and loss computation.
@@ -28,7 +28,7 @@ optimizer:
   # kwargs passed to the optimizer constructor
   kwargs:
 
-    lr: 2.0e-4
+    lr: 4.0e-4
 
     betas: [0.9, 0.95]
     
@@ -43,7 +43,7 @@ lr_scheduler:
   type: warmup_stable_decay
 
   # get_scheduler requires this outside of kwargs
-  num_warmup_steps: 250
+  num_warmup_steps: 125
 
   kwargs:
 
