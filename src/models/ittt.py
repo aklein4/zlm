@@ -25,9 +25,9 @@ class ItttFunction(torch.autograd.Function):
         z: torch.FloatTensor,
         mod: "ItttLinear",
         momentum: torch.FloatTensor,
-        delta: torch.FloatTensor,
+        state: torch.FloatTensor,
     ) -> torch.FloatTensor:
-        ctx.save_for_backward(x, momentum, delta)
+        ctx.save_for_backward(x, momentum, state)
         ctx.mod = mod
         return z.clone()
 
@@ -41,7 +41,7 @@ class ItttFunction(torch.autograd.Function):
 
         og_grad = grad.clone()
 
-        x, momentum, delta, = ctx.saved_tensors
+        x, momentum, state = ctx.saved_tensors
         mod: ItttLinear = ctx.mod
 
         x: torch.FloatTensor = x.float()
@@ -58,19 +58,18 @@ class ItttFunction(torch.autograd.Function):
             g.transpose(-2, -1) @ x
         ) / math.sqrt(x.shape[-2]) # approx 1 std
 
-        momentum.lerp_(
-            update.detach(),
+        new_momentum = torch.lerp(
+            momentum,
+            update,
             1 - mod.momentum_beta
-        )
+        ).detach()
 
-        delta.copy_(
-            -newton_schulz(
-                momentum,
-                eps=mod.eps
-            ).detach()
-        )
-
-        return None, og_grad, None, None, None
+        state_delta = -newton_schulz(
+            new_momentum,
+            eps=mod.eps
+        ).detach().to(mod.state_dtype)
+    
+        return None, og_grad, None, new_momentum, state_delta
 
         
 class ItttLinear(nn.Module):
@@ -113,7 +112,6 @@ class ItttLinear(nn.Module):
 
         # ephemeral state
         self.state: nn.Buffer
-        self.delta: nn.Buffer
         self.momentum: nn.Buffer
 
         # weight initialization
@@ -153,7 +151,7 @@ class ItttLinear(nn.Module):
         s = lr[None] * self.state
 
         z = torch.einsum("boi,bsi->bso", s, x)
-        z = ItttFunction.apply(x, z, self, self.momentum, self.delta)
+        z = ItttFunction.apply(x, z, self, self.momentum, self.state)
 
         z = z + self.base_state_proj(x)
 
@@ -172,33 +170,37 @@ class ItttLinear(nn.Module):
             bs, self.rank, self.in_features,
             device=device, dtype=self.state_dtype,
         )
-        delta = torch.zeros_like(
-            state, dtype=self.momentum_dtype
-        )
         momentum = torch.zeros_like(
             state, dtype=self.momentum_dtype
         )
 
         state = maybe_shard_with_gradients(state)
-        delta = maybe_shard_with_gradients(delta)
         momentum = maybe_shard_with_gradients(momentum)
     
         self.register_buffer("state", state, persistent=False)
-        self.register_buffer("delta", delta, persistent=False)
         self.register_buffer("momentum", momentum, persistent=False)
         
+        self.state.requires_grad_(True)
+        self.momentum.requires_grad_(True)
+
 
     @torch.no_grad()
     def empty_state(self):
         self.state.zero_()
-        self.delta.zero_()
+        self.state.grad.zero_()
+
         self.momentum.zero_()
+        self.momentum.grad.zero_()
 
     
     @torch.no_grad()
     def update_state(self):
-        self.state.add_(self.delta.to(self.state_dtype))
-        self.delta.zero_()
+        
+        self.state.add_(self.state.grad)
+        self.state.grad.zero_()
+        
+        self.momentum.copy_(self.momentum.grad)
+        self.momentum.grad.zero_()
 
 
 class ItttModel(LlamaForCausalLM):
