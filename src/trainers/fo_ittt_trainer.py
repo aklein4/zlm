@@ -175,7 +175,7 @@ class FoItttTrainer(BaseTrainer):
             aux[f"lm_loss/chunk_{i:02d}"] = loss
             total_loss = total_loss + loss
             torch_xla.sync()
-            master_print(f"Chunk {i:02d} completed.")
+            master_print(f"Second chunk {i:02d} completed.")
         
         aux["relative_grad_error"] = self.model.relative_grad_error()
 
