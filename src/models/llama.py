@@ -477,6 +477,7 @@ class LlamaForCausalLM(nn.Module):
         labels: torch.LongTensor | None = None,
         attention_mask: torch.FloatTensor | None = None, # only used in non-kernel attention
         shift_states: bool = False,
+        logits_to_keep: slice | None = None,
         return_states: bool = False,
     ) -> tuple[torch.FloatTensor, torch.FloatTensor | None]:
         """
@@ -499,8 +500,11 @@ class LlamaForCausalLM(nn.Module):
 
         lm_states = self.model.norm(hidden_states)
         if shift_states:
+            assert logits_to_keep is None, "Cannot specify `logits_to_keep` when `shift_states` is True"
             # Shift the hidden states to the right for causal language modeling
             lm_states = lm_states[..., :-1, :].contiguous()
+        elif logits_to_keep is not None:
+            lm_states = lm_states[:, logits_to_keep, :].contiguous()
 
         logits = self.lm_head(lm_states)
         logits = logits.to(torch.float32)
