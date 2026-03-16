@@ -56,7 +56,7 @@ class ItttTrainer(BaseTrainer):
             logits = self.model(
                 chunks[0],
                 logits_to_keep=slice(0, -1)
-            ).logits
+            )[0]
             loss = self.loss(chunks[0], logits)
 
         loss.backward()
@@ -79,7 +79,7 @@ class ItttTrainer(BaseTrainer):
                 logits = self.model(
                     all_chunk,
                     logits_to_keep=slice(in_chunk.shape[-1]-1, -1)
-                ).logits
+                )[0]
                 loss = self.loss(
                     all_chunk[:, in_chunk.shape[-1]-1:],
                     logits

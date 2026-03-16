@@ -181,7 +181,10 @@ class ItttLinear(nn.Module):
         self.register_buffer("momentum", momentum, persistent=False)
         
         self.state.requires_grad_(True)
+        self.state.grad = torch.zeros_like(self.state)
+
         self.momentum.requires_grad_(True)
+        self.momentum.grad = torch.zeros_like(self.momentum)
 
 
     @torch.no_grad()
