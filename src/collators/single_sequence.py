@@ -55,4 +55,6 @@ class SingleSequenceCollator:
 
         input_ids = torch.clip(input_ids, 0, self.vocab_size - 1)
 
-        return input_ids
+        return {
+            "input_ids": input_ids
+        }
