@@ -95,8 +95,8 @@ class ItttLinear(nn.Module):
         self.eps = config.rms_norm_eps
         self.scalar_scaler = math.sqrt(self.in_features)
 
-        self.momentum_dtype = config.momentum_dtype
-        self.state_dtype = config.state_dtype
+        self.momentum_dtype = getattr(torch, config.momentum_dtype)
+        self.state_dtype = getattr(torch, config.state_dtype)
 
         # save linear
         self.linear = linear
