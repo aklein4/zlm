@@ -6,6 +6,7 @@ from trainers.base_trainer import BaseTrainer
 from models.ittt import ItttModel
 from utils.loss_utils import lm_loss_fn
 import utils.constants as constants
+from utils.logging_utils import master_print
 
 
 class ItttTrainer(BaseTrainer):
@@ -112,6 +113,8 @@ class ItttTrainer(BaseTrainer):
         aux = {
             "lm_loss/chunk_00": total_loss,
         }
+        torch_xla.sync()
+        master_print("Chunk 00 completed.")
 
         # remaining chunks
         for i in range(1, len(chunks)):
@@ -122,6 +125,8 @@ class ItttTrainer(BaseTrainer):
 
             aux[f"lm_loss/chunk_{i:02d}"] = loss
             total_loss = total_loss + loss
+            torch_xla.sync()
+            master_print(f"Chunk {i:02d} completed.")
         
         post_aux, grad_norm = self.post_forward()
         aux.update(post_aux)
