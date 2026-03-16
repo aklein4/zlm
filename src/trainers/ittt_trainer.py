@@ -21,6 +21,10 @@ class ItttTrainer(BaseTrainer):
             # ShardedModule
             self.model.lm_head._orig_mod.weight.no_muon = True
 
+        self.model.init_state(
+            self.global_batch_size, self.device
+        )
+
 
     def loss(self, labels, logits):
         return lm_loss_fn(
@@ -45,9 +49,6 @@ class ItttTrainer(BaseTrainer):
             input_ids, self.config.model.chunk_size,
             dim=-1
         )
-
-        # initialize the model state
-        self.model.init_state(input_ids)
 
         # first chunk
         with torch.autocast(**ac_kwargs):
@@ -122,5 +123,5 @@ class ItttTrainer(BaseTrainer):
         for decade, values in decades.items():
             aux[f"grouped_lm_loss/decade_{decade:02d}"] = torch.stack(values).mean()
 
-        return final_loss, aux
+        return final_loss, aux, grad_norm
     

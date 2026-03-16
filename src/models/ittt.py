@@ -168,28 +168,33 @@ class ItttLinear(nn.Module):
 
 
     @torch.no_grad()
-    def init_state(self, input_ids: torch.LongTensor):
+    def init_state(self, bs: int, device: torch.device):
 
-        self.state = torch.zeros(
-            input_ids.shape[0], self.rank, self.in_features,
-            device=input_ids.device, dtype=self.state_dtype,
+        state = torch.zeros(
+            bs, self.rank, self.in_features,
+            device=device, dtype=self.state_dtype,
         )
-        self.delta = torch.zeros_like(
+        delta = torch.zeros_like(
             self.state, dtype=self.momentum_dtype
         )
-        self.momentum = torch.zeros_like(
+        momentum = torch.zeros_like(
             self.state, dtype=self.momentum_dtype
         )
 
-        self.state = maybe_shard_with_gradients(self.state)
-        self.delta = maybe_shard_with_gradients(self.delta)
-        self.momentum = maybe_shard_with_gradients(self.momentum)
+        state = maybe_shard_with_gradients(state)
+        delta = maybe_shard_with_gradients(delta)
+        momentum = maybe_shard_with_gradients(momentum)
+    
+        self.register_buffer("state", state, persistent=False)
+        self.register_buffer("delta", delta, persistent=False)
+        self.register_buffer("momentum", momentum, persistent=False)
         
 
     @torch.no_grad()
     def empty_state(self):
-        self.state = None
-        self.momentum = None
+        self.state.zero_()
+        self.delta.zero_()
+        self.momentum.zero_()
 
     
     @torch.no_grad()
@@ -198,6 +203,7 @@ class ItttLinear(nn.Module):
         assert self.state is not None
 
         self.state.add_(self.delta.to(self.state_dtype))
+        self.delta.zero_()
 
 
 class ItttModel(LlamaForCausalLM):
@@ -216,10 +222,10 @@ class ItttModel(LlamaForCausalLM):
 
 
     @torch.no_grad()
-    def init_state(self, input_ids: torch.LongTensor):
+    def init_state(self, bs: int, device: torch.device):
         for m in self.modules():
             if isinstance(m, ItttLinear):
-                m.init_state(input_ids)
+                m.init_state(bs, device)
 
 
     @torch.no_grad()
