@@ -35,15 +35,19 @@ class ItttTrainer(BaseTrainer):
 
 
     @torch_xla.compile(full_graph=True)
-    def first_chunk(self, chunks, ac_kwargs):
+    def first_chunk(self, chunk):
 
-        with torch.autocast(**ac_kwargs):
+        with torch.autocast(
+            "xla",
+            dtype=torch.bfloat16,
+            enabled=self.config.trainer.use_autocast,
+        ):
 
             logits = self.model(
-                chunks[0],
+                chunk,
                 logits_to_keep=slice(0, -1)
             )[0]
-            loss = self.loss(chunks[0], logits)
+            loss = self.loss(chunk, logits)
 
         loss.backward()
 
@@ -51,13 +55,17 @@ class ItttTrainer(BaseTrainer):
 
 
     @torch_xla.compile(full_graph=True)
-    def looped_chunks(self, in_chunk, out_chunk, ac_kwargs):
+    def looped_chunks(self, in_chunk, out_chunk):
 
         all_chunk = torch.cat([in_chunk, out_chunk], dim=-1)
 
         self.model.update_state()
 
-        with torch.autocast(**ac_kwargs):
+        with torch.autocast(
+            "xla",
+            dtype=torch.bfloat16,
+            enabled=self.config.trainer.use_autocast,
+        ):
 
             logits = self.model(
                 all_chunk,
@@ -93,13 +101,6 @@ class ItttTrainer(BaseTrainer):
 
     def train_step(self, batch):
 
-        # settings
-        ac_kwargs = {
-            "device_type": 'xla',
-            "dtype": torch.bfloat16,
-            "enabled": self.config.trainer.use_autocast,
-        }
-
         input_ids: torch.LongTensor = batch["input_ids"]
         chunks = torch.split(
             input_ids, self.config.model.chunk_size,
@@ -107,7 +108,7 @@ class ItttTrainer(BaseTrainer):
         )
 
         # first chunk
-        total_loss = self.first_chunk(chunks, ac_kwargs)
+        total_loss = self.first_chunk(chunks[0])
         aux = {
             "lm_loss/chunk_00": total_loss,
         }
@@ -117,7 +118,7 @@ class ItttTrainer(BaseTrainer):
             in_chunk = chunks[i-1]
             out_chunk = chunks[i]
             
-            loss = self.looped_chunks(in_chunk, out_chunk, ac_kwargs)
+            loss = self.looped_chunks(in_chunk, out_chunk)
 
             aux[f"lm_loss/chunk_{i:02d}"] = loss
             total_loss = total_loss + loss
