@@ -26,10 +26,10 @@ class FoItttFunction(torch.autograd.Function):
         mod: "ItttLinear",
         state: torch.FloatTensor,
         grad_buffer: torch.FloatTensor,
-        curr_grad: torch.FloatTensor,
+        final_grad_buffer: torch.FloatTensor,
     ) -> torch.FloatTensor:
         
-        ctx.save_for_backward(x, state, grad_buffer, curr_grad)
+        ctx.save_for_backward(x, state, grad_buffer, final_grad_buffer)
         ctx.mod = mod
 
         return z.clone()
@@ -51,7 +51,7 @@ class FoItttFunction(torch.autograd.Function):
 def first_backward(ctx, grad, x_kwarg=None):
     og_grad = grad.clone()
 
-    x, state, grad_buffer, curr_grad = ctx.saved_tensors
+    x, state, grad_buffer, final_grad_buffer = ctx.saved_tensors
     if x_kwarg is not None:
         x = x_kwarg
     mod: FoItttLinear = ctx.mod
@@ -87,7 +87,7 @@ def first_backward(ctx, grad, x_kwarg=None):
 def second_backward(ctx, grad):
     og_grad = grad.clone()
 
-    x, state, grad_buffer, curr_grad = ctx.saved_tensors
+    x, state, grad_buffer, final_grad_buffer = ctx.saved_tensors
     mod: FoItttLinear = ctx.mod
 
     x_dtype = x.dtype
@@ -100,11 +100,11 @@ def second_backward(ctx, grad):
     g_lm = maybe_shard_with_gradients(g_lm.clone())
 
     # do a regular backwards with the lm components
-    _, __, ___, update_lm, raw_G_lm = first_backward(ctx, g_lm, x_kwarg=x)
+    _, __, ___, update_lm, raw_G_lm, ____ = first_backward(ctx, g_lm, x_kwarg=x)
 
     # calculate the future first-order gradients
-    G_so_far = curr_grad + raw_G_lm
-    G_future = grad_buffer - G_so_far
+    G_so_far = grad_buffer + raw_G_lm
+    G_future = final_grad_buffer - G_so_far
 
     with torch.set_grad_enabled(True):
 
@@ -187,6 +187,7 @@ class FoItttLinear(nn.Module):
         # ephemeral state
         self.state: nn.Buffer
         self.grad_buffer: nn.Buffer
+        self.final_grad_buffer: nn.Buffer
 
         # weight initialization
         self.base_state_proj.weight.data.zero_()
@@ -220,7 +221,7 @@ class FoItttLinear(nn.Module):
             s = maybe_shard_with_gradients(s)
 
         z = torch.einsum("boi,bsi->bso", s, x)
-        z = FoItttFunction.apply(x, z, self, self.state, self.grad_buffer, self.grad_buffer.grad.clone())
+        z = FoItttFunction.apply(x, z, self, self.state, self.grad_buffer, self.final_grad_buffer)
 
         z = z + self.base_state_proj(x)
 
@@ -240,13 +241,16 @@ class FoItttLinear(nn.Module):
             device=device, dtype=torch.float32
         )
         grad_buffer = torch.zeros_like(state)
+        final_grad_buffer = torch.zeros_like(state)
 
         state = maybe_shard_with_gradients(state)
         grad_buffer = maybe_shard_with_gradients(grad_buffer)
+        final_grad_buffer = maybe_shard_with_gradients(final_grad_buffer)
     
         self.register_buffer("state", state, persistent=False)
         self.register_buffer("grad_buffer", grad_buffer, persistent=False)
-        
+        self.register_buffer("final_grad_buffer", final_grad_buffer, persistent=False)
+
         self.state.requires_grad_(True)
         self.state.grad = torch.zeros_like(self.state)
         self.state.grad = maybe_shard_with_gradients(self.state.grad)
@@ -255,6 +259,8 @@ class FoItttLinear(nn.Module):
         self.grad_buffer.grad = torch.zeros_like(self.grad_buffer)
         self.grad_buffer.grad = maybe_shard_with_gradients(self.grad_buffer.grad)
 
+        self.final_grad_buffer.requires_grad_(False)
+
 
     @torch.no_grad()
     def finalize_gradients(self):
@@ -262,7 +268,9 @@ class FoItttLinear(nn.Module):
         self.state.zero_()
         self.state.grad.zero_()
 
-        self.grad_buffer.copy_(self.grad_buffer.grad)
+        self.final_grad_buffer.copy_(self.grad_buffer)
+        
+        self.grad_buffer.zero_()
         self.grad_buffer.grad.zero_()
 
 
@@ -275,6 +283,8 @@ class FoItttLinear(nn.Module):
         self.grad_buffer.zero_()
         self.grad_buffer.grad.zero_()
 
+        self.final_grad_buffer.zero_()
+
     
     @torch.no_grad()
     def update_state(self):
@@ -282,12 +292,15 @@ class FoItttLinear(nn.Module):
         self.state.add_(self.state.grad)
         self.state.grad.zero_()
 
+        self.grad_buffer.add_(self.grad_buffer.grad)
+        self.grad_buffer.grad.zero_()
+
     
     @torch.no_grad()
     def relative_grad_error(self):
 
-        est = self.grad_buffer.grad
-        target = self.grad_buffer
+        est = self.grad_buffer
+        target = self.final_grad_buffer
 
         err = (est - target).norm()
         denom = target.norm() + self.eps

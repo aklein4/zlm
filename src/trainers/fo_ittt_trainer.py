@@ -64,6 +64,7 @@ class FoItttTrainer(BaseTrainer):
             loss = self.loss(chunk, logits)
 
         loss.backward()
+        self.model.update_state()
 
         return loss
 
@@ -79,8 +80,6 @@ class FoItttTrainer(BaseTrainer):
             out_chunk = maybe_shard_with_gradients(out_chunk)
 
         all_chunk = torch.cat([in_chunk, out_chunk], dim=-1)
-
-        self.model.update_state()
 
         with torch.autocast(
             "xla",
@@ -106,6 +105,7 @@ class FoItttTrainer(BaseTrainer):
             )
 
         loss.backward()
+        self.model.update_state()
 
         return loss
 
