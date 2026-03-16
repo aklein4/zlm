@@ -65,7 +65,7 @@ class ItttFunction(torch.autograd.Function):
 
         delta.copy_(
             -newton_schulz(
-                momentum_data,
+                momentum,
                 eps=mod.eps
             ).detach()
         )
