@@ -1,0 +1,22 @@
+dataset:
+
+    name: aklein4/longattn-SmolLM2
+
+    kwargs:
+
+        split: train
+
+        streaming: true
+
+
+collator:
+
+    type: single_sequence.SingleSequenceCollator
+
+    kwargs:
+    
+        sequence_length: 32768
+
+        pad_token_id: 49152
+        vocab_size: 49153
+
