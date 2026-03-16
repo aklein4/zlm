@@ -34,7 +34,7 @@ class ItttTrainer(BaseTrainer):
         )
 
 
-    @torch_xla.compile(full_graph=True)
+    # @torch_xla.compile(full_graph=True)
     def train_step(self, batch):
 
         # settings
