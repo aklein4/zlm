@@ -35,6 +35,62 @@ class ItttTrainer(BaseTrainer):
 
 
     @torch_xla.compile(full_graph=True)
+    def first_chunk(self, chunks, ac_kwargs):
+
+        with torch.autocast(**ac_kwargs):
+
+            logits = self.model(
+                chunks[0],
+                logits_to_keep=slice(0, -1)
+            )[0]
+            loss = self.loss(chunks[0], logits)
+
+        loss.backward()
+
+        return loss
+
+
+    @torch_xla.compile(full_graph=True)
+    def looped_chunks(self, in_chunk, out_chunk, ac_kwargs):
+
+        all_chunk = torch.cat([in_chunk, out_chunk], dim=-1)
+
+        self.model.update_state()
+
+        with torch.autocast(**ac_kwargs):
+
+            logits = self.model(
+                all_chunk,
+                logits_to_keep=slice(in_chunk.shape[-1]-1, -1)
+            )[0]
+            loss = self.loss(
+                all_chunk[:, in_chunk.shape[-1]-1:],
+                logits
+            )
+
+        loss.backward()
+
+        return loss
+
+
+    @torch_xla.compile(full_graph=True)
+    def post_forward(self):
+
+        # clear state
+        self.model.empty_state()
+
+        # regular optimization step
+        grad_norm = self.clip_gradients()
+
+        aux = self.optimizers['main'].step()       
+        self.model.zero_grad(set_to_none=False)
+
+        aux['lr'] = self.lr_schedulers['main'].get_last_lr()[0]
+        self.lr_schedulers['main'].step()
+
+        return aux, grad_norm
+
+
     def train_step(self, batch):
 
         # settings
@@ -51,57 +107,23 @@ class ItttTrainer(BaseTrainer):
         )
 
         # first chunk
-        with torch.autocast(**ac_kwargs):
-
-            logits = self.model(
-                chunks[0],
-                logits_to_keep=slice(0, -1)
-            )[0]
-            loss = self.loss(chunks[0], logits)
-
-        loss.backward()
-
+        total_loss = self.first_chunk(chunks, ac_kwargs)
         aux = {
-            "lm_loss/chunk_00": loss,
+            "lm_loss/chunk_00": total_loss,
         }
-        total_loss = loss
 
         # remaining chunks
         for i in range(1, len(chunks)):
             in_chunk = chunks[i-1]
             out_chunk = chunks[i]
-            all_chunk = torch.cat([in_chunk, out_chunk], dim=-1)
-
-            self.model.update_state()
-
-            with torch.autocast(**ac_kwargs):
-
-                logits = self.model(
-                    all_chunk,
-                    logits_to_keep=slice(in_chunk.shape[-1]-1, -1)
-                )[0]
-                loss = self.loss(
-                    all_chunk[:, in_chunk.shape[-1]-1:],
-                    logits
-                )
-
-            loss.backward()
+            
+            loss = self.looped_chunks(in_chunk, out_chunk, ac_kwargs)
 
             aux[f"lm_loss/chunk_{i:02d}"] = loss
             total_loss = total_loss + loss
         
-        # clear state
-        self.model.empty_state()
-
-        # regular optimization step
-        grad_norm = self.clip_gradients()
-
-        opt_aux = self.optimizers['main'].step()
-        aux.update(opt_aux)        
-        self.model.zero_grad(set_to_none=False)
-
-        aux['lr'] = self.lr_schedulers['main'].get_last_lr()[0]
-        self.lr_schedulers['main'].step()
+        post_aux, grad_norm = self.post_forward()
+        aux.update(post_aux)
 
         # finalize outputs
         final_loss = total_loss / len(chunks)
