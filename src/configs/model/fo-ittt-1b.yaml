@@ -1,5 +1,5 @@
 defaults:
-  ittt-1b
-  _self_
+ - ittt-1b
+ - _self_
 
 type: fo_ittt.FoItttModel

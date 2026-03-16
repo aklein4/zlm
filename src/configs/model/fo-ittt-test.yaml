@@ -1,5 +1,5 @@
 defaults:
-  ittt-test
-  _self_
+ - ittt-test
+ - _self_
 
 type: fo_ittt.FoItttModel
