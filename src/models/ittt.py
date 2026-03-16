@@ -56,14 +56,12 @@ class ItttFunction(torch.autograd.Function):
             g.transpose(-2, -1) @ x
         ) / math.sqrt(x.shape[-2]) # approx 1 std
 
-        assert mod.momentum is not None
         mod.momentum.lerp_(
             mod.momentum,
             update,
             1 - mod.momentum_beta
         )
 
-        assert mod.delta is not None
         mod.delta.copy_(
             -newton_schulz(
                 mod.momentum,
@@ -113,9 +111,9 @@ class ItttLinear(nn.Module):
         )
 
         # ephemeral state
-        self.state = None
-        self.delta = None
-        self.momentum = None
+        self.state: nn.Buffer
+        self.delta: nn.Buffer
+        self.momentum: nn.Buffer
 
         # weight initialization
         self.base_state_proj.weight.data.zero_()
@@ -149,7 +147,6 @@ class ItttLinear(nn.Module):
         x: torch.FloatTensor,
     ) -> torch.FloatTensor:
         assert x.ndim == 3, "x must be 3D (batch, seq_len, dim)"
-        assert self.state is not None
 
         lr = self.get_lr()
         s = lr[None] * self.state
@@ -199,9 +196,6 @@ class ItttLinear(nn.Module):
     
     @torch.no_grad()
     def update_state(self):
-        assert self.delta is not None
-        assert self.state is not None
-
         self.state.add_(self.delta.to(self.state_dtype))
         self.delta.zero_()
 
