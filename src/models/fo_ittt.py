@@ -141,7 +141,7 @@ def second_backward(ctx, grad):
 
     # lm, fo
     x_grad = torch.cat(
-        [x_grad_fo, torch.zeros_like(x_grad_fo)],
+        [torch.zeros_like(x_grad_fo), x_grad_fo],
         dim=0
     ).to(x_dtype)
     x_grad = maybe_shard_with_gradients(x_grad).detach()
