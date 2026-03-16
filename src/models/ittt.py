@@ -56,17 +56,16 @@ class ItttFunction(torch.autograd.Function):
             g.transpose(-2, -1) @ x
         ) / math.sqrt(x.shape[-2]) # approx 1 std
 
-        mod.momentum.lerp_(
-            update.detach(),
+        mod.tmp_momentum = torch.lerp(
+            mod.momentum,
+            update,
             1 - mod.momentum_beta
-        )
+        ).detach()
 
-        mod.delta.copy_(
-            -newton_schulz(
-                mod.momentum,
-                eps=mod.eps
-            ).detach()
-        )
+        mod.delta = -newton_schulz(
+            mod.tmp_momentum,
+            eps=mod.eps
+        ).detach()
 
         return None, og_grad, None
 
@@ -111,7 +110,7 @@ class ItttLinear(nn.Module):
 
         # ephemeral state
         self.state: nn.Buffer
-        self.delta: nn.Buffer
+        # self.delta: nn.Buffer
         self.momentum: nn.Buffer
 
         # weight initialization
@@ -170,33 +169,34 @@ class ItttLinear(nn.Module):
             bs, self.rank, self.in_features,
             device=device, dtype=self.state_dtype,
         )
-        delta = torch.zeros_like(
-            state, dtype=self.momentum_dtype
-        )
+        # delta = torch.zeros_like(
+        #     state, dtype=self.momentum_dtype
+        # )
         momentum = torch.zeros_like(
             state, dtype=self.momentum_dtype
         )
 
         state = maybe_shard_with_gradients(state)
-        delta = maybe_shard_with_gradients(delta)
+        # delta = maybe_shard_with_gradients(delta)
         momentum = maybe_shard_with_gradients(momentum)
     
         self.register_buffer("state", state, persistent=False)
-        self.register_buffer("delta", delta, persistent=False)
+        # self.register_buffer("delta", delta, persistent=False)
         self.register_buffer("momentum", momentum, persistent=False)
         
 
     @torch.no_grad()
     def empty_state(self):
         self.state.zero_()
-        self.delta.zero_()
+        # self.delta.zero_()
         self.momentum.zero_()
 
     
     @torch.no_grad()
     def update_state(self):
         self.state.add_(self.delta.to(self.state_dtype))
-        self.delta.zero_()
+        self.momentum.copy_(self.tmp_momentum)
+        self.tmp_momentum = None
 
 
 class ItttModel(LlamaForCausalLM):
