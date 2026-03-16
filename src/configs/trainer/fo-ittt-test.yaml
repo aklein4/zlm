@@ -1,0 +1,5 @@
+defaults:
+  ittt-test
+  _self_
+
+type: fo_ittt_trainer.FoItttTrainer
