@@ -209,7 +209,10 @@ class ItttModel(LlamaForCausalLM):
         for layer in self.model.layers:
             layer: LlamaDecoderLayer
 
-            layer.mlp.down_proj = ItttLinear(config)
+            layer.mlp.down_proj = ItttLinear(
+                layer.mlp.down_proj,
+                config
+            )
 
 
     @torch.no_grad()
