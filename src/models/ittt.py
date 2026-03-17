@@ -150,7 +150,7 @@ class ItttWeight(nn.Module):
     def init_state(self, bs: int, device: torch.device):
 
         state = torch.zeros(
-            bs, self.rank, self.in_features,
+            bs, self.out_features, self.in_features,
             device=device, dtype=self.state_dtype,
         )
         momentum = torch.zeros_like(
