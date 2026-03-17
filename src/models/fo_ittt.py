@@ -85,37 +85,6 @@ def first_backward(ctx, grad, x_kwarg=None):
     return None, og_grad, None, update, raw_G, None, None
 
 
-def _normalize_along_sequence(
-    x: torch.FloatTensor,
-    eps: float,
-) -> tuple[torch.FloatTensor, torch.FloatTensor]:
-    # equivalent to F.normalize(x, dim=-2, eps=mod.eps) * math.sqrt(x.shape[-2])
-    norm = torch.linalg.vector_norm(x, dim=-2, keepdim=True)
-    return math.sqrt(x.shape[-2]) * x / norm.clamp_min(eps), norm
-
-
-def _centered_normalize_along_sequence_backward(
-    grad: torch.FloatTensor,
-    centered_x: torch.FloatTensor,
-    centered_x_norm: torch.FloatTensor,
-    eps: float,
-) -> torch.FloatTensor:
-
-    scale = math.sqrt(centered_x.shape[-2])
-    
-    denom = centered_x_norm.clamp_min(eps)
-    active = (centered_x_norm > eps).to(grad.dtype)
-
-    proj = (centered_x * grad).sum(dim=-2, keepdim=True)
-
-    grad_centered = scale * grad / denom
-    grad_centered = grad_centered - (
-        active * scale * centered_x * proj
-    ) / denom.pow(3)
-
-    return grad_centered - grad_centered.mean(dim=-2, keepdim=True)
-
-
 def second_backward(ctx, grad):
     og_grad = grad.clone()
 
@@ -138,32 +107,39 @@ def second_backward(ctx, grad):
     G_so_far = grad_buffer + raw_G_lm
     G_future = final_grad_buffer - G_so_far
 
-    x = x.float()
-    g_lm = g_lm.float()
+    with torch.set_grad_enabled(True):
 
-    x_centered = x - x.mean(dim=-2, keepdim=True)
-    x, x_centered_norm = _normalize_along_sequence(x_centered, mod.eps)
-    g_lm = F.normalize(g_lm, dim=-2, eps=mod.eps) * math.sqrt(x.shape[-2])
+        x_leaf = x.detach().clone().requires_grad_(True)
+        
+        g_lm = g_lm.detach().requires_grad_(False)
+        G_future = G_future.detach().requires_grad_(False)
 
-    update_grad = (
-        G_future.to(torch.bfloat16) *
-        lr[None].detach().to(torch.bfloat16)
-    )
-    update_grad = -update_grad / (
-        math.sqrt(mod.in_features) * math.sqrt(x.shape[-2])
-    )
+        x = x_leaf.float()
+        g_lm = g_lm.float()
 
-    x_grad_fo = (
-        g_lm.to(torch.bfloat16) @ update_grad
-    )
+        x = x - x.mean(dim=-2, keepdim=True)
+        x = F.normalize(x, dim=-2, eps=mod.eps) * math.sqrt(x.shape[-2])
+        g_lm = F.normalize(g_lm, dim=-2, eps=mod.eps) * math.sqrt(x.shape[-2])
 
-    x_grad_fo = x_grad_fo.float()
-    x_grad_fo = _centered_normalize_along_sequence_backward(
-        x_grad_fo,
-        x_centered,
-        x_centered_norm,
-        mod.eps,
-    )
+        update = (
+            g_lm.transpose(-2, -1).to(torch.bfloat16)
+            @ x.to(torch.bfloat16)
+        ) / math.sqrt(x.shape[-2]) # approx 1 std
+
+        update = -(
+            update / math.sqrt(mod.in_features)
+        )
+
+        delta = (
+            update *
+            lr[None].detach().to(update.dtype)
+        ).to(G_future.dtype)
+
+        x_grad_fo = torch.autograd.grad(
+            delta,
+            x_leaf,
+            grad_outputs=G_future,
+        )[0]
 
     # lm, fo
     x_grad = torch.cat(
