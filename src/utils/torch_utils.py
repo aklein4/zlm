@@ -337,6 +337,18 @@ def _newton_schulz_inner(X, t):
     return X, X
 
 
+_cuda_newton_schulz = None
+def cuda_newton_schulz():
+    global _cuda_newton_schulz
+    if _cuda_newton_schulz is None:
+        _cuda_newton_schulz = torch.compile(
+            newton_schulz,
+            mode="reduce-overhead",
+            fullgraph=True,
+        ) 
+    return _cuda_newton_schulz
+
+
 def shift(
     x: torch.Tensor,
     n: int,

@@ -8,10 +8,12 @@ if constants.XLA_AVAILABLE:
 
 import math
 from omegaconf import DictConfig
+from tqdm import tqdm
 
 from models.llama import LlamaForCausalLM, LlamaDecoderLayer
 from utils.sharding_utils import maybe_shard_with_gradients
-from utils.torch_utils import newton_schulz
+from utils.torch_utils import newton_schulz, cuda_newton_schulz
+from utils.loss_utils import lm_loss_fn
 
 
 
@@ -64,7 +66,11 @@ class ItttFunction(torch.autograd.Function):
             1 - mod.momentum_beta
         ).detach()
 
-        state_delta = -newton_schulz(
+        ns_fn = newton_schulz
+        if not constants.XLA_AVAILABLE:
+            ns_fn = cuda_newton_schulz()
+
+        state_delta = -ns_fn(
             new_momentum,
             eps=mod.eps
         ).detach().to(mod.state_dtype)
@@ -256,3 +262,68 @@ class ItttModel(LlamaForCausalLM):
             if isinstance(m, ItttLinear):
                 m.update_state()
                     
+
+    def compute_logits(
+        self,
+        input_ids: torch.LongTensor,
+        verbose: bool = False,
+    ):
+        
+        chunks = torch.split(input_ids, self.config.chunk_size, dim=-1)
+
+        ac_kwargs = {
+            "device_type": str(input_ids.device),
+            "dtype": torch.bfloat16,
+        }
+
+        self.init_state(input_ids.shape[0], input_ids.device)
+
+        all_logits = []
+
+        # first chunk
+        with torch.autocast(**ac_kwargs):
+
+            logits = self(
+                chunks[0],
+                logits_to_keep=slice(0, -1)
+            )[0]
+            all_logits.append(logits.detach().cpu())
+
+            loss = lm_loss_fn(
+                logits, chunks[0],
+                shift_logits=False,
+                ignore_index=self.config.pad_token_id,
+            )
+
+        loss.backward()
+
+        # remaining chunks
+        for i in tqdm(range(1, len(chunks)), desc="Processing Chunks", leave=False, disable=(not verbose)):
+            
+            first_chunk = chunks[i-1]
+            second_chunk = chunks[i]
+            all_chunk = torch.cat([first_chunk, second_chunk], dim=-1)
+
+            self.update_state()
+
+            with torch.autocast(**ac_kwargs):
+
+                logits = self(
+                    all_chunk,
+                    logits_to_keep=slice(first_chunk.shape[-1]-1, -1)
+                )[0]
+                all_logits.append(logits.detach().cpu())
+
+                loss = lm_loss_fn(
+                    logits,
+                    all_chunk[:, first_chunk.shape[-1]-1:].to(logits.device),
+                    shift_logits=False,
+                    ignore_index=self.config.pad_token_id,
+                )
+
+            loss.backward()
+
+        self.zero_grad(True)
+        self.empty_state()
+            
+        return torch.cat(all_logits, dim=1).detach()
