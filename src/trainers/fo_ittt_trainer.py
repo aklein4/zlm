@@ -190,6 +190,8 @@ class FoItttTrainer(BaseTrainer):
         self.model.set_second_pass(True)
         self.model.finalize_gradients()
         self.model.zero_grad(set_to_none=False)
+        torch_xla.sync()
+        master_print("Ready for second pass.")
 
         # first chunk
         total_loss = self.first_chunk_second_pass(chunks[0])
