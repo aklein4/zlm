@@ -61,7 +61,7 @@ pure_modules: []
 
 chunk_size: 1024
 
-rank: 256
+rank: 384
 
 base_lr: 1.0e-2
 momentum_beta: 0.75
