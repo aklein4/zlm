@@ -37,11 +37,7 @@ class FoItttTrainer(BaseTrainer):
 
 
     @torch_xla.compile(full_graph=True)
-    def first_chunk(self, chunk, second_pass=False):
-
-        if second_pass:
-            chunk = chunk.repeat(2, 1)
-            chunk = maybe_shard_with_gradients(chunk)
+    def first_chunk(self, chunk):
 
         with torch.autocast(
             "xla",
@@ -53,13 +49,33 @@ class FoItttTrainer(BaseTrainer):
                 chunk,
                 logits_to_keep=slice(0, -1)
             )[0]
+            loss = self.loss(chunk, logits)
 
-            if second_pass:
-                chunk = chunk[:chunk.shape[0]//2]
-                logits = logits[:logits.shape[0]//2]
+        loss.backward()
+        self.model.update_state()
 
-                chunk = maybe_shard_with_gradients(chunk)
-                logits = maybe_shard_with_gradients(logits)
+        return loss
+
+    
+    @torch_xla.compile(full_graph=True)
+    def first_chunk_second_pass(self, chunk):
+
+        double_chunk = chunk.repeat(2, 1)
+        double_chunk = maybe_shard_with_gradients(double_chunk)
+
+        with torch.autocast(
+            "xla",
+            dtype=torch.bfloat16,
+            enabled=self.config.trainer.use_autocast,
+        ):
+
+            logits = self.model(
+                double_chunk,
+                logits_to_keep=slice(0, -1)
+            )[0]
+
+            logits = logits[:logits.shape[0]//2]
+            logits = maybe_shard_with_gradients(logits)
 
             loss = self.loss(chunk, logits)
 
@@ -70,14 +86,7 @@ class FoItttTrainer(BaseTrainer):
 
 
     @torch_xla.compile(full_graph=True)
-    def looped_chunks(self, in_chunk, out_chunk, second_pass=False):
-
-        if second_pass:
-            in_chunk = in_chunk.repeat(2, 1)
-            out_chunk = out_chunk.repeat(2, 1)
-
-            in_chunk = maybe_shard_with_gradients(in_chunk)
-            out_chunk = maybe_shard_with_gradients(out_chunk)
+    def looped_chunks(self, in_chunk, out_chunk):
 
         all_chunk = torch.cat([in_chunk, out_chunk], dim=-1)
 
@@ -91,13 +100,38 @@ class FoItttTrainer(BaseTrainer):
                 all_chunk,
                 logits_to_keep=slice(in_chunk.shape[-1]-1, -1)
             )[0]
+            loss = self.loss(
+                all_chunk[:, in_chunk.shape[-1]-1:],
+                logits
+            )
 
-            if second_pass:
-                all_chunk = all_chunk[:all_chunk.shape[0]//2]
-                logits = logits[:logits.shape[0]//2]
+        loss.backward()
+        self.model.update_state()
 
-                all_chunk = maybe_shard_with_gradients(all_chunk)
-                logits = maybe_shard_with_gradients(logits)
+        return loss
+    
+
+    @torch_xla.compile(full_graph=True)
+    def looped_chunks_second_pass(self, in_chunk, out_chunk):
+
+        all_chunk = torch.cat([in_chunk, out_chunk], dim=-1)
+
+        double_all_chunk = all_chunk.repeat(2, 1)
+        double_all_chunk = maybe_shard_with_gradients(double_all_chunk)
+
+        with torch.autocast(
+            "xla",
+            dtype=torch.bfloat16,
+            enabled=self.config.trainer.use_autocast,
+        ):
+
+            logits = self.model(
+                double_all_chunk,
+                logits_to_keep=slice(in_chunk.shape[-1]-1, -1)
+            )[0]
+
+            logits = logits[:logits.shape[0]//2]
+            logits = maybe_shard_with_gradients(logits)
 
             loss = self.loss(
                 all_chunk[:, in_chunk.shape[-1]-1:],
@@ -158,7 +192,7 @@ class FoItttTrainer(BaseTrainer):
         self.model.zero_grad(set_to_none=False)
 
         # first chunk
-        total_loss = self.first_chunk(chunks[0], second_pass=True)
+        total_loss = self.first_chunk_second_pass(chunks[0])
         aux = {
             "lm_loss/chunk_00": total_loss,
         }
@@ -170,7 +204,7 @@ class FoItttTrainer(BaseTrainer):
             in_chunk = chunks[i-1]
             out_chunk = chunks[i]
             
-            loss = self.looped_chunks(in_chunk, out_chunk, second_pass=True)
+            loss = self.looped_chunks_second_pass(in_chunk, out_chunk)
 
             aux[f"lm_loss/chunk_{i:02d}"] = loss
             total_loss = total_loss + loss
