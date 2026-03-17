@@ -44,7 +44,7 @@ class ItttFunction(torch.autograd.Function):
         og_grad = grad.clone()
 
         x, momentum, state = ctx.saved_tensors
-        mod: ItttLinear = ctx.mod
+        mod: ItttWeight = ctx.mod
 
         x: torch.FloatTensor = x.float()
         g = grad.float()
@@ -77,23 +77,26 @@ class ItttFunction(torch.autograd.Function):
     
         return None, og_grad, None, new_momentum, state_delta
 
-        
-class ItttLinear(nn.Module):
+
+class ItttWeight(nn.Module):
 
     def __init__(
         self,
-        linear: nn.Linear,
         config: DictConfig,
-        rank: int | None = None,
+        in_features: int,
+        out_features: int,
     ):
         super().__init__()
 
         # save config
-        self.in_features = linear.in_features
-        self.out_features = linear.out_features
-        self.rank = rank if rank is not None else config.rank
+        self.in_features = in_features
+        self.out_features = out_features
 
-        self.base_lr = config.base_lr
+        self.base_lr = ( # scaled muon-like updates
+            config.base_lr
+            * math.sqrt(max(self.in_features, self.out_features))
+            / math.sqrt(self.in_features)
+        )
         self.momentum_beta = config.momentum_beta
 
         self.eps = config.rms_norm_eps
@@ -101,19 +104,13 @@ class ItttLinear(nn.Module):
 
         self.momentum_dtype = getattr(torch, config.momentum_dtype)
         self.state_dtype = getattr(torch, config.state_dtype)
-
-        # save linear
-        self.linear = linear
         
-        # ittt params
+        # params
         self.log_lr = nn.Parameter(
             torch.zeros(self.rank, self.in_features)
         )
         self.base_state_proj = nn.Linear(
             self.in_features, self.rank, bias=False
-        )
-        self.out_proj = nn.Linear(
-            self.rank, self.out_features, bias=False
         )
 
         # ephemeral state
@@ -121,26 +118,9 @@ class ItttLinear(nn.Module):
         self.momentum: nn.Buffer
 
         # weight initialization
-        self.base_state_proj.weight.data.zero_()
-        self.out_proj.weight.data.normal_(
-            std=config.initializer_range
+        self.base_state_proj.weight.data.normal_(
+            std=1/math.sqrt(self.in_features)
         )
-
-        # self.svd_init()
-
-        # for baselines
-        self.disable_ittt = config.get("disable_ittt", False)
-
-    
-    # @torch.no_grad()
-    # def svd_init(self):
-
-    #     u, s, v = torch.linalg.svd(self.weight, full_matrices=False)
-
-    #     self.out_proj.copy_(
-    #         u[:, :self.rank] *
-    #         s[None, :self.rank]
-    #     )
     
 
     def get_lr(self):
@@ -154,8 +134,6 @@ class ItttLinear(nn.Module):
         self,
         x: torch.FloatTensor,
     ) -> torch.FloatTensor:
-        if self.disable_ittt:
-            return self.linear(x)
 
         assert x.ndim == 3, "x must be 3D (batch, seq_len, dim)"
 
@@ -165,20 +143,11 @@ class ItttLinear(nn.Module):
         z = torch.einsum("boi,bsi->bso", s, x)
         z = ItttFunction.apply(x, z, self, self.momentum, self.state)
 
-        z = z + self.base_state_proj(x)
-
-        y_lora = self.out_proj(z)
-        y_base = self.linear(x)
-
-        y = y_base + y_lora
-
-        return y
+        return z + self.base_state_proj(x)
 
 
     @torch.no_grad()
     def init_state(self, bs: int, device: torch.device):
-        if self.disable_ittt:
-            return
 
         state = torch.zeros(
             bs, self.rank, self.in_features,
@@ -205,8 +174,6 @@ class ItttLinear(nn.Module):
 
     @torch.no_grad()
     def empty_state(self):
-        if self.disable_ittt:
-            return
 
         self.state.zero_()
         self.state.grad.zero_()
@@ -217,14 +184,51 @@ class ItttLinear(nn.Module):
     
     @torch.no_grad()
     def update_state(self):
-        if self.disable_ittt:
-            return
         
         self.state.add_(self.state.grad)
         self.state.grad.zero_()
         
         self.momentum.copy_(self.momentum.grad)
         self.momentum.grad.zero_()
+
+        
+class ItttLoRA(nn.Module):
+
+    def __init__(
+        self,
+        linear: nn.Linear,
+        config: DictConfig,
+        rank: int | None = None,
+    ):
+        super().__init__()
+
+        # save config
+        self.in_features = linear.in_features
+        self.out_features = linear.out_features
+        self.rank = rank if rank is not None else config.rank
+
+        # base linear
+        self.linear = linear
+
+        # ittt weights
+        self.ittt_down = ItttWeight(config, self.in_features, self.rank)
+        self.ittt_up = ItttWeight(config, self.rank, self.out_features)
+        
+        # for baselines
+        self.disable_ittt = config.get("disable_ittt", False)
+
+
+    def forward(
+        self,
+        x: torch.FloatTensor,
+    ) -> torch.FloatTensor:
+        if self.disable_ittt:
+            return self.linear(x)
+
+        z = self.ittt_down(x)
+        z = self.ittt_up(z)
+
+        return self.linear(x) + z
 
 
 class ItttModel(LlamaForCausalLM):
@@ -236,7 +240,7 @@ class ItttModel(LlamaForCausalLM):
         for layer in self.model.layers:
             layer: LlamaDecoderLayer
 
-            layer.mlp.down_proj = ItttLinear(
+            layer.mlp.down_proj = ItttLoRA(
                 layer.mlp.down_proj,
                 config
             )
@@ -245,21 +249,21 @@ class ItttModel(LlamaForCausalLM):
     @torch.no_grad()
     def init_state(self, bs: int, device: torch.device):
         for m in self.modules():
-            if isinstance(m, ItttLinear):
+            if isinstance(m, ItttWeight):
                 m.init_state(bs, device)
 
 
     @torch.no_grad()
     def empty_state(self):
         for m in self.modules():
-            if isinstance(m, ItttLinear):
+            if isinstance(m, ItttWeight):
                 m.empty_state()
                 
 
     @torch.no_grad()
     def update_state(self):
         for m in self.modules():
-            if isinstance(m, ItttLinear):
+            if isinstance(m, ItttWeight):
                 m.update_state()
                     
 
