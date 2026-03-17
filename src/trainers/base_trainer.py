@@ -396,7 +396,10 @@ class BaseTrainer:
 
                 # keep track of something like number of tokens trained on
                 if "atom_count" in aux.keys():
-                    self.atoms_seen += aux["atom_count"].detach().item()
+                    if isinstance(aux["atom_count"], torch.Tensor):
+                        self.atoms_seen += aux["atom_count"].detach().item()
+                    else:
+                        self.atoms_seen += aux["atom_count"]
 
                 loss = loss.detach().item()
                 grad_norm = grad_norm.detach().item()
