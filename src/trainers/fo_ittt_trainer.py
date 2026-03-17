@@ -60,6 +60,10 @@ class FoItttTrainer(BaseTrainer):
     @torch_xla.compile(full_graph=True)
     def first_chunk_second_pass(self, chunk):
 
+        self.model.set_second_pass(True)
+        self.model.finalize_gradients()
+        self.model.zero_grad(set_to_none=False)
+
         double_chunk = chunk.repeat(2, 1)
         double_chunk = maybe_shard_with_gradients(double_chunk)
 
@@ -147,6 +151,8 @@ class FoItttTrainer(BaseTrainer):
     @torch_xla.compile(full_graph=True)
     def post_forward(self):
 
+        err = self.model.relative_grad_error()
+
         # clear state
         self.model.empty_state()
 
@@ -158,6 +164,8 @@ class FoItttTrainer(BaseTrainer):
 
         aux['lr'] = self.lr_schedulers['main'].get_last_lr()[0]
         self.lr_schedulers['main'].step()
+
+        aux["relative_grad_error"] = err
 
         return aux, grad_norm
 
@@ -187,13 +195,6 @@ class FoItttTrainer(BaseTrainer):
             master_print(f"First chunk {i:02d} completed.")
         
         # perform the second pass
-        self.model.set_second_pass(True)
-        self.model.finalize_gradients()
-        self.model.zero_grad(set_to_none=False)
-        torch_xla.sync()
-        master_print("Ready for second pass.")
-
-        # first chunk
         total_loss = self.first_chunk_second_pass(chunks[0])
         aux = {
             "lm_loss/chunk_00": total_loss,
@@ -212,15 +213,13 @@ class FoItttTrainer(BaseTrainer):
             total_loss = total_loss + loss
             torch_xla.sync()
             master_print(f"Second chunk {i:02d} completed.")
-        
-        aux["relative_grad_error"] = self.model.relative_grad_error()
 
         post_aux, grad_norm = self.post_forward()
         aux.update(post_aux)
 
         # finalize outputs
         final_loss = total_loss / len(chunks)
-        aux["num_atoms"] = input_ids.numel()
+        aux["atom_count"] = input_ids.numel()
 
         decades = {}
         for key, value in aux.items():
