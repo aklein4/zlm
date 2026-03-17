@@ -107,7 +107,7 @@ class ItttWeight(nn.Module):
         
         # params
         self.log_lr = nn.Parameter(
-            torch.zeros(self.in_features, self.in_features)
+            torch.zeros(self.out_features, self.in_features)
         )
         self.base_state_proj = nn.Linear(
             self.in_features, self.out_features, bias=False
