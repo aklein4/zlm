@@ -71,8 +71,9 @@ class IMLFunction(torch.autograd.Function):
             )
 
             direction = F.normalize(update, dim=[-2, -1], eps=eps)
-            direction_sum = direction.sum(dim=0, keepdim=True)
-            direction_sum = maybe_shard_with_gradients(direction_sum, spec=[None, ['data', 'fsdp'], None])
+            
+            direction_sum = direction.sum(dim=0)
+            direction_sum = maybe_shard_with_gradients(direction_sum)
 
             l_raw = torch.einsum(
                 "io,io->",
