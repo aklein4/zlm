@@ -162,7 +162,7 @@ class IMLModel(LlamaForCausalLM):
                 if isinstance(m_, nn.Linear):
                     m.set_submodule(
                         name,
-                        IMLLinear(m_, config)
+                        IMLLinear(m_, config),
                         strict=True
                     )
 
