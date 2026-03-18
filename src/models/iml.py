@@ -63,12 +63,14 @@ class IMLFunction(torch.autograd.Function):
             g = g.detach().clone().requires_grad_(False)
 
             # calculate the update
-            update = g.transpose(-2, -1) @ x
+            update = (
+                g.transpose(-2, -1) @ x
+            ).float()
 
             # adam-like preconditioning
             update = F.normalize(update, dim=0, eps=eps) * math.sqrt(x.shape[0])
 
-            direction = F.normalize(update, dim=[-2, -1], eps=eps)
+            direction = F.normalize(update, dim=[-2, -1], eps=eps).to(torch.bfloat16)
             
             l_raw = direction.sum(dim=0).pow(2).sum() / direction.shape[0]
             l = ((l_raw - 1) / (direction.shape[0] - 1)).mean()
@@ -160,7 +162,7 @@ class IMLModel(LlamaForCausalLM):
     def __init__(self, config):
         super().__init__(config)
 
-        for m in self.modules():
+        for m in self.model.layers.modules():
 
             if isinstance(m, (nn.Linear, IMLLinear)):
                 continue
