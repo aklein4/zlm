@@ -24,7 +24,7 @@ DATA_URL = "Geralt-Targaryen/books3"
 TOKENIZER_URL = os.path.join(constants.LOCAL_DATA_PATH, "tokenizer")
 
 NUM_EXAMPLES = 128
-BS = 2
+BS = 4
 
 SEQUENCE_LENGTH = 1024 * 128
 
@@ -62,7 +62,7 @@ def main():
     losses = []
     for i, batch in tqdm(enumerate(loader), total=NUM_EXAMPLES // BS, desc="Processing Batches"):
 
-        input_ids = batch["input_ids"].to(DEVICE)
+        input_ids = batch["input_ids"].to(DEVICE).clamp(0, model.config.vocab_size - 1)
 
         logits = model.compute_logits(
             input_ids,

@@ -1,6 +1,6 @@
 import torch
 
-from models.iml import IMLModel
+from models.iml import IMLModel, IMLLinear
 from trainers.base_trainer import BaseTrainer
 from utils.loss_utils import lm_loss_fn, lm_acc_fn
 from utils.sharding_utils import shard_with_gradients
@@ -18,6 +18,11 @@ class IMLTrainer(BaseTrainer):
         except:
             # ShardedModule
             self.model.lm_head._orig_mod.weight.no_muon = True
+
+        for m in self.model.modules():
+            if isinstance(m, IMLLinear):
+                m.loss_buffer.requires_grad_(True)
+                m.loss_buffer.grad = torch.zeros_like(m.loss_buffer)
 
 
     def forward(self, input_ids):

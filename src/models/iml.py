@@ -123,7 +123,6 @@ class IMLLinear(nn.Module):
             "loss_buffer", torch.zeros(1), persistent=True
         )
         self.loss_buffer: nn.Buffer
-        self.loss_buffer.requires_grad_(True)
 
 
     def forward(
