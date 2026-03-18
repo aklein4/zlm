@@ -25,12 +25,12 @@ class IMLFunction(torch.autograd.Function):
         ctx,
         x: torch.FloatTensor,
         y: torch.FloatTensor,
-        w: torch.FloatTensor,
         loss_buffer: nn.Buffer,
+        log_loss_buffer: nn.Buffer,
         eps: float,
         loss_scale: float,
     ) -> torch.FloatTensor:
-        ctx.save_for_backward(x, w, loss_buffer)
+        ctx.save_for_backward(x, loss_buffer, log_loss_buffer)
         ctx.eps = eps
         ctx.loss_scale = loss_scale
         return y.clone()
@@ -44,7 +44,7 @@ class IMLFunction(torch.autograd.Function):
     ) -> tuple[None, torch.FloatTensor, None]:
         og_grad = grad.clone()
 
-        x, w, loss_buffer = ctx.saved_tensors
+        x, loss_buffer, log_loss_buffer = ctx.saved_tensors
         eps = ctx.eps
         loss_scale = ctx.loss_scale
 
@@ -62,22 +62,26 @@ class IMLFunction(torch.autograd.Function):
             x = x.detach().clone().requires_grad_(True)
             g = g.detach().clone().requires_grad_(False)
 
-            # calculate and precondition the update
+            # calculate the update
             update = g.transpose(-2, -1) @ x
+
+            # adam-like preconditioning
             update = update / (
                 update.pow(2).mean(0, keepdim=True).sqrt() + eps
             )
 
             direction = F.normalize(update, dim=[-2, -1], eps=eps)
-            
+            direction_sum = direction.sum(dim=0, keepdim=True)
+            direction_sum = maybe_shard_with_gradients(direction_sum, spec=[None, ['data', 'fsdp'], None])
+
             l_raw = torch.einsum(
-                "boi,boi->b",
-                direction,
-                direction.sum(dim=0, keepdim=True)
-            )
+                "io,io->",
+                direction_sum, direction_sum
+            ) / direction.shape[0]
             l = ((l_raw - 1) / (direction.shape[0] - 1)).mean()
 
-            l = l * math.sqrt(w.numel())
+            l = l * math.sqrt(direction.shape[-2] * direction.shape[-1])
+            log_l = torch.log2(l + 1.0)
 
             l_for_backwards = l * loss_scale
             x_grad = torch.autograd.grad(
@@ -92,8 +96,9 @@ class IMLFunction(torch.autograd.Function):
         x_grad = maybe_shard_with_gradients(x_grad)
 
         loss_buffer_grad = l.detach().to(loss_buffer.dtype).reshape_as(loss_buffer)
+        log_loss_buffer_grad = log_l.detach().to(log_loss_buffer.dtype).reshape_as(log_loss_buffer)
 
-        return x_grad, og_grad, None, loss_buffer_grad, None, None
+        return x_grad, og_grad, loss_buffer_grad, log_loss_buffer_grad, None, None
 
 
 class IMLLinear(nn.Module):
@@ -123,6 +128,10 @@ class IMLLinear(nn.Module):
             "loss_buffer", torch.zeros(1), persistent=True
         )
         self.loss_buffer: nn.Buffer
+        self.register_buffer(
+            "log_loss_buffer", torch.zeros(1), persistent=True
+        )
+        self.log_loss_buffer: nn.Buffer
 
 
     def forward(
@@ -134,7 +143,7 @@ class IMLLinear(nn.Module):
         else:
             y = F.linear(x, self.weight, self.bias)
 
-        y = IMLFunction.apply(x, y, self.weight, self.loss_buffer, self.eps, self.loss_scale)
+        y = IMLFunction.apply(x, y, self.loss_buffer, self.log_loss_buffer, self.eps, self.loss_scale)
 
         return y
 
@@ -143,6 +152,12 @@ class IMLLinear(nn.Module):
     def get_previous_loss(self):
         out = self.loss_buffer.grad.clone()
         self.loss_buffer.grad.zero_()
+        return out
+
+    @torch.no_grad()
+    def get_previous_log_loss(self):
+        out = self.log_loss_buffer.grad.clone()
+        self.log_loss_buffer.grad.zero_()
         return out
 
 
@@ -176,3 +191,16 @@ class IMLModel(LlamaForCausalLM):
                 losses.append(m.get_previous_loss())
 
         return torch.stack(losses).mean()
+
+
+    @torch.no_grad()
+    def get_previous_log_loss(self):
+
+        log_losses = []
+        for m in self.modules():
+
+            if isinstance(m, IMLLinear):
+                log_losses.append(m.get_previous_log_loss())
+
+        return torch.stack(log_losses).mean()
+    

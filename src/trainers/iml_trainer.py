@@ -21,8 +21,12 @@ class IMLTrainer(BaseTrainer):
 
         for m in self.model.modules():
             if isinstance(m, IMLLinear):
+
                 m.loss_buffer.requires_grad_(True)
                 m.loss_buffer.grad = torch.zeros_like(m.loss_buffer)
+
+                m.log_loss_buffer.requires_grad_(True)
+                m.log_loss_buffer.grad = torch.zeros_like(m.log_loss_buffer)
 
 
     def forward(self, input_ids):
@@ -63,5 +67,6 @@ class IMLTrainer(BaseTrainer):
     def post_backward(self, **batch):
         return {
             "iml_loss": self.model.get_previous_loss(),
+            "iml_log_loss": self.model.get_previous_log_loss(),
         }
     
