@@ -76,7 +76,7 @@ class IMLFunction(torch.autograd.Function):
             l = l * math.sqrt(direction.shape[-2] * direction.shape[-1])
             log_l = torch.log2(l + 1.0)
 
-            l_for_backwards = l * loss_scale
+            l_for_backwards = -log_l * loss_scale
             x_grad = torch.autograd.grad(
                 l_for_backwards, x
             )[0]
