@@ -507,7 +507,11 @@ class LlamaForCausalLM(nn.Module):
         elif logits_to_keep is not None:
             lm_states = lm_states[:, logits_to_keep, :].contiguous()
         if sequences_to_keep is not None:
+
+            from utils.sharding_utils import maybe_shard_with_gradients
+
             lm_states = lm_states[sequences_to_keep, :, :].contiguous()
+            lm_states = maybe_shard_with_gradients(lm_states)
 
         logits = self.lm_head(lm_states)
         logits = logits.to(torch.float32)

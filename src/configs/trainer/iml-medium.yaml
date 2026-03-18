@@ -3,13 +3,13 @@
 type: iml_trainer.IMLTrainer  # Used to import the trainer from this class
 
 # total batch size across all devices
-global_batch_size: 1024
+global_batch_size: 512
 
 # run for N steps
 max_steps: 1000000
 
 # Save a checkpoint every N steps
-checkpoint_interval: 1000
+checkpoint_interval: 5000
 
 
 # whether to autocast the forward pass and loss computation.
@@ -26,7 +26,7 @@ optimizer:
   # kwargs passed to the optimizer constructor
   kwargs:
 
-    lr: 6.0e-4
+    lr: 5.0e-4
 
     betas: [0.9, 0.95]
     
@@ -46,7 +46,7 @@ lr_scheduler:
   num_warmup_steps: 250
 
   # cosine scheduler requires this outside of kwargs
-  num_training_steps: 130000
+  num_training_steps: 100000
 
   # kwargs passed to the scheduler constructor
   kwargs:
