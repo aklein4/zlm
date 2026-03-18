@@ -164,6 +164,7 @@ class IMLModel(LlamaForCausalLM):
     def __init__(self, config):
         super().__init__(config)
 
+        num_iml = 0
         for m in self.model.layers.modules():
 
             if isinstance(m, (nn.Linear, IMLLinear)):
@@ -176,6 +177,12 @@ class IMLModel(LlamaForCausalLM):
                         IMLLinear(m_, config),
                         strict=True
                     )
+                    num_iml += 1
+
+        for m in self.modules():
+            
+            if isinstance(m, IMLLinear):
+                m.loss_scale /= num_iml
 
 
     @torch.no_grad()

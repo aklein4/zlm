@@ -24,7 +24,7 @@ DATA_URL = "Geralt-Targaryen/books3"
 TOKENIZER_URL = os.path.join(constants.LOCAL_DATA_PATH, "tokenizer")
 
 NUM_EXAMPLES = 128
-BS = 4
+BS = 1
 
 SEQUENCE_LENGTH = 1024 * 128
 
@@ -68,13 +68,15 @@ def main():
             input_ids,
             verbose=True,
         )
+
         loss = lm_loss_fn(
             logits, input_ids.cpu(),
             shift_logits=False,
             ignore_index=model.config.pad_token_id,
             reduction='none',
         )
-        losses.append(loss)
+        losses.append(loss.detach())
+        del logits
         
         if len(losses) >= NUM_EXAMPLES // BS:
             break
