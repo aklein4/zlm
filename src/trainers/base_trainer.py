@@ -473,6 +473,9 @@ class BaseTrainer:
             loss, aux = self.forward(**batch)
 
         loss.backward()
+
+        post_aux = self.post_backward(**batch)
+        aux.update(post_aux)
         
         grad_norm = self.clip_gradients()
 
@@ -501,6 +504,11 @@ class BaseTrainer:
         raise NotImplementedError(
             "The forward method should be implemented in the derived class."
         )
+
+    
+    def post_backward(self, **batch) -> dict:
+        """ Optional method to perform additional operations after backward() and before optimizer step. """
+        return {}
 
 
     def clip_gradients(self):

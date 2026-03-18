@@ -1,0 +1,22 @@
+
+dataset:
+
+    # The Hugging Face Hub URL of the dataset to load.
+    url: aklein4/fineweb-edu-SmolLM2
+    
+    # kwargs to pass to `datasets.load_dataset`
+    kwargs:
+
+        split: train
+
+        streaming: true
+
+
+collator:
+
+    # Used to import the collator from this class
+    type: simple.SimpleCollator
+
+    # kwargs to pass to the collator constructor
+    kwargs: {}
+    

@@ -17,14 +17,14 @@ from utils.loss_utils import lm_loss_fn
 DEVICE = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
 
-CHECKPOINT_URL = 'aklein4/iTTT-TPU_alpha-1b'
+CHECKPOINT_URL = 'aklein4/iTTT-TPU_norm-1b'
 CHECKPOINT_STEP = 500
 
 DATA_URL = "Geralt-Targaryen/books3"
 TOKENIZER_URL = os.path.join(constants.LOCAL_DATA_PATH, "tokenizer")
 
 NUM_EXAMPLES = 128
-BS = 4
+BS = 2
 
 SEQUENCE_LENGTH = 1024 * 128
 
@@ -82,7 +82,7 @@ def main():
     losses = torch.cat(losses, dim=0)
     torch.save(
         losses,
-        os.path.join(constants.LOCAL_DATA_PATH, "ittt_losses.pt")
+        os.path.join(constants.LOCAL_DATA_PATH, "new_ittt_losses.pt")
     )
 
 
@@ -96,21 +96,26 @@ def nan_mean(x):
 def analyze_results():
 
     losses = torch.load(os.path.join(constants.LOCAL_DATA_PATH, "ittt_losses.pt")).float().numpy()
-    
+    new_losses = torch.load(os.path.join(constants.LOCAL_DATA_PATH, "new_ittt_losses.pt")).float().numpy()
+
     df = pd.DataFrame({
         "loss": nan_mean(losses),
+        "norm_loss": nan_mean(new_losses),
     })
 
     x = np.arange(len(df["loss"]))
     y_running = df["loss"].rolling(window=2000)
-        
-    plt.plot(x, y_running.mean())
+    plt.plot(x, y_running.mean(), label="Original Loss")
+
+    x = np.arange(len(df["norm_loss"]))
+    y_running = df["norm_loss"].rolling(window=2000)
+    plt.plot(x, y_running.mean(), label="Normalized Loss")
     
-    # plt.legend()
+    plt.legend()
     plt.grid()
     plt.savefig("ittt_extrapolation_loss.png")
 
 
 if __name__ == "__main__":
-    # main()
+    main()
     analyze_results()
