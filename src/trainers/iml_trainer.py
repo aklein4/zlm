@@ -28,10 +28,8 @@ class IMLTrainer(BaseTrainer):
         logits, _ = self.model(
             input_ids=doubled_inputs,
             shift_states=True,
+            sequences_to_keep=slice(0, input_ids.shape[0])
         )
-
-        logits = logits[:input_ids.shape[0]]
-        logits = shard_with_gradients(logits.contiguous())
 
         lm_loss = lm_loss_fn(
             logits,

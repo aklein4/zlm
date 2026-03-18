@@ -478,6 +478,7 @@ class LlamaForCausalLM(nn.Module):
         attention_mask: torch.FloatTensor | None = None, # only used in non-kernel attention
         shift_states: bool = False,
         logits_to_keep: slice | None = None,
+        sequences_to_keep: slice | None = None,
         return_states: bool = False,
     ) -> tuple[torch.FloatTensor, torch.FloatTensor | None]:
         """
@@ -505,6 +506,8 @@ class LlamaForCausalLM(nn.Module):
             lm_states = lm_states[..., :-1, :].contiguous()
         elif logits_to_keep is not None:
             lm_states = lm_states[:, logits_to_keep, :].contiguous()
+        if sequences_to_keep is not None:
+            lm_states = lm_states[sequences_to_keep, :, :].contiguous()
 
         logits = self.lm_head(lm_states)
         logits = logits.to(torch.float32)
