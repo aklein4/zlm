@@ -28,8 +28,10 @@ class ItttFunction(torch.autograd.Function):
         mod: "ItttLinear",
         momentum: torch.FloatTensor,
         state: torch.FloatTensor,
+        s_pre_norm: torch.FloatTensor,
+        s_norm: torch.FloatTensor,
     ) -> torch.FloatTensor:
-        ctx.save_for_backward(x, momentum, state)
+        ctx.save_for_backward(x, momentum, state, s_pre_norm, s_norm)
         ctx.mod = mod
         return z.clone()
 
@@ -43,7 +45,7 @@ class ItttFunction(torch.autograd.Function):
 
         og_grad = grad.clone()
 
-        x, momentum, state = ctx.saved_tensors
+        x, momentum, state, s_pre_norm, s_norm = ctx.saved_tensors
         mod: ItttWeight = ctx.mod
 
         x: torch.FloatTensor = x.float()
@@ -58,7 +60,22 @@ class ItttFunction(torch.autograd.Function):
         # [b, r, i]
         update = (
             g.transpose(-2, -1) @ x
-        ) / math.sqrt(x.shape[-2]) # approx 1 std
+        ) / math.sqrt(x.shape[-2])
+
+        # account for frobenious norm in update
+        s_pre_norm = s_pre_norm.to(mod.momentum_dtype)
+
+        norm_correction = s_pre_norm * torch.einsum("boi,boi->b", update, s_pre_norm)[:, None, None]
+
+        update = update.float()
+        norm_correction = norm_correction.float()
+        s_norm = s_norm.float()
+
+        # absolute scale doesn't matter because ns normalizes
+        update = (
+            update / (s_norm + mod.eps) -
+            norm_correction / (s_norm.pow(3) + mod.eps)
+        ).to(mod.momentum_dtype)
 
         new_momentum = torch.lerp(
             momentum,
@@ -75,7 +92,7 @@ class ItttFunction(torch.autograd.Function):
             eps=mod.eps
         ).detach().to(mod.state_dtype)
     
-        return None, og_grad, None, new_momentum, state_delta
+        return None, og_grad, None, new_momentum, state_delta, None, None
 
 
 class ItttWeight(nn.Module):
@@ -92,9 +109,9 @@ class ItttWeight(nn.Module):
         self.in_features = in_features
         self.out_features = out_features
 
-        self.base_lr = ( # scaled muon-like updates
-            config.base_lr
-            * math.sqrt(max(self.in_features, self.out_features))
+        # puts post-muon updates on scale 1/sqrt(in_features), same as initial base_state
+        self.base_lr = (
+            math.sqrt(max(self.in_features, self.out_features))
             / math.sqrt(self.in_features)
         )
         self.momentum_beta = config.momentum_beta
@@ -109,8 +126,8 @@ class ItttWeight(nn.Module):
         self.log_lr = nn.Parameter(
             torch.zeros(self.out_features, self.in_features)
         )
-        self.base_state_proj = nn.Linear(
-            self.in_features, self.out_features, bias=False
+        self.base_state = nn.Parameter(
+            torch.randn(self.out_features, self.in_features)
         )
 
         # ephemeral state
@@ -118,7 +135,7 @@ class ItttWeight(nn.Module):
         self.momentum: nn.Buffer
 
         # weight initialization
-        self.base_state_proj.weight.data.normal_(
+        self.base_state.data.normal_(
             std=1/math.sqrt(self.in_features)
         )
     
@@ -137,13 +154,19 @@ class ItttWeight(nn.Module):
 
         assert x.ndim == 3, "x must be 3D (batch, seq_len, dim)"
 
-        lr = self.get_lr()
-        s = lr[None] * self.state.detach()
+        s_pre_norm = (
+            self.get_lr()[None] * self.state.detach()
+            + self.base_state
+        )
+        s_norm = torch.norm(s_pre_norm, dim=[-2, -1], keepdim=True)
+
+        # dividing by norm puts on scale 1/sqrt(in_features * out_features), multiplying by sqrt(out_features) puts on scale 1/sqrt(in_features)
+        s = math.sqrt(self.out_features) * s_pre_norm / (s_norm + self.eps)
 
         z = torch.einsum("boi,bsi->bso", s, x)
-        z = ItttFunction.apply(x, z, self, self.momentum, self.state)
+        z = ItttFunction.apply(x, z, self, self.momentum, self.state, s_pre_norm, s_norm)
 
-        return z + self.base_state_proj(x)
+        return z
 
 
     @torch.no_grad()
@@ -212,8 +235,12 @@ class ItttLoRA(nn.Module):
 
         # ittt weights
         self.ittt_down = ItttWeight(config, self.in_features, self.rank)
-        self.ittt_up = ItttWeight(config, self.rank, self.out_features)
         
+        self.up = nn.Linear(self.rank, self.out_features, bias=False)
+        self.up.weight.data.normal_(
+            std=1/math.sqrt(self.rank)
+        )
+
         # for baselines
         self.disable_ittt = config.get("disable_ittt", False)
 
@@ -226,7 +253,7 @@ class ItttLoRA(nn.Module):
             return self.linear(x)
 
         z = self.ittt_down(x)
-        z = self.ittt_up(z)
+        z = self.up(z)
 
         return self.linear(x) + z
 
