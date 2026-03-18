@@ -66,19 +66,11 @@ class IMLFunction(torch.autograd.Function):
             update = g.transpose(-2, -1) @ x
 
             # adam-like preconditioning
-            update = update / (
-                update.pow(2).mean(0, keepdim=True).sqrt() + eps
-            )
+            update = F.normalize(update, dim=0, eps=eps) * math.sqrt(x.shape[0])
 
             direction = F.normalize(update, dim=[-2, -1], eps=eps)
             
-            direction_sum = direction.sum(dim=0)
-            direction_sum = maybe_shard_with_gradients(direction_sum)
-
-            l_raw = torch.einsum(
-                "io,io->",
-                direction_sum, direction_sum
-            ) / direction.shape[0]
+            l_raw = direction.sum(dim=0).pow(2).sum() / direction.shape[0]
             l = ((l_raw - 1) / (direction.shape[0] - 1)).mean()
 
             l = l * math.sqrt(direction.shape[-2] * direction.shape[-1])
