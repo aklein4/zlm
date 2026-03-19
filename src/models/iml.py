@@ -61,8 +61,8 @@ class IMLFunction(torch.autograd.Function):
             x = x.detach().clone().requires_grad_(True)
             g = g.detach().clone().requires_grad_(False)
 
-            x_bias = (x.mean(0).pow(2) / (x.var(0) + eps)).mean().sqrt()
-            g_bias = (g.mean(0).pow(2) / (g.var(0) + eps)).mean().sqrt()
+            x_bias = (x.mean(0).abs() / x.std(0).clamp(min=eps)).mean()
+            g_bias = (g.mean(0).abs() / g.std(0).clamp(min=eps)).mean()
 
             # calculate the update
             update = (
