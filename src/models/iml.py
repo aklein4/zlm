@@ -69,14 +69,13 @@ class IMLFunction(torch.autograd.Function):
                 g.transpose(-2, -1).to(torch.bfloat16)
                 @ x.to(torch.bfloat16)
             ).float()
-            update_detached = update.detach()
 
             # adam-like preconditioning
             # denominator is sqrt(E[mean(update)^2]) with v/N accounting for the expectation
-            m = update_detached.mean(dim=0, keepdim=True)
-            v = update_detached.var(dim=0, keepdim=True)
+            m = update.mean(dim=0, keepdim=True)
+            v = update.var(dim=0, keepdim=True)
             s = (m.pow(2) + v/update.shape[0]).sqrt()
-            update = update / torch.clamp(s, min=eps).detach()
+            update = update / torch.clamp(s, min=eps)
 
             # L2 normalize each update
             direction = F.normalize(update, dim=[-2, -1], eps=eps).to(torch.bfloat16)
