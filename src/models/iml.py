@@ -8,12 +8,9 @@ if constants.XLA_AVAILABLE:
 
 import math
 from omegaconf import DictConfig
-from tqdm import tqdm
 
-from models.llama import LlamaForCausalLM, LlamaDecoderLayer
+from models.llama import LlamaForCausalLM
 from utils.sharding_utils import maybe_shard_with_gradients
-from utils.torch_utils import newton_schulz, cuda_newton_schulz
-from utils.loss_utils import lm_loss_fn
 
 
 
@@ -72,10 +69,16 @@ class IMLFunction(torch.autograd.Function):
                 g.transpose(-2, -1).to(torch.bfloat16)
                 @ x.to(torch.bfloat16)
             ).float()
+            update_detached = update.detach()
 
             # adam-like preconditioning
-            update = F.normalize(update, dim=0, eps=eps) * math.sqrt(x.shape[0])
+            # denominator is sqrt(E[mean(update)^2]) with v/N accounting for the expectation
+            m = update_detached.mean(dim=0, keepdim=True)
+            v = update_detached.var(dim=0, keepdim=True)
+            s = (m.pow(2) + v/update.shape[0]).sqrt()
+            update = update / torch.clamp(s, min=eps).detach()
 
+            # L2 normalize each update
             direction = F.normalize(update, dim=[-2, -1], eps=eps).to(torch.bfloat16)
             
             l_raw = direction.sum(dim=0).pow(2).sum() / direction.shape[0]
