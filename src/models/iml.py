@@ -62,8 +62,6 @@ class IMLFunction(torch.autograd.Function):
             x = x.detach().clone().requires_grad_(True)
             g = g.detach().clone().requires_grad_(False)
 
-            g = g - g.mean(dim=0, keepdim=True)
-
             # calculate the update
             update = (
                 g.transpose(-2, -1) @ x
