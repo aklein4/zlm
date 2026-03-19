@@ -59,4 +59,5 @@ pure_modules: []
 # You can add any additional configuration options for your model here
 # They will appear as attributes of config.model
 
+iml_eps: 1.0e-10
 iml_loss_scale: 0.0

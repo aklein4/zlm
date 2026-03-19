@@ -28,6 +28,12 @@ class IMLTrainer(BaseTrainer):
                 m.log_loss_buffer.requires_grad_(True)
                 m.log_loss_buffer.grad = torch.zeros_like(m.log_loss_buffer)
 
+                m.x_bias_buffer.requires_grad_(True)
+                m.x_bias_buffer.grad = torch.zeros_like(m.x_bias_buffer)
+
+                m.g_bias_buffer.requires_grad_(True)
+                m.g_bias_buffer.grad = torch.zeros_like(m.g_bias_buffer)
+
 
     def forward(self, input_ids):
 
@@ -65,8 +71,11 @@ class IMLTrainer(BaseTrainer):
     
 
     def post_backward(self, **batch):
+        x_bias, g_bias = self.model.get_previous_biases()
         return {
             "iml_loss": self.model.get_previous_loss(),
             "iml_log_loss": self.model.get_previous_log_loss(),
+            "x_bias": x_bias,
+            "g_bias": g_bias,
         }
     

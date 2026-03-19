@@ -27,10 +27,12 @@ class IMLFunction(torch.autograd.Function):
         y: torch.FloatTensor,
         loss_buffer: nn.Buffer,
         log_loss_buffer: nn.Buffer,
+        x_bias_buffer: nn.Buffer,
+        g_bias_buffer: nn.Buffer,
         eps: float,
         loss_scale: float,
     ) -> torch.FloatTensor:
-        ctx.save_for_backward(x, loss_buffer, log_loss_buffer)
+        ctx.save_for_backward(x, loss_buffer, log_loss_buffer, x_bias_buffer, g_bias_buffer)
         ctx.eps = eps
         ctx.loss_scale = loss_scale
         return y.clone()
@@ -44,17 +46,17 @@ class IMLFunction(torch.autograd.Function):
     ) -> tuple[None, torch.FloatTensor, None]:
         og_grad = grad.clone()
 
-        x, loss_buffer, log_loss_buffer = ctx.saved_tensors
+        x, loss_buffer, log_loss_buffer, x_bias_buffer, g_bias_buffer = ctx.saved_tensors
         eps = ctx.eps
         loss_scale = ctx.loss_scale
 
         x_dtype = x.dtype
 
         # lm will come first
-        x = x[:x.shape[0]//2].to(torch.bfloat16)
+        x = x[:x.shape[0]//2].float()
         x = maybe_shard_with_gradients(x)
 
-        g = grad[:grad.shape[0]//2].to(torch.bfloat16)
+        g = grad[:grad.shape[0]//2].float()
         g = maybe_shard_with_gradients(g)
 
         with torch.set_grad_enabled(True):
@@ -62,11 +64,13 @@ class IMLFunction(torch.autograd.Function):
             x = x.detach().clone().requires_grad_(True)
             g = g.detach().clone().requires_grad_(False)
 
-            g = g - g.mean(dim=0, keepdim=True)
+            x_bias = (x.mean(0).pow(2) / (x.var(0) + eps)).mean().sqrt()
+            g_bias = (g.mean(0).pow(2) / (g.var(0) + eps)).mean().sqrt()
 
             # calculate the update
             update = (
-                g.transpose(-2, -1) @ x
+                g.transpose(-2, -1).to(torch.bfloat16)
+                @ x.to(torch.bfloat16)
             ).float()
 
             # adam-like preconditioning
@@ -95,7 +99,10 @@ class IMLFunction(torch.autograd.Function):
         loss_buffer_grad = l.detach().to(loss_buffer.dtype).reshape_as(loss_buffer)
         log_loss_buffer_grad = log_l.detach().to(log_loss_buffer.dtype).reshape_as(log_loss_buffer)
 
-        return x_grad, og_grad, loss_buffer_grad, log_loss_buffer_grad, None, None
+        x_bias_grad = x_bias.detach().to(x_bias_buffer.dtype).reshape_as(x_bias_buffer)
+        g_bias_grad = g_bias.detach().to(g_bias_buffer.dtype).reshape_as(g_bias_buffer)
+
+        return x_grad, og_grad, loss_buffer_grad, log_loss_buffer_grad, x_bias_grad, g_bias_grad, None, None
 
 
 class IMLLinear(nn.Module):
@@ -110,7 +117,7 @@ class IMLLinear(nn.Module):
         # save config
         self.in_features = linear.in_features
         self.out_features = linear.out_features
-        self.eps = config.rms_norm_eps
+        self.eps = config.iml_eps
         self.loss_scale = config.iml_loss_scale
 
         # parameters
@@ -130,6 +137,15 @@ class IMLLinear(nn.Module):
         )
         self.log_loss_buffer: nn.Buffer
 
+        self.register_buffer(
+            "x_bias_buffer", torch.zeros(1), persistent=True
+        )
+        self.x_bias_buffer: nn.Buffer
+        self.register_buffer(
+            "g_bias_buffer", torch.zeros(1), persistent=True
+        )
+        self.g_bias_buffer: nn.Buffer
+
 
     def forward(
         self,
@@ -140,7 +156,12 @@ class IMLLinear(nn.Module):
         else:
             y = F.linear(x, self.weight, self.bias)
 
-        y = IMLFunction.apply(x, y, self.loss_buffer, self.log_loss_buffer, self.eps, self.loss_scale)
+        y = IMLFunction.apply(
+            x, y,
+            self.loss_buffer, self.log_loss_buffer,
+            self.x_bias_buffer, self.g_bias_buffer,
+            self.eps, self.loss_scale
+        )
 
         return y
 
@@ -156,6 +177,17 @@ class IMLLinear(nn.Module):
         out = self.log_loss_buffer.grad.clone()
         self.log_loss_buffer.grad.zero_()
         return out
+    
+
+    @torch.no_grad()
+    def get_previous_biases(self):
+        x_bias = self.x_bias_buffer.grad.clone()
+        g_bias = self.g_bias_buffer.grad.clone()
+
+        self.x_bias_buffer.grad.zero_()
+        self.g_bias_buffer.grad.zero_()
+
+        return x_bias, g_bias
 
 
 class IMLModel(LlamaForCausalLM):
@@ -207,4 +239,19 @@ class IMLModel(LlamaForCausalLM):
                 log_losses.append(m.get_previous_log_loss())
 
         return torch.stack(log_losses).mean()
+    
+
+    @torch.no_grad()
+    def get_previous_biases(self):
+
+        x_biases = []
+        g_biases = []
+        for m in self.modules():
+
+            if isinstance(m, IMLLinear):
+                x_bias, g_bias = m.get_previous_biases()
+                x_biases.append(x_bias)
+                g_biases.append(g_bias)
+
+        return torch.stack(x_biases).mean(), torch.stack(g_biases).mean()
     
