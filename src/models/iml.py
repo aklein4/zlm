@@ -84,7 +84,7 @@ class IMLFunction(torch.autograd.Function):
             m = G.mean(dim=0, keepdim=True)
             v = G.var(dim=0, keepdim=True)
             s = (m.pow(2) + v/G.shape[0]).sqrt()
-            update_lm = update_lm / torch.clamp(s, min=eps)
+            update_lm = update_lm / torch.clamp(s, min=eps).detach()
 
             # L2 normalize each update
             direction = F.normalize(update_lm, dim=[-2, -1], eps=eps)
