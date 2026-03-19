@@ -49,36 +49,45 @@ class IMLFunction(torch.autograd.Function):
 
         x_dtype = x.dtype
 
-        # lm will come first
-        x = x[:x.shape[0]//2].float()
-        x = maybe_shard_with_gradients(x)
-
-        g = grad[:grad.shape[0]//2].float()
-        g = maybe_shard_with_gradients(g)
-
         with torch.set_grad_enabled(True):
 
-            x = x.detach().clone().requires_grad_(True)
-            g = g.detach().clone().requires_grad_(False)
+            x = x.float().detach().clone().requires_grad_(True)
+            g = grad.float().detach().clone().requires_grad_(False)
 
-            x_bias = (x.mean(0).abs() / x.std(0).clamp(min=eps)).mean()
-            g_bias = (g.mean(0).abs() / g.std(0).clamp(min=eps)).mean()
+            # lm will come first
+            x_lm = x[:x.shape[0]//2].clone()
+            x_lm = maybe_shard_with_gradients(x_lm)
+            x_iml = x[x.shape[0]//2:].clone()
+            x_iml = maybe_shard_with_gradients(x_iml)
+
+            g_lm = g[:g.shape[0]//2].clone()
+            g_lm = maybe_shard_with_gradients(g_lm)
+            g_iml = g[g.shape[0]//2:].clone()
+            g_iml = maybe_shard_with_gradients(g_iml)
+
+            x_bias = (x_lm.mean(0).abs() / x_lm.std(0).clamp(min=eps)).mean()
+            g_bias = (g_lm.mean(0).abs() / g_lm.std(0).clamp(min=eps)).mean()
 
             # calculate the update
-            update = (
-                g.transpose(-2, -1).to(torch.bfloat16)
-                @ x.to(torch.bfloat16)
+            update_lm = (
+                g_lm.transpose(-2, -1).to(torch.bfloat16)
+                @ x_lm.to(torch.bfloat16)
+            ).float()
+            update_iml = (
+                g_iml.transpose(-2, -1).to(torch.bfloat16)
+                @ x_iml.to(torch.bfloat16)
             ).float()
 
             # adam-like preconditioning
             # denominator is sqrt(E[mean(update)^2]) with v/N accounting for the expectation
-            m = update.mean(dim=0, keepdim=True)
-            v = update.var(dim=0, keepdim=True)
-            s = (m.pow(2) + v/update.shape[0]).sqrt()
-            update = update / torch.clamp(s, min=eps)
+            G = update_lm + update_iml
+            m = G.mean(dim=0, keepdim=True)
+            v = G.var(dim=0, keepdim=True)
+            s = (m.pow(2) + v/G.shape[0]).sqrt()
+            update_lm = update_lm / torch.clamp(s, min=eps)
 
             # L2 normalize each update
-            direction = F.normalize(update, dim=[-2, -1], eps=eps).to(torch.bfloat16)
+            direction = F.normalize(update_lm, dim=[-2, -1], eps=eps)
             
             l_raw = direction.sum(dim=0).pow(2).sum() / direction.shape[0]
             l = ((l_raw - 1) / (direction.shape[0] - 1)).mean()
@@ -91,11 +100,14 @@ class IMLFunction(torch.autograd.Function):
                 l_for_backwards, x
             )[0]
 
+            # consoladate into one copy
+            x_grad = x_grad[:x.shape[0]//2] + x_grad[x.shape[0]//2:]
+
         # iml comes second
         x_grad = torch.cat(
             [torch.zeros_like(x_grad), x_grad],
             dim=0
-        ).to(x_dtype)
+        ).detach().to(x_dtype)
         x_grad = maybe_shard_with_gradients(x_grad)
 
         loss_buffer_grad = l.detach().to(loss_buffer.dtype).reshape_as(loss_buffer)
