@@ -21,7 +21,7 @@ use_autocast: true
 optimizer:
 
   # Used to import the optimizer from this class.
-  type: adamw.AdamW
+  type: muon.ScaledMuon
 
   # kwargs passed to the optimizer constructor
   kwargs:

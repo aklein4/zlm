@@ -11,7 +11,7 @@ from omegaconf import DictConfig
 
 from models.llama import LlamaForCausalLM
 from utils.sharding_utils import maybe_shard_with_gradients
-
+from utils.torch_utils import newton_schulz
 
 
 class IMLFunction(torch.autograd.Function):
@@ -49,69 +49,55 @@ class IMLFunction(torch.autograd.Function):
 
         x_dtype = x.dtype
 
+        # lm will come first
+        x = x[:x.shape[0]//2].float()
+        x = maybe_shard_with_gradients(x)
+
+        g = grad[:grad.shape[0]//2].float()
+        g = maybe_shard_with_gradients(g)
+
         with torch.set_grad_enabled(True):
 
-            x = x.float().detach().clone().requires_grad_(True)
-            g = grad.float().detach().clone().requires_grad_(False)
+            x = x.detach().clone().requires_grad_(True)
+            g = g.detach().clone().requires_grad_(False)
 
-            # lm will come first
-            x_lm = x[:x.shape[0]//2].clone()
-            x_lm = maybe_shard_with_gradients(x_lm)
-            x_iml = x[x.shape[0]//2:].clone()
-            x_iml = maybe_shard_with_gradients(x_iml)
+            x_bias = (x.mean(0).abs() / x.std(0).clamp(min=eps)).mean()
+            g_bias = (g.mean(0).abs() / g.std(0).clamp(min=eps)).mean()
 
-            g_lm = g[:g.shape[0]//2].clone()
-            g_lm = maybe_shard_with_gradients(g_lm)
-            g_iml = g[g.shape[0]//2:].clone()
-            g_iml = maybe_shard_with_gradients(g_iml)
+            x = x.to(torch.bfloat16)
+            g = g.to(torch.bfloat16)
 
-            x_bias = (x_lm.mean(0).abs() / x_lm.std(0).clamp(min=eps)).mean()
-            g_bias = (g_lm.mean(0).abs() / g_lm.std(0).clamp(min=eps)).mean()
+            update = torch.einsum(
+                "bol,bli->oi",
+                g.transpose(-2, -1), x
+            )
+            update = newton_schulz(update)
 
-            # calculate the update
-            update_lm = (
-                g_lm.transpose(-2, -1).to(torch.bfloat16)
-                @ x_lm.to(torch.bfloat16)
-            ).float()
-            update_iml = (
-                g_iml.transpose(-2, -1).to(torch.bfloat16)
-                @ x_iml.to(torch.bfloat16)
-            ).float()
+            pred_g = torch.einsum(
+                "boi,bil->bol",
+                update[None], x.transpose(-2, -1)
+            ).transpose(-2, -1)
+            pred_g = maybe_shard_with_gradients(pred_g)
 
-            # adam-like preconditioning
-            # denominator is sqrt(E[mean(update)^2]) with v/N accounting for the expectation
-            G = update_lm + update_iml
-            m = G.mean(dim=0, keepdim=True)
-            v = G.var(dim=0, keepdim=True)
-            s = (m.pow(2) + v/G.shape[0]).sqrt()
-            update_lm = update_lm / torch.clamp(s, min=eps).detach()
+            pred_g = F.normalize(pred_g.float(), dim=-1, eps=eps)
+            targ_g = F.normalize(g.float(), dim=-1, eps=eps)
 
-            # L2 normalize each update
-            direction = F.normalize(update_lm, dim=[-2, -1], eps=eps)
-            
-            l_raw = direction.sum(dim=0).pow(2).sum() / direction.shape[0]
-            l = ((l_raw - 1) / (direction.shape[0] - 1)).mean()
+            l = F.mse_loss(pred_g, targ_g)
 
-            l = l * math.sqrt(direction.shape[-2] * direction.shape[-1])
-            log_l = torch.log2(l + 1.0)
-
-            l_for_backwards = -log_l * loss_scale
+            l_for_backwards = l * loss_scale
             x_grad = torch.autograd.grad(
                 l_for_backwards, x
             )[0]
-
-            # consoladate into one copy
-            x_grad = x_grad[:x.shape[0]//2] + x_grad[x.shape[0]//2:]
 
         # iml comes second
         x_grad = torch.cat(
             [torch.zeros_like(x_grad), x_grad],
             dim=0
-        ).detach().to(x_dtype)
+        ).to(x_dtype)
         x_grad = maybe_shard_with_gradients(x_grad)
 
         loss_buffer_grad = l.detach().to(loss_buffer.dtype).reshape_as(loss_buffer)
-        log_loss_buffer_grad = log_l.detach().to(log_loss_buffer.dtype).reshape_as(log_loss_buffer)
+        log_loss_buffer_grad = l.detach().log().to(log_loss_buffer.dtype).reshape_as(log_loss_buffer)
 
         x_bias_grad = x_bias.detach().to(x_bias_buffer.dtype).reshape_as(x_bias_buffer)
         g_bias_grad = g_bias.detach().to(g_bias_buffer.dtype).reshape_as(g_bias_buffer)
