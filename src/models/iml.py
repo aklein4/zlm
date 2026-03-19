@@ -79,8 +79,8 @@ class IMLFunction(torch.autograd.Function):
             ).transpose(-2, -1)
             pred_g = maybe_shard_with_gradients(pred_g)
 
-            pred_g = F.normalize(pred_g.float(), dim=-1, eps=eps)
-            targ_g = F.normalize(g.float(), dim=-1, eps=eps)
+            pred_g = F.rms_norm(pred_g.float(), [pred_g.shape[-1]], eps=eps)
+            targ_g = F.rms_norm(g.float(), [g.shape[-1]], eps=eps)
 
             l = F.mse_loss(pred_g, targ_g)
 
