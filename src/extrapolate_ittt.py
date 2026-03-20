@@ -23,7 +23,7 @@ CHECKPOINT_STEP = 500
 DATA_URL = "Geralt-Targaryen/books3"
 TOKENIZER_URL = os.path.join(constants.LOCAL_DATA_PATH, "tokenizer")
 
-NUM_EXAMPLES = 128
+NUM_EXAMPLES = 16
 BS = 1
 
 SEQUENCE_LENGTH = 1024 * 128
