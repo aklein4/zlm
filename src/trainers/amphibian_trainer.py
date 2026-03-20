@@ -76,7 +76,7 @@ class AmphibianTrainer(BaseTrainer):
         aux["lr"] = lr
         lr_scheduler.step()
         
-        return aux["lm_loss"], aux, 0.0
+        return aux["lm_loss"], aux, torch.zeros_like(aux["lm_loss"])
 
 
     def forward(self, input_ids):
