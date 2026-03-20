@@ -97,7 +97,7 @@ class Amphibian(Optimizer):
                 if "step" in state.keys():
 
                     bias_correction2 = 1.0 - beta2 ** state["step"]
-                    step_size = group["lr"] * math.sqrt(bias_correction2)
+                    step_size = (1.0 - beta1) * group["lr"] * math.sqrt(bias_correction2)
 
                     update = (
                         p.grad /
