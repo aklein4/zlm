@@ -58,10 +58,9 @@ class AmphibianTrainer(BaseTrainer):
         
         loss_1_H.backward()
         
-        optimizer.step()
+        aux = optimizer.step()
         self.model.zero_grad(set_to_none=False)
 
-        aux = {}
         for k, v in aux_1.items():
             aux[f"{k}_1"] = v
         for k, v in aux_2.items():
