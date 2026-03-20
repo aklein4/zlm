@@ -101,7 +101,7 @@ class Amphibian(Optimizer):
 
                     update = (
                         p.grad /
-                        torch.clamp(state["exp_avg_sq_inner"].to(p.dtype), min=group["eps"]**2).sqrt()
+                        torch.clamp(state["exp_avg_sq"].to(p.dtype), min=group["eps"]**2).sqrt()
                     )
 
                     p.add_(-step_size * update)
@@ -217,21 +217,6 @@ class Amphibian(Optimizer):
                 # restore the original parameters
                 p.copy_(state["base_p"])
 
-                # update the inner state
-                if "exp_avg_sq_inner" not in state.keys():
-                    state["exp_avg_sq_inner"] = torch.zeros_like(p.grad, dtype=group["state_dtype"])
-                else:
-                    state["exp_avg_sq_inner"] = state["exp_avg_sq_inner"].to(p.grad.device, dtype=group["state_dtype"])
-
-                sq_inner = (
-                    state["g1"].pow(2) +
-                    state["g2"].pow(2)
-                ) / 2.0
-                state["exp_avg_sq_inner"].lerp_(
-                    sq_inner.to(state["exp_avg_sq_inner"].dtype),
-                    1.0 - group["betas"][1]
-                )
-
                 # compute the gradient components
                 g1_H = p.grad.to(group["state_dtype"])
 
@@ -243,7 +228,7 @@ class Amphibian(Optimizer):
                 avg_grad_mag = avg_grad_mag + avg_grad.pow(2).sum()
                 avg_grad_inner_mag = avg_grad_inner_mag + avg_grad_inner.pow(2).sum()
 
-                if (
+                if True or (
                     grad.dim() != 2 or
                     min(grad.shape) <= 1 or
                     (hasattr(p, "no_muon") and p.no_muon)
