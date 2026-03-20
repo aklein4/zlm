@@ -49,19 +49,12 @@ class IMLFunction(torch.autograd.Function):
 
         x_dtype = x.dtype
 
-        # lm will come first
-        x = x[:x.shape[0]//2].float()
-        x = maybe_shard_with_gradients(x)
-
-        g = grad[:grad.shape[0]//2].float()
-        g = maybe_shard_with_gradients(g)
-
         with torch.set_grad_enabled(True):
 
             B = x.shape[0]
 
-            x = x.detach().clone().requires_grad_(True)
-            g = g.detach().clone().requires_grad_(False)
+            x = x.float().detach().clone().requires_grad_(True)
+            g = g.float().detach().clone().requires_grad_(False)
 
             x_bias = (x.mean(0).abs() / x.std(0).clamp(min=eps)).mean()
             g_bias = (g.mean(0).abs() / g.std(0).clamp(min=eps)).mean()
@@ -99,11 +92,7 @@ class IMLFunction(torch.autograd.Function):
             )[0]
 
         # iml comes second
-        x_grad = torch.cat(
-            [torch.zeros_like(x_grad), x_grad],
-            dim=0
-        ).to(x_dtype)
-        x_grad = maybe_shard_with_gradients(x_grad)
+        x_grad = x_grad.detach().to(x_dtype).reshape_as(x)
 
         loss_buffer_grad = l.detach().to(loss_buffer.dtype).reshape_as(loss_buffer)
         log_loss_buffer_grad = log_l.detach().to(log_loss_buffer.dtype).reshape_as(log_loss_buffer)

@@ -37,13 +37,9 @@ class IMLTrainer(BaseTrainer):
 
     def forward(self, input_ids):
 
-        doubled_inputs = torch.cat([input_ids, input_ids], dim=0)
-        doubled_inputs = shard_with_gradients(doubled_inputs)
-
         logits, _ = self.model(
-            input_ids=doubled_inputs,
+            input_ids=input_ids,
             shift_states=True,
-            sequences_to_keep=slice(0, input_ids.shape[0])
         )
 
         lm_loss = lm_loss_fn(
