@@ -54,7 +54,7 @@ class IMLFunction(torch.autograd.Function):
             B = x.shape[0]
 
             x = x.float().detach().clone().requires_grad_(True)
-            g = g.float().detach().clone().requires_grad_(False)
+            g = grad.float().detach().clone().requires_grad_(False)
 
             x_bias = (x.mean(0).abs() / x.std(0).clamp(min=eps)).mean()
             g_bias = (g.mean(0).abs() / g.std(0).clamp(min=eps)).mean()
