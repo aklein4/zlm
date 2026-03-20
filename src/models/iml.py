@@ -81,7 +81,7 @@ class IMLFunction(torch.autograd.Function):
 
             # L2 normalized each update
             # directions = F.normalize(updates, dim=[-2, -1], eps=eps)
-            directions = updates / math.sqrt(G.shape[-2] * G.shape[-1]))
+            directions = updates / math.sqrt(G.shape[-2] * G.shape[-1])
 
             # E_{i!=j}[direction_i * update_j]
             # on scale of ~1 because we would need to scale by sqrt(IO) if updates were L2 normed, but they are already sqrt(IO) * L2 normed
