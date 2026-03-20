@@ -203,6 +203,9 @@ class Amphibian(Optimizer):
         if closure is not None:
             loss = closure()
 
+        g1_mag = 0.0
+        g2_mag = 0.0
+        g1_H_mag = 0.0
         avg_grad_mag = 0.0
         avg_grad_inner_mag = 0.0
         for group in self.param_groups:
@@ -225,6 +228,9 @@ class Amphibian(Optimizer):
 
                 grad = avg_grad + group["inner_weight"] * avg_grad_inner
 
+                g1_mag = g1_mag + state["g1"].pow(2).sum()
+                g2_mag = g2_mag + state["g2"].pow(2).sum()
+                g1_H_mag = g1_H_mag + g1_H.pow(2).sum()
                 avg_grad_mag = avg_grad_mag + avg_grad.pow(2).sum()
                 avg_grad_inner_mag = avg_grad_inner_mag + avg_grad_inner.pow(2).sum()
 
@@ -238,6 +244,9 @@ class Amphibian(Optimizer):
                     self.muon_update(group, p, grad)
 
         return {
+            "g1_norm": torch.sqrt(g1_mag),
+            "g2_norm": torch.sqrt(g2_mag),
+            "g1_H_norm": torch.sqrt(g1_H_mag),
             "avg_grad_norm": torch.sqrt(avg_grad_mag),
             "avg_grad_inner_norm": torch.sqrt(avg_grad_inner_mag),
         }
