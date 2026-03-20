@@ -40,6 +40,7 @@ class AmphibianTrainer(BaseTrainer):
 
         loss_1.backward()
 
+        self.clip_gradients()
         optimizer.handle_g1()
         self.model.zero_grad(set_to_none=False)
 
@@ -49,6 +50,7 @@ class AmphibianTrainer(BaseTrainer):
         
         loss_2.backward()
 
+        self.clip_gradients()
         optimizer.handle_g2()
         self.model.zero_grad(set_to_none=False)
 
@@ -58,6 +60,7 @@ class AmphibianTrainer(BaseTrainer):
         
         loss_1_H.backward()
         
+        self.clip_gradients()
         aux = optimizer.step()
         self.model.zero_grad(set_to_none=False)
 
