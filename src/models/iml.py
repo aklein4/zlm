@@ -58,6 +58,8 @@ class IMLFunction(torch.autograd.Function):
 
         with torch.set_grad_enabled(True):
 
+            B = x.shape[0]
+
             x = x.detach().clone().requires_grad_(True)
             g = g.detach().clone().requires_grad_(False)
 
@@ -65,25 +67,29 @@ class IMLFunction(torch.autograd.Function):
             g_bias = (g.mean(0).abs() / g.std(0).clamp(min=eps)).mean()
 
             # calculate the update
-            update = (
+            G = (
                 g.transpose(-2, -1).to(torch.bfloat16)
                 @ x.to(torch.bfloat16)
             ).float()
 
             # adam-like preconditioning
-            # denominator is sqrt(E[mean(update)^2]) with v/N accounting for the expectation
-            m = update.mean(dim=0, keepdim=True)
-            v = update.var(dim=0, keepdim=True)
-            s = (m.pow(2) + v/update.shape[0]).sqrt()
-            update = update / torch.clamp(s, min=eps)
+            s = G.pow(2).mean(dim=0, keepdim=True).sqrt()
+            P = 1 / torch.clamp(s, min=eps)
 
-            # L2 normalize each update
-            direction = F.normalize(update, dim=[-2, -1], eps=eps).to(torch.bfloat16)
+            # elements on ~1
+            updates = P * G
+
+            # L2 normalized each update
+            directions = F.normalize(updates, dim=[-2, -1], eps=eps)
             
-            l_raw = direction.sum(dim=0).pow(2).sum() / direction.shape[0]
-            l = ((l_raw - 1) / (direction.shape[0] - 1)).mean()
+            # E_{i!=j}[direction_i * update_j]
+            # on scale of ~1 because we would need to scale by sqrt(IO) if updates were L2 normed, but they are already sqrt(IO) * L2 normed
+            l = torch.einsum(
+                "boi,boi->",
+                updates.sum(0, keepdim=True) - updates, # B - 1
+                directions # B
+            ) / (B * (B - 1))
 
-            l = l * math.sqrt(direction.shape[-2] * direction.shape[-1])
             log_l = torch.log2(l + 1.0)
 
             l_for_backwards = -log_l * loss_scale
