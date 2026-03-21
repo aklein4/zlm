@@ -66,7 +66,7 @@ class IMLFunction(torch.autograd.Function):
             x_val = maybe_shard_with_gradients(x_val)
             
             g_train = g[:g.shape[0]//2].to(torch.bfloat16)
-            g_train = maybe_shard_with_gradients(g_train)
+            g_train = maybe_shard_with_gradients(g_train).detach()
 
             g_val = g[g.shape[0]//2:].to(torch.bfloat16)
             g_val = maybe_shard_with_gradients(g_val)
