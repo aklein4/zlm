@@ -85,7 +85,8 @@ class IMLFunction(torch.autograd.Function):
                 @ x_train.to(torch.bfloat16)
             )
 
-            G_val = (
+            G_val = torch.einsum(
+                'bol,bli->oi',
                 g_val.transpose(-2, -1).to(torch.bfloat16)
                 @ x_val.to(torch.bfloat16)
             )
@@ -96,9 +97,9 @@ class IMLFunction(torch.autograd.Function):
             PG = (P * G_train).to(torch.bfloat16)
 
             # elements on ~1 -> adam-like is ~0.2
-            update = 0.2 * torch.sum(loss_scale * lr * PG, dim=0, keepdim=True) / math.sqrt(B)
+            update = 0.2 * torch.sum(loss_scale * lr * PG, dim=0) / math.sqrt(B)
 
-            iml_loss = -torch.sum(G_val.sum(0, keepdim=True) * update) / (B * 2)
+            iml_loss = -torch.sum(G_val * update)
 
             x_grad = torch.autograd.grad(
                 iml_loss, x_train
