@@ -98,14 +98,15 @@ class IMLFunction(torch.autograd.Function):
             PG = (P * G_train).to(torch.bfloat16)
 
             # elements on ~1 -> adam-like is ~0.2, negative like adam
-            update = -0.2 * torch.sum(loss_scale * lr * PG, dim=0) / math.sqrt(B)
+            update = -0.2 * torch.sum(lr * PG, dim=0) / math.sqrt(B)
 
             # taylor approximation of the change in validation loss if we added update to the weights
             # which we want to make negative, and will be made so just like the main loss)
             iml_loss = torch.sum(G_val * update)
+            loss_for_backward = loss_scale * iml_loss
 
             x_grad = torch.autograd.grad(
-                iml_loss, x_train
+                loss_for_backward, x_train
             )[0]
 
         # iml comes second
