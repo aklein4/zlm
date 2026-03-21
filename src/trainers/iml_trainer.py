@@ -41,7 +41,7 @@ class IMLTrainer(BaseTrainer):
 
         first_, second_ = input_ids.chunk(2, dim=-1)
 
-        coin = torch.rand(input_ids.shape[0], device=input_ids.device) < 0.5
+        coin = torch.rand(first_.shape[0], device=input_ids.device)[:, None] < 0.5
         first = torch.where(coin, first_, second_)
         second = torch.where(coin, second_, first_)
 
