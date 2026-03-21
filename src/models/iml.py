@@ -92,10 +92,12 @@ class IMLFunction(torch.autograd.Function):
             )
 
             # muon-like preconditioning
-            update = update = newton_schulz(G_train)
+            update = newton_schulz(G_train)
 
             # elements on ~1 -> adam-like is ~0.2, negative like adam
-            step_size = lr * rms_scale * math.sqrt(max(g.shape[0], g.shape[1]))
+            step_size = lr * rms_scale * math.sqrt(
+                max(update.shape[0], update.shape[1])
+            )
 
             iml_loss = torch.sum(G_val * (-step_size * update))
             loss_for_backward = loss_scale * iml_loss
