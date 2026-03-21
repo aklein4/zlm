@@ -233,6 +233,8 @@ class ItttModel(LlamaForCausalLM):
     def __init__(self, config):
         super().__init__(config)
 
+        attn_ittt = config.get("attn_ittt", False)
+
         for layer in self.model.layers:
             layer: LlamaDecoderLayer
 
@@ -240,6 +242,16 @@ class ItttModel(LlamaForCausalLM):
                 layer.mlp.down_proj,
                 config
             )
+
+            if attn_ittt:
+                layer.self_attn.q_proj = ItttLinear(
+                    layer.self_attn.q_proj,
+                    config
+                )
+                layer.self_attn.o_proj = ItttLinear(
+                    layer.self_attn.o_proj,
+                    config
+                )
 
 
     @torch.no_grad()

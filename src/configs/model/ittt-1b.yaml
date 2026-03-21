@@ -61,10 +61,12 @@ pure_modules: []
 
 chunk_size: 1024
 
-rank: 512
+rank: 256
 
 base_lr: 1.0e-2
 momentum_beta: 0.75
 
 momentum_dtype: bfloat16
 state_dtype: float32
+
+attn_ittt: true
