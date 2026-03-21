@@ -56,7 +56,7 @@ class IMLFunction(torch.autograd.Function):
         with torch.set_grad_enabled(True):
 
             x = x.detach().clone().requires_grad_(True)
-            g = g.detach().clone().requires_grad_(False)
+            g = grad.detach().clone().requires_grad_(False)
 
             # first portion will will come will come first
             x_train = x[:x.shape[0]//2].to(torch.bfloat16)
