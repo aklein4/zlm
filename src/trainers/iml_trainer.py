@@ -34,28 +34,34 @@ class IMLTrainer(BaseTrainer):
                 m.g_bias_buffer.requires_grad_(True)
                 m.g_bias_buffer.grad = torch.zeros_like(m.g_bias_buffer)
 
+                m.optimizer = self.optimizers['main']
+
 
     def forward(self, input_ids):
 
-        doubled_inputs = torch.cat([input_ids, input_ids], dim=0)
-        doubled_inputs = shard_with_gradients(doubled_inputs)
+        first_, second_ = input_ids.chunk(2, dim=-1)
+
+        coin = torch.rand(input_ids.shape[0], device=input_ids.device) < 0.5
+        first = torch.where(coin, first_, second_)
+        second = torch.where(coin, second_, first_)
+
+        sorted_inputs = torch.cat([first, second], dim=0)
 
         logits, _ = self.model(
-            input_ids=doubled_inputs,
+            input_ids=sorted_inputs,
             shift_states=True,
-            sequences_to_keep=slice(0, input_ids.shape[0])
         )
 
         lm_loss = lm_loss_fn(
             logits,
-            input_ids,
+            sorted_inputs,
             ignore_index=self.model.config.pad_token_id,
             shift_logits=False,
             shift_labels=True,
         )
         lm_acc = lm_acc_fn(
             logits,
-            input_ids,
+            sorted_inputs,
             ignore_index=self.model.config.pad_token_id,
             shift_logits=False,
             shift_labels=True,

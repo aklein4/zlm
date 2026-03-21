@@ -28,10 +28,12 @@ class IMLFunction(torch.autograd.Function):
         g_bias_buffer: nn.Buffer,
         eps: float,
         loss_scale: float,
+        optimizer: torch.optim.Optimizer,
     ) -> torch.FloatTensor:
         ctx.save_for_backward(x, loss_buffer, log_loss_buffer, x_bias_buffer, g_bias_buffer)
         ctx.eps = eps
         ctx.loss_scale = loss_scale
+        ctx.optimizer = optimizer
         return y.clone()
 
 
@@ -46,67 +48,71 @@ class IMLFunction(torch.autograd.Function):
         x, loss_buffer, log_loss_buffer, x_bias_buffer, g_bias_buffer = ctx.saved_tensors
         eps = ctx.eps
         loss_scale = ctx.loss_scale
+        optimizer = ctx.optimizer
 
         x_dtype = x.dtype
 
-        # lm will come first
-        x = x[:x.shape[0]//2].float()
-        x = maybe_shard_with_gradients(x)
+        # first portion will will come will come first
+        x_train = x[:x.shape[0]//2].float()
+        x_train = maybe_shard_with_gradients(x_train)
 
-        g = grad[:grad.shape[0]//2].float()
-        g = maybe_shard_with_gradients(g)
+        x_val = x[x.shape[0]//2:].float()
+        x_val = maybe_shard_with_gradients(x_val)
+        
+        g_train = grad[:grad.shape[0]//2].float()
+        g_train = maybe_shard_with_gradients(g_train)
+
+        g_val = grad[grad.shape[0]//2:].float()
+        g_val = maybe_shard_with_gradients(g_val)
 
         with torch.set_grad_enabled(True):
 
-            B = x.shape[0]
+            B = x_train.shape[0]
+            lr = optimizer.param_groups[0]['lr']
 
-            x = x.detach().clone().requires_grad_(True)
-            g = g.detach().clone().requires_grad_(False)
+            x_train = x_train.detach().clone().requires_grad_(True)
+            g_train = g_train.detach().clone().requires_grad_(False)
 
-            x_bias = (x.mean(0).abs() / x.std(0).clamp(min=eps)).mean()
-            g_bias = (g.mean(0).abs() / g.std(0).clamp(min=eps)).mean()
+            x_val = x_val.detach().clone().requires_grad_(False)
+            g_val = g_val.detach().clone().requires_grad_(False)
+
+            x_bias = (x_train.mean(0).abs() / x_train.std(0).clamp(min=eps)).mean()
+            g_bias = (g_train.mean(0).abs() / g_train.std(0).clamp(min=eps)).mean()
 
             # calculate the update
-            G = (
-                g.transpose(-2, -1).to(torch.bfloat16)
-                @ x.to(torch.bfloat16)
-            ).float()
+            G_train = (
+                g_train.transpose(-2, -1).to(torch.bfloat16)
+                @ x_train.to(torch.bfloat16)
+            )
+
+            G_val = (
+                g_val.transpose(-2, -1).to(torch.bfloat16)
+                @ x_val.to(torch.bfloat16)
+            )
 
             # adam-like preconditioning
-            s = G.pow(2).mean(dim=0, keepdim=True).sqrt()
+            s = G_train.float().pow(2).mean(dim=0, keepdim=True).sqrt()
             P = 1 / torch.clamp(s, min=eps)
+            PG = (P * G_train).to(torch.bfloat16)
 
-            # elements on ~1
-            updates = P * G
+            # elements on ~1 -> adam-like is ~0.2
+            update = 0.2 * torch.sum(loss_scale * lr * PG, dim=0, keepdim=True) / math.sqrt(B)
 
-            # L2 normalized each update
-            # directions = F.normalize(updates, dim=[-2, -1], eps=eps)
-            directions = updates / math.sqrt(G.shape[-2] * G.shape[-1])
+            iml_loss = torch.sum(G_val.sum(0, keepdim=True) * update) / (B * 2)
 
-            # E_{i!=j}[direction_i * update_j]
-            # on scale of ~1 because we would need to scale by sqrt(IO) if updates were L2 normed, but they are already sqrt(IO) * L2 normed
-            l = torch.einsum(
-                "boi,boi->",
-                updates.sum(0, keepdim=True) - updates, # B - 1
-                directions # B
-            ) / (B * (B - 1))
-
-            log_l = torch.log2(l + 1.0)
-
-            l_for_backwards = -log_l * loss_scale
             x_grad = torch.autograd.grad(
-                l_for_backwards, x
+                iml_loss, x_train
             )[0]
 
         # iml comes second
         x_grad = torch.cat(
-            [torch.zeros_like(x_grad), x_grad],
+            [x_grad, torch.zeros_like(x_val)],
             dim=0
         ).to(x_dtype)
         x_grad = maybe_shard_with_gradients(x_grad)
 
-        loss_buffer_grad = l.detach().to(loss_buffer.dtype).reshape_as(loss_buffer)
-        log_loss_buffer_grad = log_l.detach().to(log_loss_buffer.dtype).reshape_as(log_loss_buffer)
+        loss_buffer_grad = iml_loss.detach().to(loss_buffer.dtype).reshape_as(loss_buffer)
+        log_loss_buffer_grad = iml_loss.detach().to(log_loss_buffer.dtype).reshape_as(log_loss_buffer)
 
         x_bias_grad = x_bias.detach().to(x_bias_buffer.dtype).reshape_as(x_bias_buffer)
         g_bias_grad = g_bias.detach().to(g_bias_buffer.dtype).reshape_as(g_bias_buffer)
@@ -155,6 +161,8 @@ class IMLLinear(nn.Module):
         )
         self.g_bias_buffer: nn.Buffer
 
+        self.optimizer = None
+
 
     def forward(
         self,
@@ -169,7 +177,7 @@ class IMLLinear(nn.Module):
             x, y,
             self.loss_buffer, self.log_loss_buffer,
             self.x_bias_buffer, self.g_bias_buffer,
-            self.eps, self.loss_scale
+            self.eps, self.loss_scale, self.optimizer
         )
 
         return y
