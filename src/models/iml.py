@@ -87,8 +87,8 @@ class IMLFunction(torch.autograd.Function):
 
             G_val = torch.einsum(
                 'bol,bli->oi',
-                g_val.transpose(-2, -1).to(torch.bfloat16)
-                @ x_val.to(torch.bfloat16)
+                g_val.transpose(-2, -1).to(torch.bfloat16),
+                x_val.to(torch.bfloat16)
             )
 
             # adam-like preconditioning
