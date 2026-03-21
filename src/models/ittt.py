@@ -287,7 +287,7 @@ class ItttModel(LlamaForCausalLM):
                 chunks[0],
                 logits_to_keep=slice(0, -1)
             )[0]
-            all_logits.append(logits.detach().cpu())
+            all_logits.append(logits.detach())
 
             loss = lm_loss_fn(
                 logits, chunks[0],
@@ -312,12 +312,13 @@ class ItttModel(LlamaForCausalLM):
                     all_chunk,
                     logits_to_keep=slice(first_chunk.shape[-1]-1, -1)
                 )[0]
-                all_logits.append(logits.detach().cpu())
+                all_logits.append(logits.detach())
 
                 loss = lm_loss_fn(
                     logits,
-                    all_chunk[:, first_chunk.shape[-1]-1:].to(logits.device),
+                    all_chunk[:, first_chunk.shape[-1]:],
                     shift_logits=False,
+                    shift_labels=False,
                     ignore_index=self.config.pad_token_id,
                 )
 
