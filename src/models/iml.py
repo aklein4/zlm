@@ -101,7 +101,7 @@ class IMLFunction(torch.autograd.Function):
             loss_for_backward = loss_scale * iml_loss
 
             x_grad = torch.autograd.grad(
-                loss_for_backward, x_train
+                loss_for_backward, x
             )[0]
 
         # iml comes second
