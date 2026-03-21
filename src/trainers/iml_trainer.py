@@ -39,29 +39,26 @@ class IMLTrainer(BaseTrainer):
 
     def forward(self, input_ids):
 
-        first_, second_ = input_ids.chunk(2, dim=-1)
-
-        coin = torch.rand(first_.shape[0], device=input_ids.device)[:, None] < 0.5
-        first = torch.where(coin, first_, second_)
-        second = torch.where(coin, second_, first_)
-
-        sorted_inputs = torch.cat([first, second], dim=0)
+        x_train, x_val = input_ids.chunk(2, dim=0)
+        x = torch.cat([input_ids, x_train], dim=0)
+        x = shard_with_gradients(x)
 
         logits, _ = self.model(
-            input_ids=sorted_inputs,
+            input_ids=x,
             shift_states=True,
+            sequences_to_keep=slice(0, input_ids.shape[0])
         )
 
         lm_loss = lm_loss_fn(
             logits,
-            sorted_inputs,
+            input_ids,
             ignore_index=self.model.config.pad_token_id,
             shift_logits=False,
             shift_labels=True,
         )
         lm_acc = lm_acc_fn(
             logits,
-            sorted_inputs,
+            input_ids,
             ignore_index=self.model.config.pad_token_id,
             shift_logits=False,
             shift_labels=True,

@@ -55,20 +55,16 @@ class IMLFunction(torch.autograd.Function):
 
         with torch.set_grad_enabled(True):
 
-            x = x.detach().clone().requires_grad_(True)
-            g = grad.detach().clone().requires_grad_(False)
+            x = x.detach().clone().requires_grad_(True).to(torch.bfloat16)
+            g = grad.detach().clone().requires_grad_(False).to(torch.bfloat16)
 
             # first portion will will come will come first
-            x_train = x[:x.shape[0]//2].to(torch.bfloat16)
+            x_train, x_val, _ = x.chunk(3, dim=0)
             x_train = maybe_shard_with_gradients(x_train)
-
-            x_val = x[x.shape[0]//2:].to(torch.bfloat16)
             x_val = maybe_shard_with_gradients(x_val).detach()
-            
-            g_train = g[:g.shape[0]//2].to(torch.bfloat16)
-            g_train = maybe_shard_with_gradients(g_train)
 
-            g_val = g[g.shape[0]//2:].to(torch.bfloat16)
+            g_train, g_val, _ = g.chunk(3, dim=0)
+            g_train = maybe_shard_with_gradients(g_train)
             g_val = maybe_shard_with_gradients(g_val)
 
             lr = optimizer.param_groups[0]['lr']
@@ -104,10 +100,13 @@ class IMLFunction(torch.autograd.Function):
 
             x_grad = torch.autograd.grad(
                 loss_for_backward, x
-            )[0]
+            )[0].chunk(3, dim=0)[0] # only for train portion
 
         # iml comes second
-        x_grad = x_grad.detach().to(x_dtype)
+        x_grad = torch.cat(
+            [torch.zeros_like(x_grad), torch.zeros_like(x_grad), x_grad],
+            dim=0
+        ).detach().to(x_dtype)
         x_grad = maybe_shard_with_gradients(x_grad)
 
         loss_buffer_grad = iml_loss.detach().to(loss_buffer.dtype).reshape_as(loss_buffer)
