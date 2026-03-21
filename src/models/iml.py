@@ -117,7 +117,7 @@ class IMLFunction(torch.autograd.Function):
         x_bias_grad = x_bias.detach().to(x_bias_buffer.dtype).reshape_as(x_bias_buffer)
         g_bias_grad = g_bias.detach().to(g_bias_buffer.dtype).reshape_as(g_bias_buffer)
 
-        return x_grad, og_grad, loss_buffer_grad, log_loss_buffer_grad, x_bias_grad, g_bias_grad, None, None
+        return x_grad, og_grad, loss_buffer_grad, log_loss_buffer_grad, x_bias_grad, g_bias_grad, None, None, None
 
 
 class IMLLinear(nn.Module):
