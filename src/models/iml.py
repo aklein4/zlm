@@ -85,7 +85,7 @@ class IMLFunction(torch.autograd.Function):
                 @ x_train.to(torch.bfloat16)
             )
 
-            val_scale = 1.0 # x.shape[0] / x_val.shape[0] # this should be enabled for forward compatability
+            val_scale = x.shape[0] / x_val.shape[0] # this should be enabled for forward compatability
             G_val = val_scale * torch.einsum(
                 'bol,bli->oi',
                 g_val.transpose(-2, -1).to(torch.bfloat16),
@@ -100,7 +100,8 @@ class IMLFunction(torch.autograd.Function):
             # elements on ~1 -> adam-like is ~0.2, negative like adam
             update = -0.2 * torch.sum(loss_scale * lr * PG, dim=0) / math.sqrt(B)
 
-            # delta in loss (which we want to make negative, and will be made so just like the main loss)
+            # taylor approximation of the change in validation loss if we added update to the weights
+            # which we want to make negative, and will be made so just like the main loss)
             iml_loss = torch.sum(G_val * update)
 
             x_grad = torch.autograd.grad(
@@ -231,10 +232,10 @@ class IMLModel(LlamaForCausalLM):
                     )
                     num_iml += 1
 
-        for m in self.modules():
+        # for m in self.modules():
             
-            if isinstance(m, IMLLinear):
-                m.loss_scale /= num_iml
+        #     if isinstance(m, IMLLinear):
+        #         m.loss_scale /= num_iml
 
 
     @torch.no_grad()
@@ -246,7 +247,7 @@ class IMLModel(LlamaForCausalLM):
             if isinstance(m, IMLLinear):
                 losses.append(m.get_previous_loss())
 
-        return torch.stack(losses).mean()
+        return torch.stack(losses).sum()
 
 
     @torch.no_grad()
