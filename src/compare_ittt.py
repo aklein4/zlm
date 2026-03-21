@@ -125,6 +125,11 @@ def analyze_results():
         "ittt_loss": nan_mean(ittt_losses),
     })
 
+    print("\n === Average Losses === ")
+    for col in df.columns:
+        print(f"    {col}: {df[col].mean():.2f}")
+    print("")
+
     for col in df.columns:
 
         x = np.arange(len(df[col]))
@@ -138,5 +143,5 @@ def analyze_results():
 
 
 if __name__ == "__main__":
-    main()
+    # main()
     analyze_results()
