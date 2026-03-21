@@ -85,7 +85,8 @@ class IMLFunction(torch.autograd.Function):
                 @ x_train.to(torch.bfloat16)
             )
 
-            G_val = torch.einsum(
+            val_scale = 1.0 # x.shape[0] / x_val.shape[0] # this should be enabled for forward compatability
+            G_val = val_scale * torch.einsum(
                 'bol,bli->oi',
                 g_val.transpose(-2, -1).to(torch.bfloat16),
                 x_val.to(torch.bfloat16)
@@ -96,10 +97,11 @@ class IMLFunction(torch.autograd.Function):
             P = 1 / torch.clamp(s, min=eps)
             PG = (P * G_train).to(torch.bfloat16)
 
-            # elements on ~1 -> adam-like is ~0.2
-            update = 0.2 * torch.sum(loss_scale * lr * PG, dim=0) / math.sqrt(B)
+            # elements on ~1 -> adam-like is ~0.2, negative like adam
+            update = -0.2 * torch.sum(loss_scale * lr * PG, dim=0) / math.sqrt(B)
 
-            iml_loss = -torch.sum(G_val * update)
+            # delta in loss (which we want to make negative, and will be made so just like the main loss)
+            iml_loss = torch.sum(G_val * update)
 
             x_grad = torch.autograd.grad(
                 iml_loss, x_train
