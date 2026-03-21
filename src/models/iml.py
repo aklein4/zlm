@@ -98,7 +98,7 @@ class IMLFunction(torch.autograd.Function):
             # elements on ~1 -> adam-like is ~0.2
             update = 0.2 * torch.sum(loss_scale * lr * PG, dim=0, keepdim=True) / math.sqrt(B)
 
-            iml_loss = torch.sum(G_val.sum(0, keepdim=True) * update) / (B * 2)
+            iml_loss = -torch.sum(G_val.sum(0, keepdim=True) * update) / (B * 2)
 
             x_grad = torch.autograd.grad(
                 iml_loss, x_train
