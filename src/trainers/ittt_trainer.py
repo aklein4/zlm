@@ -68,18 +68,32 @@ class ItttTrainer(BaseTrainer):
             enabled=self.config.trainer.use_autocast,
         ):
 
-            logits = self.model(
+            hidden_states = self.model(
                 all_chunk,
-                logits_to_keep=slice(in_chunk.shape[-1]-1, -1)
-            )[0]
-            loss = self.loss(
-                all_chunk[:, in_chunk.shape[-1]-1:],
-                logits
+                logits_to_keep=slice(0, 1),
+            )[2]
+
+            first_states = hidden_states[:, :in_chunk.shape[-1]-1]
+            second_states = hidden_states[:, in_chunk.shape[-1]-1:-1]
+
+            first_logits = self.model.lm_head(first_states).float()
+            second_logits = self.model.lm_head(second_states).float()
+
+            first_loss = self.loss(
+                in_chunk,
+                first_logits,
             )
+            second_loss = self.loss(
+                all_chunk[:, in_chunk.shape[-1]-1:], # loss does labels[:, 1:]
+                second_logits,
+            )
+
+            # TODO: this balancing is slightly off
+            loss = (first_loss + second_loss) / 2
 
         loss.backward()
 
-        return loss
+        return first_loss, second_loss
 
 
     @torch_xla.compile(full_graph=True)
@@ -121,8 +135,9 @@ class ItttTrainer(BaseTrainer):
             in_chunk = chunks[i-1]
             out_chunk = chunks[i]
             
-            loss = self.looped_chunks(in_chunk, out_chunk)
+            first_loss, loss = self.looped_chunks(in_chunk, out_chunk)
 
+            aux[f"repeated_lm_loss/chunk_{i-1:02d}"] = first_loss
             aux[f"lm_loss/chunk_{i:02d}"] = loss
             total_loss = total_loss + loss
             torch_xla.sync()
