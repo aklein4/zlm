@@ -153,7 +153,7 @@ class ItttLinear(nn.Module):
 
     def get_lr(self):
         return (
-            self.base_lr * math.sqrt(max(self.in_features, self.rank)) * math.sqrt(1 / self.in_features) *
+            self.base_lr * math.sqrt(max(self.in_features, self.rank/2)) * math.sqrt(1 / self.in_features) *
             torch.exp(self.log_lr * self.scalar_scaler)
         )
 
