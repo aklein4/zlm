@@ -71,6 +71,7 @@ class ItttTrainer(BaseTrainer):
             hidden_states = self.model(
                 all_chunk,
                 logits_to_keep=slice(0, 1),
+                return_states=True,
             )[2]
 
             first_states = hidden_states[:, :in_chunk.shape[-1]-1]
