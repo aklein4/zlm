@@ -109,8 +109,8 @@ class ItttLinear(nn.Module):
         self.log_lr = nn.Parameter(
             torch.zeros(self.rank, self.in_features)
         )
-        self.base_state_proj = nn.Linear(
-            self.in_features, self.rank, bias=False
+        self.base_state = nn.Parameter(
+            torch.randn(self.rank, self.in_features) * math.sqrt(1 / self.in_features)
         )
         self.out_proj = nn.Linear(
             self.rank, self.out_features, bias=False
@@ -121,7 +121,6 @@ class ItttLinear(nn.Module):
         self.momentum: nn.Buffer
 
         # weight initialization
-        self.base_state_proj.weight.data.zero_()
         self.out_proj.weight.data.normal_(
             std=config.initializer_range
         )
@@ -145,7 +144,7 @@ class ItttLinear(nn.Module):
 
     def get_lr(self):
         return (
-            self.base_lr *
+            self.base_lr * math.sqrt(max(self.in_features, self.rank)) * (1 / math.sqrt(self.in_features)) *
             torch.exp(self.log_lr * self.scalar_scaler)
         )
 
@@ -159,13 +158,14 @@ class ItttLinear(nn.Module):
 
         assert x.ndim == 3, "x must be 3D (batch, seq_len, dim)"
 
-        lr = self.get_lr()
-        s = lr[None] * self.state.detach()
+        s = (
+            self.base_state[None] +
+            self.get_lr() * self.state.detach()
+        )
+        s = F.rms_norm(s, s.shape[-2:], eps=self.eps) / math.sqrt(self.in_features)
 
         z = torch.einsum("boi,bsi->bso", s, x)
         z = ItttFunction.apply(x, z, self, self.momentum, self.state)
-
-        z = z + self.base_state_proj(x)
 
         y_lora = self.out_proj(z)
         y_base = self.linear(x)
