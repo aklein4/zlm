@@ -15,6 +15,7 @@ model.layers.*.mlp.up_proj.weight: [fsdp, null]
 
 model.layers.*.mlp.down_proj.linear.weight: [null, fsdp]
 model.layers.*.mlp.down_proj.log_lr: [null, fsdp]
+model.layers.*.mlp.down_proj.log_beta: [null, fsdp]
 model.layers.*.mlp.down_proj.base_state_proj.weight: [null, fsdp]
 model.layers.*.mlp.down_proj.out_proj.weight: [fsdp, null]
 

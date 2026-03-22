@@ -12,7 +12,7 @@ from tqdm import tqdm
 
 from models.llama import LlamaForCausalLM, LlamaDecoderLayer
 from utils.sharding_utils import maybe_shard_with_gradients
-from utils.torch_utils import newton_schulz, cuda_newton_schulz
+from utils.torch_utils import newton_schulz, cuda_newton_schulz, attach_gradient
 from utils.loss_utils import lm_loss_fn
 
 
@@ -70,10 +70,13 @@ class ItttFunction(torch.autograd.Function):
         if not constants.XLA_AVAILABLE:
             ns_fn = cuda_newton_schulz()
 
+        decay_and_non = new_momentum.reshape(
+            new_momentum.shape[0], 2, mod.rank//2, mod.in_features
+        )
         state_delta = -ns_fn(
-            new_momentum,
+            decay_and_non,
             eps=mod.eps
-        ).detach().to(mod.state_dtype)
+        ).detach().to(mod.state_dtype).reshape_as(state)
     
         return None, og_grad, None, new_momentum, state_delta
 
@@ -94,6 +97,7 @@ class ItttLinear(nn.Module):
         self.rank = rank if rank is not None else config.rank
 
         self.base_lr = config.base_lr
+        self.base_log_beta = config.base_log_beta
         self.momentum_beta = config.momentum_beta
 
         self.eps = config.rms_norm_eps
@@ -109,6 +113,9 @@ class ItttLinear(nn.Module):
         self.log_lr = nn.Parameter(
             torch.zeros(self.rank, self.in_features)
         )
+        self.log_beta = nn.Parameter(
+            torch.zeros(self.rank // 2, self.in_features)
+        )
         self.base_state_proj = nn.Linear(
             self.in_features, self.rank, bias=False
         )
@@ -119,6 +126,7 @@ class ItttLinear(nn.Module):
         # ephemeral state
         self.state: nn.Buffer
         self.momentum: nn.Buffer
+        self.decay_conv: nn.Buffer
 
         # weight initialization
         self.base_state_proj.weight.data.zero_()
@@ -145,8 +153,15 @@ class ItttLinear(nn.Module):
 
     def get_lr(self):
         return (
-            self.base_lr *
+            self.base_lr * math.sqrt(max(self.in_features, self.rank)) * math.sqrt(1 / self.in_features) *
             torch.exp(self.log_lr * self.scalar_scaler)
+        )
+
+    
+    def get_decay_beta(self):
+        life = torch.exp(self.base_log_beta + self.scalar_scaler * self.log_beta)
+        return torch.exp(
+            -1 / (life + self.eps) 
         )
 
 
@@ -159,8 +174,13 @@ class ItttLinear(nn.Module):
 
         assert x.ndim == 3, "x must be 3D (batch, seq_len, dim)"
 
-        lr = self.get_lr()
-        s = lr[None] * self.state.detach()
+        s_decay, s = self.state.detach().chunk(2, dim=1)
+        s_decay = attach_gradient(
+            s_decay, self.get_decay_beta()[None] * self.decay_conv.detach()
+        )
+        s = torch.cat([s_decay, s], dim=1)
+
+        s = self.get_lr()[None] * s
 
         z = torch.einsum("boi,bsi->bso", s, x)
         z = ItttFunction.apply(x, z, self, self.momentum, self.state)
@@ -187,12 +207,18 @@ class ItttLinear(nn.Module):
         momentum = torch.zeros_like(
             state, dtype=self.momentum_dtype
         )
+        decay_conv = torch.zeros(
+            bs, self.rank//2, self.in_features,
+            device=device, dtype=self.state_dtype,
+        )
 
         state = maybe_shard_with_gradients(state)
         momentum = maybe_shard_with_gradients(momentum)
-    
+        decay_conv = maybe_shard_with_gradients(decay_conv)
+
         self.register_buffer("state", state, persistent=False)
         self.register_buffer("momentum", momentum, persistent=False)
+        self.register_buffer("decay_conv", decay_conv, persistent=False)
         
         self.state.requires_grad_(True)
         self.state.grad = torch.zeros_like(self.state)
@@ -201,6 +227,8 @@ class ItttLinear(nn.Module):
         self.momentum.requires_grad_(True)
         self.momentum.grad = torch.zeros_like(self.momentum)
         self.momentum.grad = maybe_shard_with_gradients(self.momentum.grad)
+
+        self.decay_conv.requires_grad_(False)
 
 
     @torch.no_grad()
@@ -214,13 +242,30 @@ class ItttLinear(nn.Module):
         self.momentum.zero_()
         self.momentum.grad.zero_()
 
+        self.decay_conv.zero_()
+
     
     @torch.no_grad()
     def update_state(self):
         if self.disable_ittt:
             return
         
-        self.state.add_(self.state.grad)
+        # [B, r/2, i]
+        decay_delta, delta = self.state.grad.chunk(2, dim=1)
+        decay_state, state = self.state.chunk(2, dim=1)
+        beta = self.get_decay_beta()[None]
+
+        self.decay_conv.mul_(beta).add_(decay_state)
+
+        new_state = torch.cat(
+            [
+                beta * decay_state + decay_delta,
+                state + delta
+            ],
+            dim=1
+        )
+
+        self.state.copy_(new_state)
         self.state.grad.zero_()
         
         self.momentum.copy_(self.momentum.grad)
