@@ -5,18 +5,10 @@ model.embed_tokens.weight: [fsdp, null]
 lm_head.weight: [fsdp, null]
 
 
-model.layers.*.self_attn.q_proj.linear.weight: [fsdp, null]
-model.layers.*.self_attn.q_proj.log_lr: [null, fsdp]
-model.layers.*.self_attn.q_proj.base_state_proj.weight: [null, fsdp]
-model.layers.*.self_attn.q_proj.out_proj.weight: [fsdp, null]
-
+model.layers.*.self_attn.q_proj.weight: [fsdp, null]
 model.layers.*.self_attn.k_proj.weight: [null, fsdp]
 model.layers.*.self_attn.v_proj.weight: [null, fsdp]
-
-model.layers.*.self_attn.o_proj.linear.weight: [fsdp, null]
-model.layers.*.self_attn.o_proj.log_lr: [null, fsdp]
-model.layers.*.self_attn.o_proj.base_state_proj.weight: [null, fsdp]
-model.layers.*.self_attn.o_proj.out_proj.weight: [fsdp, null]
+model.layers.*.self_attn.o_proj.weight: [fsdp, null]
 
 model.layers.*.mlp.gate_proj.weight: [fsdp, null]
 model.layers.*.mlp.up_proj.weight: [fsdp, null]
