@@ -17,8 +17,8 @@ from utils.loss_utils import lm_loss_fn
 DEVICE = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
 
-CHECKPOINT_URL = 'aklein4/iTTT-TPU_alpha-1b'
-CHECKPOINT_STEP = 500
+CHECKPOINT_URL = 'aklein4/iTTT-TPU_decay-1b'
+CHECKPOINT_STEP = 250
 
 DATA_URL = "Geralt-Targaryen/books3"
 TOKENIZER_URL = os.path.join(constants.LOCAL_DATA_PATH, "tokenizer")
@@ -31,6 +31,56 @@ SEQUENCE_LENGTH = 1024 * 128
 
 def main():
     
+    print("Loading model...")
+    model: ItttModel = load_checkpoint(
+        CHECKPOINT_URL,
+        CHECKPOINT_STEP,
+        attention_kernel="gpu_flash_attention",
+        strict=False,
+    ).to(DEVICE)
+
+    if False:
+        beta = model.model.layers[16].mlp.down_proj.get_decay_beta()
+        h = -np.log(2) / torch.log(beta)
+
+        plt.matshow(np.log10(h[:, :512].detach().cpu().numpy()))
+        plt.colorbar()
+        plt.savefig("ittt_beta.png", dpi=300)
+        plt.clf()
+
+        lr = model.model.layers[0].mlp.down_proj.log_lr * model.model.layers[16].mlp.down_proj.scalar_scaler
+        plt.matshow(lr[:, :512].detach().cpu().numpy())
+        plt.colorbar()
+        plt.savefig("ittt_lr.png")
+        plt.clf()
+
+        plt.hexbin(
+            np.log10(h.detach().cpu().numpy()).flatten(),
+            lr[:lr.shape[0]//2].detach().cpu().numpy().flatten(),
+            bins='log',
+        )
+        plt.xlabel("log10(h)")
+        plt.ylabel("lr")
+        plt.savefig("ittt_beta_lr_hexbin.png", dpi=300)
+        plt.clf()
+
+        plt.hist(h.detach().cpu().numpy().flatten(), bins=1000)
+        plt.grid()
+        plt.savefig("ittt_beta_hist.png", dpi=300)
+
+        h_flat = h.detach().cpu().numpy().flatten()
+        for p in np.linspace(0.01, 0.99, 100):
+            x = np.percentile(h_flat, p * 100)
+            print(f"{p:.2f} percentile: {x:.2f}")
+
+        # plt.clf()
+        # plt.hist(lr.detach().cpu().numpy().flatten(), bins=100)
+        # plt.grid()
+        # plt.savefig("ittt_lr_hist.png")
+        # exit()
+
+        return
+
     print("Loading data...")
     data = datasets.load_dataset(DATA_URL, split='train', streaming=True)
     collator = TokenizeCollator(TOKENIZER_URL, SEQUENCE_LENGTH)
@@ -39,24 +89,6 @@ def main():
         batch_size=BS,
         collate_fn=collator,
     )
-
-    print("Loading model...")
-    model: ItttModel = load_checkpoint(
-        CHECKPOINT_URL,
-        CHECKPOINT_STEP,
-        attention_kernel="gpu_flash_attention",
-    ).to(DEVICE)
-
-    # lr = model.model.layers[0].mlp.down_proj.log_lr * model.model.layers[16].mlp.down_proj.scalar_scaler
-    # plt.matshow(lr.detach().cpu().numpy())
-    # plt.colorbar()
-    # plt.savefig("ittt_lr.png")
-    
-    # plt.clf()
-    # plt.hist(lr.detach().cpu().numpy().flatten(), bins=100)
-    # plt.grid()
-    # plt.savefig("ittt_lr_hist.png")
-    # exit()
 
     print("Running models...")
     losses = []
@@ -112,5 +144,5 @@ def analyze_results():
 
 
 if __name__ == "__main__":
-    # main()
+    main()
     analyze_results()
