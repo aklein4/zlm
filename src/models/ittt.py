@@ -46,11 +46,13 @@ class ItttFunction(torch.autograd.Function):
         x, momentum, state = ctx.saved_tensors
         mod: ItttLinear = ctx.mod
 
-        x: torch.FloatTensor = x.float()
-        g = grad.float()
+        if mod.normalize_vectors:
+            
+            x: torch.FloatTensor = x.float()
+            g = grad.float()
 
-        x = F.rms_norm(x, [x.shape[-1]], eps=mod.eps) # [b, s, i]
-        g = F.normalize(g, dim=-2, eps=mod.eps) * math.sqrt(x.shape[-2])  # [b, s, r]
+            x = F.rms_norm(x, [x.shape[-1]], eps=mod.eps) # [b, s, i]
+            g = F.normalize(g, dim=-2, eps=mod.eps) * math.sqrt(x.shape[-2])  # [b, s, r]
 
         x = x.to(mod.momentum_dtype)
         g = g.to(mod.momentum_dtype)
@@ -101,6 +103,8 @@ class ItttLinear(nn.Module):
 
         self.momentum_dtype = getattr(torch, config.momentum_dtype)
         self.state_dtype = getattr(torch, config.state_dtype)
+
+        self.normalize_vectors = config.get("normalize_vectors", True)
 
         # save linear
         self.linear = linear
