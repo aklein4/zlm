@@ -77,10 +77,28 @@ class ItttFunction(torch.autograd.Function):
         if not constants.XLA_AVAILABLE:
             ns_fn = cuda_newton_schulz()
 
-        state_delta = -ns_fn(
-            new_momentum,
-            eps=mod.eps
-        ).detach().to(mod.state_dtype)
+        if mod.fancy_momentum:
+
+            whitened = ns_fn(
+                momentum,
+                eps=mod.eps
+            )
+            new_whitened = ns_fn(
+                new_momentum,
+                eps=mod.eps
+            )
+            change = (
+                (new_whitened - whitened * mod.momentum_beta) /
+                (1 - mod.momentum_beta)
+            )
+
+        else:
+            change = ns_fn(
+                new_momentum,
+                eps=mod.eps
+            )
+
+        state_delta = -change.detach().to(mod.state_dtype)
     
         return None, og_grad, None, new_momentum, state_delta
 
@@ -111,6 +129,7 @@ class ItttLinear(nn.Module):
 
         self.normalize_vectors = config.get("normalize_vectors", True)
         self.center_x = config.get("center_x", False)
+        self.fancy_momentum = config.get("fancy_momentum", False)
 
         # save linear
         self.linear = linear
