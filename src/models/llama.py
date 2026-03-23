@@ -351,6 +351,7 @@ class LlamaModel(nn.Module):
 
     def __init__(self, config: DictConfig):
         super().__init__()
+        self.config = config
         self.vocab_size = config.vocab_size
         self.embed_tokens = nn.Embedding(config.vocab_size, config.hidden_size)
 
@@ -404,13 +405,20 @@ class LlamaModel(nn.Module):
             ).unsqueeze(0).float()
 
         # Create a causal attention mask
-        causal_mask = torch.triu(
-            torch.full((seq_length, seq_length), float("-inf"), device=inputs_embeds.device),
-            diagonal=1,
-        )
-        causal_mask = causal_mask.unsqueeze(0).unsqueeze(0)  # Add batch and head dimension
-        if attention_mask is not None:
-            causal_mask = causal_mask * attention_mask[:, None, None, :]
+        if "lash" in self.config.attention_kernel:
+            assert attention_mask is None, "Custom attention mask not compatible with flash attention"
+
+            # dummy value
+            causal_mask = torch.zeros_like(position_ids)
+
+        else:
+            causal_mask = torch.triu(
+                torch.full((seq_length, seq_length), float("-inf"), device=inputs_embeds.device),
+                diagonal=1,
+            )
+            causal_mask = causal_mask.unsqueeze(0).unsqueeze(0)  # Add batch and head dimension
+            if attention_mask is not None:
+                causal_mask = causal_mask * attention_mask[:, None, None, :]
 
         # create position embeddings to be shared across the decoder layers
         position_embeddings = self.rotary_emb(inputs_embeds, position_ids)

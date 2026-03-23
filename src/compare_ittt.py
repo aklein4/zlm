@@ -12,6 +12,7 @@ from models import load_checkpoint
 from models.llama import LlamaForCausalLM
 from models.ittt import ItttModel
 from collators.simple import SimpleCollator
+from collators.tokenize import TokenizeCollator
 import utils.constants as constants
 from utils.loss_utils import lm_loss_fn
 
@@ -24,10 +25,15 @@ LM_STEP = 2000
 ITTT_URL = 'aklein4/iTTT-TPU_alpha-1b'
 ITTT_STEP = 500
 
-DATA_URL = "aklein4/longattn-SmolLM2"
+DATA_URL = "Geralt-Targaryen/books3"
+TOKENIZER_URL = os.path.join(constants.LOCAL_DATA_PATH, "tokenizer")
 
-NUM_EXAMPLES = 512
-BS = 4
+NUM_EXAMPLES = 64
+BS = 2
+
+SEQUENCE_LENGTH = 1024 * 128
+
+PREFIX = "extrapolate_"
 
 
 def main():
@@ -37,7 +43,7 @@ def main():
     loader = torch.utils.data.DataLoader(
         data,
         batch_size=BS,
-        collate_fn=SimpleCollator(),
+        collate_fn=TokenizeCollator(TOKENIZER_URL, SEQUENCE_LENGTH),
     )
 
     print("Loading model...")
@@ -66,7 +72,7 @@ def main():
             input_ids, verbose=True,
         )   
         loss = lm_loss_fn(
-            logits, input_ids,
+            logits, input_ids.to(logits.device),
             shift_logits=False,
             ignore_index=ittt_model.config.pad_token_id,
             reduction='none',
@@ -77,17 +83,31 @@ def main():
         with torch.no_grad():
             with torch.autocast(str(constants.DEVICE), torch.bfloat16):
 
-                logits = lm_model.forward(
+                states = lm_model.forward(
                     input_ids,
-                    shift_states=True,
-                )[0]
+                    return_states=True,
+                    logits_to_keep=slice(0, 1),
+                )[-1]
+                states = lm_model.model.norm(states)
 
-            loss = lm_loss_fn(
-                logits, input_ids,
-                shift_logits=False,
-                ignore_index=lm_model.config.pad_token_id,
-                reduction='none',
-            )
+                states = states[:, :-1].split(1024, dim=1)
+                labels = input_ids[:, 1:].split(1024, dim=1)
+
+                loss = []
+                for s, l in tqdm(zip(states, labels), total=len(states), desc="Processing LM Chunks", leave=False):
+
+                    logits = lm_model.lm_head(s).float()
+
+                    curr_loss = lm_loss_fn(
+                        logits, l,
+                        shift_logits=False,
+                        shift_labels=False,
+                        ignore_index=lm_model.config.pad_token_id,
+                        reduction='none',
+                    )
+                    loss.append(curr_loss)
+                
+                loss = torch.cat(loss, dim=1)
 
         lm_losses.append(loss.cpu())
         del logits
@@ -98,13 +118,13 @@ def main():
     lm_losses = torch.cat(lm_losses, dim=0)
     torch.save(
         lm_losses,
-        os.path.join(constants.LOCAL_DATA_PATH, "lm_losses_for_comparison.pt")
+        os.path.join(constants.LOCAL_DATA_PATH, PREFIX+"lm_losses_for_comparison.pt")
     )
     
     ittt_losses = torch.cat(ittt_losses, dim=0)
     torch.save(
         ittt_losses,
-        os.path.join(constants.LOCAL_DATA_PATH, "ittt_losses_for_comparison.pt")
+        os.path.join(constants.LOCAL_DATA_PATH, PREFIX+"ittt_losses_for_comparison.pt")
     )
 
 
@@ -112,17 +132,19 @@ def nan_mean(x):
     mask = np.isfinite(x)
     s = mask.sum(0)
     x = np.where(mask, x, np.zeros_like(x))
-    return x.sum(0) / s
+    return x.sum(0) / (s + 1e-7)
 
 
 def analyze_results():
 
-    lm_losses = torch.load(os.path.join(constants.LOCAL_DATA_PATH, "lm_losses_for_comparison.pt")).float().numpy()
-    ittt_losses = torch.load(os.path.join(constants.LOCAL_DATA_PATH, "ittt_losses_for_comparison.pt")).float().numpy()
+    lm_losses = torch.load(os.path.join(constants.LOCAL_DATA_PATH, PREFIX+"lm_losses_for_comparison.pt")).float().numpy()
+    ittt_losses = torch.load(os.path.join(constants.LOCAL_DATA_PATH, PREFIX+"ittt_losses_for_comparison.pt")).float().numpy()
+    norm_ittt_losses = torch.load(os.path.join(constants.LOCAL_DATA_PATH, "norm_"+PREFIX+"ittt_losses_for_comparison.pt")).float().numpy()
 
     df = pd.DataFrame({
         "lm_loss": nan_mean(lm_losses),
         "ittt_loss": nan_mean(ittt_losses),
+        "norm_ittt_loss": nan_mean(norm_ittt_losses),
     })
 
     print("\n === Average Losses === ")
@@ -133,13 +155,43 @@ def analyze_results():
     for col in df.columns:
 
         x = np.arange(len(df[col]))
-        y_running = df[col].rolling(window=500)
+        y_running = df[col].rolling(window=2000)
         
         plt.plot(x, y_running.mean(), label=col)
     
     plt.legend()
     plt.grid()
-    plt.savefig("loss_comparison.png")
+
+    plt.title("iTTT Loss Comparison")
+    plt.xlabel("Token Position")
+    plt.ylabel("Loss (log perplexity)")
+
+    plt.savefig(PREFIX+"loss_comparison.png")
+    plt.clf()
+    
+    diff = ittt_losses - lm_losses
+    norm_diff = norm_ittt_losses - lm_losses
+
+    df = pd.DataFrame({
+        "ittt_diff": nan_mean(diff),
+        "norm_ittt_diff": nan_mean(norm_diff),
+    })
+
+    for col in df.columns:
+        
+        x = np.arange(len(df[col]))
+        y_running = df[col].rolling(window=2000)
+        
+        plt.plot(x, y_running.mean(), label=col)
+    
+    plt.legend()
+    plt.grid()
+
+    plt.title("iTTT Loss Delta")
+    plt.xlabel("Token Position")
+    plt.ylabel("Loss difference with full attn.")
+
+    plt.savefig(PREFIX+"loss_diff_comparison.png")
 
 
 if __name__ == "__main__":
