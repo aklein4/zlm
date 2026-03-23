@@ -65,7 +65,7 @@ rank: 512
 
 base_lr: 1.0e-2
 base_log_beta: 2.0
-momentum_beta: 0.5
+momentum_beta: 0.9
 
 momentum_dtype: bfloat16
 state_dtype: float32

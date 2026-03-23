@@ -58,12 +58,12 @@ def main():
         plt.clf()
 
         plt.hexbin(
-            log_beta.detach().cpu().numpy().flatten(),
             lr[:lr.shape[0]//2].detach().cpu().numpy().flatten(),
+            log_beta.detach().cpu().numpy().flatten(),
             bins='log',
         )
-        plt.xlabel("log10(h)")
-        plt.ylabel("lr")
+        plt.xlabel("log_lr")
+        plt.ylabel("log_beta")
         plt.savefig("ittt_beta_lr_hexbin.png", dpi=300)
         plt.clf()
 

@@ -46,14 +46,8 @@ class ItttFunction(torch.autograd.Function):
         x, momentum, state = ctx.saved_tensors
         mod: ItttLinear = ctx.mod
 
-        x: torch.FloatTensor = x.float()
-        g = grad.float()
-
-        x = F.rms_norm(x, [x.shape[-1]], eps=mod.eps) # [b, s, i]
-        g = F.normalize(g, dim=-2, eps=mod.eps) * math.sqrt(x.shape[-2])  # [b, s, r]
-
         x = x.to(mod.momentum_dtype)
-        g = g.to(mod.momentum_dtype)
+        g = grad.to(mod.momentum_dtype)
 
         # [b, r, i]
         update = (
@@ -70,13 +64,21 @@ class ItttFunction(torch.autograd.Function):
         if not constants.XLA_AVAILABLE:
             ns_fn = cuda_newton_schulz()
 
-        decay_and_non = new_momentum.reshape(
-            new_momentum.shape[0], 2, mod.rank//2, mod.in_features
-        )
-        state_delta = -ns_fn(
-            decay_and_non,
+        dub = (new_momentum.shape[0], 2, mod.rank//2, mod.in_features)
+        whitened = ns_fn(
+            momentum.reshape(*dub),
             eps=mod.eps
-        ).detach().to(mod.state_dtype).reshape_as(state)
+        )
+        new_whitened = ns_fn(
+            new_momentum.reshape(*dub),
+            eps=mod.eps
+        )
+        change = (
+            (new_whitened - whitened * mod.momentum_beta) /
+            (1 - mod.momentum_beta)
+        ).reshape_as(state)
+
+        state_delta = -change.detach().to(mod.state_dtype)
     
         return None, og_grad, None, new_momentum, state_delta
 
@@ -152,9 +154,19 @@ class ItttLinear(nn.Module):
     
 
     def get_lr(self):
-        return (
-            self.base_lr * math.sqrt(max(self.in_features, self.rank/2)) * math.sqrt(1 / self.in_features) *
-            torch.exp(self.log_lr * self.scalar_scaler)
+        
+        # put muon updates on 1/sqrt(i)
+        muon_scale = math.sqrt(max(self.in_features, self.rank/2)) * math.sqrt(1 / self.in_features)
+
+        lr_decay, lr = torch.exp(self.log_lr * self.scalar_scaler).chunk(2, dim=0)
+        decay_beta = self.get_decay_beta()
+
+        return muon_scale * torch.cat(
+            [
+                (1 - decay_beta) * lr_decay,
+                self.base_lr * lr
+            ],
+            dim=0
         )
 
     
