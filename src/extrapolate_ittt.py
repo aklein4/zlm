@@ -39,8 +39,11 @@ def main():
         strict=False,
     ).to(DEVICE)
 
-    if False:
-        beta = model.model.layers[16].mlp.down_proj.get_decay_beta()
+    if True:
+        mod = model.model.layers[16].mlp.down_proj
+
+        log_beta = mod.log_beta * mod.scalar_scaler
+        beta = mod.get_decay_beta()
         h = -np.log(2) / torch.log(beta)
 
         plt.matshow(np.log10(h[:, :512].detach().cpu().numpy()))
@@ -48,14 +51,14 @@ def main():
         plt.savefig("ittt_beta.png", dpi=300)
         plt.clf()
 
-        lr = model.model.layers[0].mlp.down_proj.log_lr * model.model.layers[16].mlp.down_proj.scalar_scaler
+        lr = mod.log_lr * mod.scalar_scaler
         plt.matshow(lr[:, :512].detach().cpu().numpy())
         plt.colorbar()
         plt.savefig("ittt_lr.png")
         plt.clf()
 
         plt.hexbin(
-            np.log10(h.detach().cpu().numpy()).flatten(),
+            log_beta.detach().cpu().numpy().flatten(),
             lr[:lr.shape[0]//2].detach().cpu().numpy().flatten(),
             bins='log',
         )
@@ -64,7 +67,7 @@ def main():
         plt.savefig("ittt_beta_lr_hexbin.png", dpi=300)
         plt.clf()
 
-        plt.hist(h.detach().cpu().numpy().flatten(), bins=1000)
+        plt.hist(np.log10(h.detach().cpu().numpy().flatten()), bins=1000)
         plt.grid()
         plt.savefig("ittt_beta_hist.png", dpi=300)
 
