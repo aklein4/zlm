@@ -55,6 +55,10 @@ class ItttFunction(torch.autograd.Function):
             x = F.rms_norm(x, [x.shape[-1]], eps=mod.eps) # [b, s, i]
             g = F.normalize(g, dim=-2, eps=mod.eps) * math.sqrt(x.shape[-2])  # [b, s, r]
 
+        if mod.center_x:
+
+            x = x - x.mean(dim=-2, keepdim=True)
+
         x = x.to(mod.momentum_dtype)
         g = g.to(mod.momentum_dtype)
 
@@ -106,6 +110,7 @@ class ItttLinear(nn.Module):
         self.state_dtype = getattr(torch, config.state_dtype)
 
         self.normalize_vectors = config.get("normalize_vectors", True)
+        self.center_x = config.get("center_x", False)
 
         # save linear
         self.linear = linear
