@@ -250,7 +250,10 @@ class ItttModel(LlamaForCausalLM):
     @torch.no_grad()
     def update_state(self):
         
-        ref: ItttLinear = self.model.layers[0].mlp.down_proj
+        try:
+            ref: ItttLinear = self.model.layers[0].mlp.down_proj
+        except:
+            ref: ItttLinear = self.model.layers[0]._orig_mod.mlp.down_proj
         if ref.disable_ittt:
             return
 
@@ -258,7 +261,11 @@ class ItttModel(LlamaForCausalLM):
         momentums = []
         for layer in self.model.layers:
             layer: LlamaDecoderLayer
-            m: ItttLinear = layer.mlp.down_proj
+
+            try:
+                m: ItttLinear = layer.mlp.down_proj
+            except:
+                m: ItttLinear = layer._orig_mod.mlp.down_proj
 
             updates.append(m.momentum.grad)
             momentums.append(m.momentum)
@@ -287,7 +294,11 @@ class ItttModel(LlamaForCausalLM):
 
         for i, layer in enumerate(self.model.layers):
             layer: LlamaDecoderLayer
-            m: ItttLinear = layer.mlp.down_proj
+
+            try:
+                m: ItttLinear = layer.mlp.down_proj
+            except:
+                m: ItttLinear = layer._orig_mod.mlp.down_proj
 
             m.state.add_(state_deltas[i].detach())
             m.momentum.copy_(new_momentums[i].detach())
