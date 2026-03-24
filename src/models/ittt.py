@@ -95,7 +95,7 @@ class ItttLinear(nn.Module):
         self.momentum: nn.Buffer
 
         # weight initialization
-        self.base_state_proj.weight.normal_(
+        self.base_state_proj.weight.data.normal_(
             std=math.sqrt(1/self.in_features)
         )
         self.out_proj.weight.data.normal_(
