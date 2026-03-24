@@ -179,10 +179,12 @@ def analyze_results():
     
     diff = ittt_losses - lm_losses
     norm_diff = norm_ittt_losses - lm_losses
+    fancy_diff = fancy_ittt_losses - lm_losses
 
     df = pd.DataFrame({
         "ittt_diff": nan_mean(diff),
         "norm_ittt_diff": nan_mean(norm_diff),
+        "fancy_ittt_diff": nan_mean(fancy_diff),
     })
 
     for col in df.columns:
@@ -203,5 +205,5 @@ def analyze_results():
 
 
 if __name__ == "__main__":
-    main()
+    # main()
     analyze_results()

@@ -10,6 +10,13 @@ TPU quota expires: ~May 31st
 
 https://aklein.bearblog.dev/ittt/
 
+**Release Name Candidates:**
+- InchWorm
+   - The model inches along the context, keeping constant activation sequence length 
+- Dart or Arrow
+   - Training only moves forward (no BPTT)
+
+
 ## Goals
 1. Paper accepted at NeurIPS 2026
    - Paper Abstract Submission Deadline: May 4th
@@ -20,81 +27,127 @@ https://aklein.bearblog.dev/ittt/
 
 
 ## So Far
-
-### Augmenting Existing Models
-- Demonstrated improved perplexity in plug-and-play setting against sliding-window baseline
-- Continued pretraining (2B tokens) improves perplexity against plug-and-play
-   - Still worse than dense attention
-
-### Training From Scratch
 - Pretrained ~1B models on 2B tokens at 32K sequence length
    - Showed decreasing perplexity with token position (including extrapolation) 
    - Beats dense attention baseline (1B tokens iTTT approx 2B tokens attention)
+      - wins by bigger difference at later token positions
 
 
-## Plan
+## Guidelines
+- Focus on novelty:
+   1. O(1) train-time memory (no BPTT)
+- Be sure to mention:
+   1. Native length extrapolation from inductive bias
+   2. Compatibility with existing LoRA engines
+   3. Ease of implementation (python-level ops only like LaCT)
+- Target results:
+   1. Training length performance similar to attention (even past chinchilla optimal training)
+      - iTTT does particularly better than attention early in training because of inductive bias, need to show that attention doesn't overtake later 
+   2. Better length extrapolation than attention
+   3. Particularly good in-context learning performance
+- Thorough benchmarks and baselines (good science)
+   - perplexity as workhorse metric
+   - real-world (RULER, LongBench) is more important than NIAH
+   - Attention is gold-standard baseline, at least need to test SOTA constant state size method (LaCT? TTT-E2E?)
+   - Use best version of baselines to remove doubt
+- Clear-cut compute/memory metrics and graphs
+- Keep methods simple and elegant
+   - minimize hyper-parameters
+   - minimize and ablate arbitrary design decisions 
+- Include _some_ theory
+   - Connections to meta-learning like MAML and Reptile
+   - Muon optimizer connections to Hebbian learning
+   - High-dimensional MLP -> low-noise Hebbian retrieval
+- Prioritize visual diagrams for method explanations 
+- Need a headline result/graph
+   - Match/beat attention with constant training memory
+   - Extrapolate to 1M+ token sequence length
+- At least one interesting observation/finding/behavior
+- Only mention philosophy (convergence, serial compute, etc) in appendix, if at all
 
-### Experimental Setup
 
-#### Training From Scratch
+## Experimental Setup
 
-**Data**
+### Data
 - Training:
    - Dolma3 Longmino at 32K sequence length
 - Evaluation: 
    - Held out LongMino sequences of 32/64/128K+
-   - Book-3
+   - Books 3
 
-**Scale**
-- Small (~125M), Medium (~350M), XL (~1.1B) parameter
+### Scale
+Current compute+time budget gives us at least 150B-250B total tokens of 1B model training 
+- Medium (~350M), XL (~1.1B) parameter
 models
 - Pretrain each to 25B tokens
-   - Chinchilla optimal for 1.1B, well past for smaller models
+   - That is chinchilla optimal for 1.1B
+   - Much longer than chinchilla optimal for smaller models
 
-**Details**
-- SmolLM2 Tokenizer
+### Details
+- SmolLM2 (50K), TinyLlama (32K), or Mixtra (32K) tokenizer?
+   - smaller vocab saves memory
 - QK-Norm in attention?
 - Default Llama init scale?
+- Muon outer optimizer
+- Nothing else fancy about architecture initialization
 
-#### Existing Models
-- TODO
+## Baselines
 
-### Baselines
-
-**Definitely**
+### Definitely
 - Full attention (w/ appropriate rope theta)
 - Sliding Window Attention
 - Hybrid 5:1 SWA + Full attention
 - LaCT
+- E2E-TTT 
 
-**If Time Permitting**
+### If Time Permitting
 1. GLA + SWA
+   - Supposedly strictly worse than LaCT/E2E-TTT
 2. DeltaNet + SWA
-3. E2E-TTT
-4. In-Place TTT
+   - Supposedly strictly worse than LaCT/E2E-TTT
+3. In-Place TTT
+   - Less notable, more relevant for drop-in instead of training from scratch
 
 
-### Evaluation
+## Evaluation
+
+### Definitely
 - Perplexity at token positions
    - up to 32K (interpolation)
    - up 128K or 1M (extrapolation)
-      - use yarn-like adjustment for full attention
-- Needle in a Haystack
-- BABILong
-- Many-shot In-Context Learning
-   - ManyICLBench? 
+      - use yarn-like adjustment for full attention for best performance
+- Real-world benchmarks
+   - RULER
+   - LongBench v2
+   - HELMET
 - Scaling 
    - Training compute/time/memory
    - Inference compute/time/memory
-- Basic reasoning?
-   - ARC, MMLU, etc
+- Many-shot In-Context Learning
+   - ManyICLBench? 
+   - LongBench v2 subset?
 
-### Ablations
-Performed at Small or Medium scale
+### If Time Permitting
+- Needle in a Haystack
+   - Superseded by RULER
+- Basic reasoning (ARC, MMLU, etc)
+
+## Ablations
+Performed at Small (125M) or Medium (350M) scale, trained to 25B tokens? Simple evaluation with perplexity.
+
+### Definitely
 - Chunk size: 512, 1024, 2048
 - LoRA rank: d_h/8, d_h/4, d_h/2
+- Momentum
+   - at least zero momentum since it uses less memory
 - LoRA placement: Q, O, MLP up/gate?
-- Optimizers: Muon, SGD+momentum, SigNum+momentum?
+   - equivalent state size
+- Train up LoRA projection, not just down
+
+### If time permitting
+- Inner optimizers: Muon, SGD+momentum, SigNum+momentum?
+- base_lr
+- base state
 
 
 ## References
@@ -184,3 +237,12 @@ https://aklein.bearblog.dev/monarc/
     - Showed 2x data efficiency vs. baseline in perplexity
  - Continued pretraining ~350M model on 10B tokens
     - Showed more improvement in perplexity
+
+
+
+# iTTT (Drop-In)
+
+## So Far
+- Demonstrated improved perplexity in plug-and-play setting against sliding-window baseline
+- Continued pretraining (2B tokens) improves perplexity against plug-and-play
+   - Still worse than dense attention
