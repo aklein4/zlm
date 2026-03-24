@@ -270,8 +270,11 @@ class ItttModel(LlamaForCausalLM):
             updates.append(m.momentum.grad)
             momentums.append(m.momentum)
         
-        updates = torch.stack(updates, dim=0)
-        momentums = torch.stack(momentums, dim=0)
+        updates = torch.stack(updates, dim=1)
+        momentums = torch.stack(momentums, dim=1)
+
+        updates = maybe_shard_with_gradients(updates)
+        momentums = maybe_shard_with_gradients(momentums)
 
         new_momentums = torch.lerp(
             momentums,
@@ -300,8 +303,8 @@ class ItttModel(LlamaForCausalLM):
             except:
                 m: ItttLinear = layer._orig_mod.mlp.down_proj
 
-            m.state.add_(state_deltas[i].detach())
-            m.momentum.copy_(new_momentums[i].detach())
+            m.state.add_(state_deltas[:, i].detach())
+            m.momentum.copy_(new_momentums[:, i].detach())
             m.momentum.grad.zero_()
 
 
