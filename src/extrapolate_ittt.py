@@ -17,7 +17,7 @@ from utils.loss_utils import lm_loss_fn
 DEVICE = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
 
-CHECKPOINT_URL = 'aklein4/iTTT-TPU_decay-1b'
+CHECKPOINT_URL = 'aklein4/iTTT-TPU_decay-better-1b'
 CHECKPOINT_STEP = 250
 
 DATA_URL = "Geralt-Targaryen/books3"
@@ -46,7 +46,7 @@ def main():
         beta = mod.get_decay_beta()
         h = -np.log(2) / torch.log(beta)
 
-        plt.matshow(np.log10(h[:, :512].detach().cpu().numpy()))
+        plt.matshow(h[:, :512].detach().cpu().numpy())
         plt.colorbar()
         plt.savefig("ittt_beta.png", dpi=300)
         plt.clf()
