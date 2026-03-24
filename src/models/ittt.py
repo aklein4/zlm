@@ -95,7 +95,9 @@ class ItttLinear(nn.Module):
         self.momentum: nn.Buffer
 
         # weight initialization
-        self.base_state_proj.weight.data.zero_()
+        self.base_state_proj.weight.normal_(
+            std=math.sqrt(1/self.in_features)
+        )
         self.out_proj.weight.data.normal_(
             std=config.initializer_range
         )
@@ -120,6 +122,7 @@ class ItttLinear(nn.Module):
     def get_lr(self):
         return (
             self.base_lr *
+            math.sqrt(max(self.in_features, self.rank)) * math.sqrt(1/self.in_features) *
             torch.exp(self.log_lr * self.scalar_scaler)
         )
 
@@ -140,6 +143,7 @@ class ItttLinear(nn.Module):
         z = ItttFunction.apply(x, z, self, self.momentum)
 
         z = z + self.base_state_proj(x)
+        z = F.rms_norm(z, [z.shape[-1]], eps=self.eps)
 
         y_lora = self.out_proj(z)
         y_base = self.linear(x)
