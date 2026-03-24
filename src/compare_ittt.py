@@ -22,18 +22,21 @@ DEVICE = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 LM_URL = 'aklein4/iTTT-TPU_attn-baseline-1b'
 LM_STEP = 2000
 
-ITTT_URL = 'aklein4/iTTT-TPU_alpha-1b'
+ITTT_URL = 'aklein4/iTTT-TPU_fancy-momentum-1b'
 ITTT_STEP = 500
 
 DATA_URL = "Geralt-Targaryen/books3"
 TOKENIZER_URL = os.path.join(constants.LOCAL_DATA_PATH, "tokenizer")
 
 NUM_EXAMPLES = 64
-BS = 2
+BS = 8
 
 SEQUENCE_LENGTH = 1024 * 128
 
+THIS_PREFIX = "fancy_"
 PREFIX = "extrapolate_"
+
+DO_LM = False
 
 
 def main():
@@ -46,13 +49,14 @@ def main():
         collate_fn=TokenizeCollator(TOKENIZER_URL, SEQUENCE_LENGTH),
     )
 
-    print("Loading model...")
-    lm_model: LlamaForCausalLM = load_checkpoint(
-        LM_URL,
-        LM_STEP,
-        attention_kernel="gpu_flash_attention",
-    ).to(DEVICE)
-    # lm_model.lm_head.weight = lm_model.lm_head.weight.cpu()
+    if DO_LM:
+        print("Loading model...")
+        lm_model: LlamaForCausalLM = load_checkpoint(
+            LM_URL,
+            LM_STEP,
+            attention_kernel="gpu_flash_attention",
+        ).to(DEVICE)
+        # lm_model.lm_head.weight = lm_model.lm_head.weight.cpu()
 
     print("Loading ItttModel...")
     ittt_model: ItttModel = load_checkpoint(
@@ -80,51 +84,53 @@ def main():
         ittt_losses.append(loss.cpu())
         del logits
 
-        with torch.no_grad():
-            with torch.autocast(str(constants.DEVICE), torch.bfloat16):
+        if DO_LM:
+            with torch.no_grad():
+                with torch.autocast(str(constants.DEVICE), torch.bfloat16):
 
-                states = lm_model.forward(
-                    input_ids,
-                    return_states=True,
-                    logits_to_keep=slice(0, 1),
-                )[-1]
-                states = lm_model.model.norm(states)
+                    states = lm_model.forward(
+                        input_ids,
+                        return_states=True,
+                        logits_to_keep=slice(0, 1),
+                    )[-1]
+                    states = lm_model.model.norm(states)
 
-                states = states[:, :-1].split(1024, dim=1)
-                labels = input_ids[:, 1:].split(1024, dim=1)
+                    states = states[:, :-1].split(1024, dim=1)
+                    labels = input_ids[:, 1:].split(1024, dim=1)
 
-                loss = []
-                for s, l in tqdm(zip(states, labels), total=len(states), desc="Processing LM Chunks", leave=False):
+                    loss = []
+                    for s, l in tqdm(zip(states, labels), total=len(states), desc="Processing LM Chunks", leave=False):
 
-                    logits = lm_model.lm_head(s).float()
+                        logits = lm_model.lm_head(s).float()
 
-                    curr_loss = lm_loss_fn(
-                        logits, l,
-                        shift_logits=False,
-                        shift_labels=False,
-                        ignore_index=lm_model.config.pad_token_id,
-                        reduction='none',
-                    )
-                    loss.append(curr_loss)
-                
-                loss = torch.cat(loss, dim=1)
+                        curr_loss = lm_loss_fn(
+                            logits, l,
+                            shift_logits=False,
+                            shift_labels=False,
+                            ignore_index=lm_model.config.pad_token_id,
+                            reduction='none',
+                        )
+                        loss.append(curr_loss)
+                    
+                    loss = torch.cat(loss, dim=1)
 
-        lm_losses.append(loss.cpu())
-        del logits
+            lm_losses.append(loss.cpu())
+            del logits
 
         if len(ittt_losses) >= NUM_EXAMPLES // BS:
             break
     
-    lm_losses = torch.cat(lm_losses, dim=0)
-    torch.save(
-        lm_losses,
-        os.path.join(constants.LOCAL_DATA_PATH, PREFIX+"lm_losses_for_comparison.pt")
-    )
+    if DO_LM:
+        lm_losses = torch.cat(lm_losses, dim=0)
+        torch.save(
+            lm_losses,
+            os.path.join(constants.LOCAL_DATA_PATH, THIS_PREFIX+PREFIX+"lm_losses_for_comparison.pt")
+        )
     
     ittt_losses = torch.cat(ittt_losses, dim=0)
     torch.save(
         ittt_losses,
-        os.path.join(constants.LOCAL_DATA_PATH, PREFIX+"ittt_losses_for_comparison.pt")
+        os.path.join(constants.LOCAL_DATA_PATH, THIS_PREFIX+PREFIX+"ittt_losses_for_comparison.pt")
     )
 
 
@@ -140,11 +146,13 @@ def analyze_results():
     lm_losses = torch.load(os.path.join(constants.LOCAL_DATA_PATH, PREFIX+"lm_losses_for_comparison.pt")).float().numpy()
     ittt_losses = torch.load(os.path.join(constants.LOCAL_DATA_PATH, PREFIX+"ittt_losses_for_comparison.pt")).float().numpy()
     norm_ittt_losses = torch.load(os.path.join(constants.LOCAL_DATA_PATH, "norm_"+PREFIX+"ittt_losses_for_comparison.pt")).float().numpy()
+    fancy_ittt_losses = torch.load(os.path.join(constants.LOCAL_DATA_PATH, "fancy_"+PREFIX+"ittt_losses_for_comparison.pt")).float().numpy()
 
     df = pd.DataFrame({
         "lm_loss": nan_mean(lm_losses),
         "ittt_loss": nan_mean(ittt_losses),
         "norm_ittt_loss": nan_mean(norm_ittt_losses),
+        "fancy_ittt_loss": nan_mean(fancy_ittt_losses),
     })
 
     print("\n === Average Losses === ")
@@ -195,5 +203,5 @@ def analyze_results():
 
 
 if __name__ == "__main__":
-    # main()
+    main()
     analyze_results()

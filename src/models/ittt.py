@@ -74,8 +74,8 @@ class ItttFunction(torch.autograd.Function):
         ).detach()
 
         ns_fn = newton_schulz
-        if not constants.XLA_AVAILABLE:
-            ns_fn = cuda_newton_schulz()
+        if not constants.XLA_AVAILABLE and False:
+            ns_fn = lambda x, eps: cuda_newton_schulz()(x, eps=eps).clone()
 
         if mod.fancy_momentum:
 
