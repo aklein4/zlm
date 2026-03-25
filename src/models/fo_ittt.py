@@ -94,7 +94,7 @@ def second_backward(ctx, grad):
     grad_lm = maybe_shard_with_gradients(grad_lm.clone())
 
     # do a regular backwards with the lm components
-    _, __, ___, update_lm, raw_G_lm, ____, _____, ______ = first_backward(ctx, g_lm, x_kwarg=x)
+    _, __, ___, update_lm, raw_G_lm, ____, _____, ______ = first_backward(ctx, grad_lm, x_kwarg=x)
 
     # calculate the future first-order gradients
     G_so_far = grad_buffer + raw_G_lm
