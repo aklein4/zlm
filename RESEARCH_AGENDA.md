@@ -69,8 +69,9 @@ https://aklein.bearblog.dev/ittt/
 ## Things to Try
 - [x] L2-norm state (with and without grads accounting for it)
    - Worse performance, no difference in extrapolation
-- [ ] RMS-norm on z
-- [ ] Update LoRA matrix also
+- [x] RMS-norm on z
+   - much worse performance
+- [ ] Update LoRA-up matrix also
 - [ ] RoPE on continual state
 - [ ] Continual weights on other matrices (QKV,O,up/gate)
 
