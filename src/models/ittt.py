@@ -273,15 +273,35 @@ class ItttModel(LlamaForCausalLM):
             )
 
             if attn_ittt:
-                layer.self_attn.q_proj = ItttLinear(
-                    layer.self_attn.q_proj,
-                    config
+                a = layer.self_attn
+
+                qkv_proj = nn.Linear(
+                    a.hidden_size,
+                    (
+                        a.num_heads * a.head_dim +
+                        a.num_key_value_heads * a.head_dim * 2
+                    ),
+                    bias=False # this is fine for most cases
                 )
-                layer.self_attn.o_proj = ItttLinear(
-                    layer.self_attn.o_proj,
-                    config
+                qkv_proj.weight.data.copy_(
+                    torch.cat(
+                        [
+                            a.q_proj.weight.data,
+                            a.k_proj.weight.data,
+                            a.v_proj.weight.data,
+                        ],
+                        dim=0
+                    )
                 )
 
+                a.qkv_proj = ItttLinear(
+                    qkv_proj,
+                    config
+                )
+                a.q_proj = None
+                a.k_proj = None
+                a.v_proj = None
+                
 
     @torch.no_grad()
     def init_state(self, bs: int, device: torch.device):

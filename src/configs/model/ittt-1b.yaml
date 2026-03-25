@@ -64,7 +64,9 @@ chunk_size: 1024
 rank: 512
 
 base_lr: 1.0e-2
-momentum_beta: 0.75
+momentum_beta: 0.9
+
+fancy_momentum: true
 
 momentum_dtype: bfloat16
 state_dtype: float32
