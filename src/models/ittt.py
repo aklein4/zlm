@@ -10,6 +10,8 @@ import math
 from omegaconf import DictConfig
 from tqdm import tqdm
 
+from transformers.activations import ACT2FN
+
 from models.llama import LlamaForCausalLM, LlamaDecoderLayer
 from utils.sharding_utils import maybe_shard_with_gradients
 from utils.torch_utils import newton_schulz, cuda_newton_schulz
@@ -76,6 +78,8 @@ class ItttLinear(nn.Module):
         self.momentum_dtype = getattr(torch, config.momentum_dtype)
         self.state_dtype = getattr(torch, config.state_dtype)
 
+        self.act_fn = ACT2FN[config.hidden_act]
+
         # save linear
         self.linear = linear
         
@@ -84,6 +88,9 @@ class ItttLinear(nn.Module):
             torch.zeros(self.rank, self.in_features)
         )
         self.base_state_proj = nn.Linear(
+            self.in_features, self.rank, bias=False
+        )
+        self.gate_proj = nn.Linear(
             self.in_features, self.rank, bias=False
         )
         self.out_proj = nn.Linear(
@@ -95,8 +102,9 @@ class ItttLinear(nn.Module):
         self.momentum: nn.Buffer
 
         # weight initialization
-        self.base_state_proj.weight.data.normal_(
-            std=math.sqrt(1/self.in_features)
+        self.base_state_proj.weight.data.zero_()
+        self.gate_proj.weight.data.normal_(
+            std=config.initializer_range
         )
         self.out_proj.weight.data.normal_(
             std=config.initializer_range
@@ -143,7 +151,7 @@ class ItttLinear(nn.Module):
         z = ItttFunction.apply(x, z, self, self.momentum)
 
         z = z + self.base_state_proj(x)
-        z = F.rms_norm(z, [z.shape[-1]], eps=self.eps)
+        z = z * self.act_fn(self.gate_proj(x))
 
         y_lora = self.out_proj(z)
         y_base = self.linear(x)
