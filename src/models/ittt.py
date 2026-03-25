@@ -10,8 +10,6 @@ import math
 from omegaconf import DictConfig
 from tqdm import tqdm
 
-from transformers.activations import ACT2FN
-
 from models.llama import LlamaForCausalLM, LlamaDecoderLayer
 from utils.sharding_utils import maybe_shard_with_gradients
 from utils.torch_utils import newton_schulz, cuda_newton_schulz
@@ -78,8 +76,6 @@ class ItttLinear(nn.Module):
         self.momentum_dtype = getattr(torch, config.momentum_dtype)
         self.state_dtype = getattr(torch, config.state_dtype)
 
-        self.act_fn = ACT2FN[config.hidden_act]
-
         # save linear
         self.linear = linear
         
@@ -88,9 +84,6 @@ class ItttLinear(nn.Module):
             torch.zeros(self.rank, self.in_features)
         )
         self.base_state_proj = nn.Linear(
-            self.in_features, self.rank, bias=False
-        )
-        self.gate_proj = nn.Linear(
             self.in_features, self.rank, bias=False
         )
         self.out_proj = nn.Linear(
@@ -103,9 +96,6 @@ class ItttLinear(nn.Module):
 
         # weight initialization
         self.base_state_proj.weight.data.zero_()
-        self.gate_proj.weight.data.normal_(
-            std=config.initializer_range
-        )
         self.out_proj.weight.data.normal_(
             std=config.initializer_range
         )
@@ -151,7 +141,6 @@ class ItttLinear(nn.Module):
         z = ItttFunction.apply(x, z, self, self.momentum)
 
         z = z + self.base_state_proj(x)
-        z = z * self.act_fn(self.gate_proj(x))
 
         y_lora = self.out_proj(z)
         y_base = self.linear(x)
@@ -212,17 +201,9 @@ class ItttLinear(nn.Module):
         )
 
         whitened = newton_schulz(
-            self.momentum, eps=self.eps
-        )
-        new_whitened = newton_schulz(
             new_momentum, eps=self.eps
         )
-        change = (
-            (new_whitened - whitened * self.momentum_beta) /
-            (1 - self.momentum_beta)
-        )
-
-        state_delta = -change.to(self.state_dtype)
+        state_delta = -whitened.to(self.state_dtype)
         
         self.state.add_(state_delta.detach())
         
@@ -295,17 +276,10 @@ class ItttModel(LlamaForCausalLM):
         )
 
         whitened = newton_schulz(
-            momentums, eps=ref.eps
-        )
-        new_whitened = newton_schulz(
             new_momentums, eps=ref.eps
         )
-        change = (
-            (new_whitened - whitened * ref.momentum_beta) /
-            (1 - ref.momentum_beta)
-        )
 
-        state_deltas = -change.to(ref.state_dtype)
+        state_deltas = -whitened.to(ref.state_dtype)
 
         for i, layer in enumerate(self.model.layers):
             layer: LlamaDecoderLayer
