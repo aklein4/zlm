@@ -22,18 +22,19 @@ class FoItttFunction(torch.autograd.Function):
     def forward(
         ctx,
         x: torch.FloatTensor,
-        z: torch.FloatTensor,
+        y: torch.FloatTensor,
         mod: "ItttLinear",
         state: torch.FloatTensor,
         grad_buffer: torch.FloatTensor,
         final_grad_buffer: torch.FloatTensor,
         lr: torch.FloatTensor,
+        out_proj_weight: torch.FloatTensor,
     ) -> torch.FloatTensor:
         
-        ctx.save_for_backward(x, state, grad_buffer, final_grad_buffer, lr)
+        ctx.save_for_backward(x, state, grad_buffer, final_grad_buffer, lr, out_proj_weight)
         ctx.mod = mod
 
-        return z.clone()
+        return y.clone()
 
 
     @staticmethod
@@ -52,43 +53,35 @@ class FoItttFunction(torch.autograd.Function):
 def first_backward(ctx, grad, x_kwarg=None):
     og_grad = grad.clone()
 
-    x, state, grad_buffer, final_grad_buffer, lr = ctx.saved_tensors
+    x, state, grad_buffer, final_grad_buffer, lr, out_proj_weight = ctx.saved_tensors
     if x_kwarg is not None:
         x = x_kwarg
     mod: FoItttLinear = ctx.mod
 
+    # get the inner gradient blo,bor->blr
+    g = (
+        grad.to(torch.bfloat16)
+        @ out_proj_weight[None].to(torch.bfloat16)
+    )
+
     # calculate the raw gradients for the grad buffer
     raw_G = (
-        grad.transpose(-2, -1).to(torch.bfloat16)
+        g.transpose(-2, -1)
         @ x.to(torch.bfloat16)
-    ).to(grad_buffer.dtype)
+    )
 
-    # x is centered and std-normalized, g is rms-normalized
-    x = x.float() # [b, s, i]
-    g = grad.float() # [b, s, r]
-
-    x = x - x.mean(dim=-2, keepdim=True)
-    x = F.normalize(x, dim=-2, eps=mod.eps) * math.sqrt(x.shape[-2])
-    g = F.normalize(g, dim=-2, eps=mod.eps) * math.sqrt(x.shape[-2])
-    
-    # [b, r, i]
-    update = (
-        g.transpose(-2, -1).to(torch.bfloat16)
-        @ x.to(torch.bfloat16)
-    ) / math.sqrt(x.shape[-2]) # approx 1 std
-
-    # gradient descent and scaling
-    update = -(
-        update / math.sqrt(mod.in_features)
+    # calculate the update for the state
+    update = -newton_schulz(
+        raw_G, eps=mod.eps,
     ).to(state.dtype)
 
-    return None, og_grad, None, update, raw_G, None, None
+    return None, og_grad, None, update, raw_G.to(grad_buffer.dtype), None, None, None
 
 
 def second_backward(ctx, grad):
     og_grad = grad.clone()
 
-    x, state, grad_buffer, final_grad_buffer, lr = ctx.saved_tensors
+    x, state, grad_buffer, final_grad_buffer, lr, out_proj_weight = ctx.saved_tensors
     mod: FoItttLinear = ctx.mod
 
     x_dtype = x.dtype
@@ -97,11 +90,11 @@ def second_backward(ctx, grad):
     x = x[:x.shape[0]//2]
     x = maybe_shard_with_gradients(x.clone())
 
-    g_lm = grad[:grad.shape[0]//2]
-    g_lm = maybe_shard_with_gradients(g_lm.clone())
+    grad_lm = grad[:grad.shape[0]//2]
+    grad_lm = maybe_shard_with_gradients(grad_lm.clone())
 
     # do a regular backwards with the lm components
-    _, __, ___, update_lm, raw_G_lm, ____, _____ = first_backward(ctx, g_lm, x_kwarg=x)
+    _, __, ___, update_lm, raw_G_lm, ____, _____, ______ = first_backward(ctx, g_lm, x_kwarg=x)
 
     # calculate the future first-order gradients
     G_so_far = grad_buffer + raw_G_lm
@@ -109,37 +102,36 @@ def second_backward(ctx, grad):
 
     with torch.set_grad_enabled(True):
 
-        x_leaf = x.detach().clone().requires_grad_(True)
+        x_leaf = x.detach().clone().requires_grad_(True).to(torch.bfloat16)
+        out_proj_weight_leaf = out_proj_weight.detach().requires_grad_(True).to(torch.bfloat16)
         
-        g_lm = g_lm.detach().requires_grad_(False)
-        G_future = G_future.detach().requires_grad_(False)
+        grad_lm = grad_lm.detach().requires_grad_(False).to(torch.bfloat16) 
+        G_future = G_future.detach().requires_grad_(False).to(torch.bfloat16)
+        lr = lr.detach().requires_grad_(False).to(torch.bfloat16)
 
-        x = x_leaf.float()
-        g_lm = g_lm.float()
-
-        x = x - x.mean(dim=-2, keepdim=True)
-        x = F.normalize(x, dim=-2, eps=mod.eps) * math.sqrt(x.shape[-2])
-        g_lm = F.normalize(g_lm, dim=-2, eps=mod.eps) * math.sqrt(x.shape[-2])
-
-        update = (
-            g_lm.transpose(-2, -1).to(torch.bfloat16)
-            @ x.to(torch.bfloat16)
-        ) / math.sqrt(x.shape[-2]) # approx 1 std
-
-        update = -(
-            update / math.sqrt(mod.in_features)
+        # get the inner gradient blo,bor->blr
+        g_lm = (
+            grad_lm
+            @ out_proj_weight_leaf[None]
         )
 
-        delta = (
-            update *
-            lr[None].detach().to(update.dtype)
-        ).to(G_future.dtype)
+        # calculate the raw gradients for the grad buffer
+        raw_G = (
+            g_lm.transpose(-2, -1)
+            @ x_leaf
+        )
 
-        x_grad_fo = torch.autograd.grad(
+        # calculate the update for the state
+        update = -newton_schulz(
+            raw_G, eps=mod.eps,
+        )
+        delta = update * lr[None]
+
+        x_grad_fo, out_proj_weight_grad_fo = torch.autograd.grad(
             delta,
-            x_leaf,
+            [x_leaf, out_proj_weight_leaf],
             grad_outputs=G_future,
-        )[0]
+        )
 
     # lm, fo
     x_grad = torch.cat(
@@ -148,7 +140,9 @@ def second_backward(ctx, grad):
     ).to(x_dtype)
     x_grad = maybe_shard_with_gradients(x_grad).detach()
 
-    return x_grad, og_grad, None, update_lm, raw_G_lm, None, None
+    out_proj_weight_grad = out_proj_weight_grad_fo.to(out_proj_weight.dtype)
+
+    return x_grad, og_grad, None, update_lm, raw_G_lm, None, None, out_proj_weight_grad
 
         
 class FoItttLinear(nn.Module):
@@ -204,6 +198,7 @@ class FoItttLinear(nn.Module):
     def get_lr(self) -> torch.FloatTensor:
         return (
             self.base_lr *
+            math.sqrt(max(self.in_features, self.rank) / self.in_features) *
             torch.exp(self.log_lr * self.scalar_scaler)
         )
 
@@ -222,13 +217,17 @@ class FoItttLinear(nn.Module):
             s = maybe_shard_with_gradients(s)
 
         z = torch.einsum("boi,bsi->bso", s, x)
-        z = FoItttFunction.apply(x, z, self, self.state, self.grad_buffer, self.final_grad_buffer, lr)
-
         z = z + self.base_state_proj(x)
-
+        
         y_lora = self.out_proj(z)
-        y_base = self.linear(x)
 
+        y_lora = FoItttFunction.apply(
+            x, y_lora, self,
+            self.state, self.grad_buffer, self.final_grad_buffer,
+            lr, self.out_proj.weight
+        )
+        
+        y_base = self.linear(x)
         y = y_base + y_lora
 
         return y
@@ -300,7 +299,7 @@ class FoItttLinear(nn.Module):
     @torch.no_grad()
     def relative_grad_error(self):
 
-        est = self.grad_buffer
+        est = self.grad_buffer + self.grad_buffer.grad
         target = self.final_grad_buffer
 
         err = (est - target).norm()

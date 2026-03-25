@@ -34,6 +34,7 @@ if constants.XLA_AVAILABLE:
     from torchprime.torch_xla_models import offloading
 from utils.attention_utils import AtttentionProbe
 from utils.loss_utils import lm_loss_fn
+from utils.sharding_utils import maybe_shard_with_gradients
 
 
 logger = logging.get_logger(__name__)
@@ -499,6 +500,7 @@ class LlamaForCausalLM(nn.Module):
         attention_mask: torch.FloatTensor | None = None, # only used in non-kernel attention
         shift_states: bool = False,
         logits_to_keep: slice | None = None,
+        sequences_to_keep: slice | None = None,
         return_states: bool = False,
     ) -> tuple[torch.FloatTensor, torch.FloatTensor | None]:
         """
@@ -526,6 +528,9 @@ class LlamaForCausalLM(nn.Module):
             lm_states = lm_states[..., :-1, :].contiguous()
         elif logits_to_keep is not None:
             lm_states = lm_states[:, logits_to_keep, :].contiguous()
+        if sequences_to_keep is not None:
+            lm_states = lm_states[sequences_to_keep, :, :].contiguous()
+            lm_states = maybe_shard_with_gradients(lm_states)
 
         logits = self.lm_head(lm_states)
         logits = logits.to(torch.float32)
