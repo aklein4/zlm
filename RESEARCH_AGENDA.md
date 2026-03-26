@@ -66,16 +66,6 @@ https://aklein.bearblog.dev/ittt/
 - Only mention philosophy (convergence, serial compute, etc) in appendix, if at all
 
 
-## Things to Try
-- [x] L2-norm state (with and without grads accounting for it)
-   - Worse performance, no difference in extrapolation
-- [x] RMS-norm on z
-   - much worse performance
-- [ ] Update LoRA-up matrix also
-- [ ] RoPE on continual state
-- [ ] Continual weights on other matrices (QKV,O,up/gate)
-
-
 ## Experimental Setup
 
 ### Data
@@ -100,7 +90,6 @@ models
 - Default Llama init scale?
 - Muon outer optimizer
 - Nothing else fancy about architecture initialization
-
 
 ## Baselines
 
@@ -142,7 +131,6 @@ models
 - Needle in a Haystack
    - Superseded by RULER
 - Basic reasoning (ARC, MMLU, etc)
-
 
 ## Ablations
 Performed at Small (125M) or Medium (350M) scale, trained to 25B tokens? Simple evaluation with perplexity.

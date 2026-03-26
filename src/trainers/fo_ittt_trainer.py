@@ -75,9 +75,11 @@ class FoItttTrainer(BaseTrainer):
 
             logits = self.model(
                 double_chunk,
-                logits_to_keep=slice(0, -1),
-                sequences_to_keep=slice(0, chunk.shape[0])
+                logits_to_keep=slice(0, -1)
             )[0]
+
+            logits = logits[:logits.shape[0]//2]
+            logits = maybe_shard_with_gradients(logits)
 
             loss = self.loss(chunk, logits)
 
@@ -129,9 +131,11 @@ class FoItttTrainer(BaseTrainer):
 
             logits = self.model(
                 double_all_chunk,
-                logits_to_keep=slice(in_chunk.shape[-1]-1, -1),
-                sequences_to_keep=slice(0, in_chunk.shape[0])
+                logits_to_keep=slice(in_chunk.shape[-1]-1, -1)
             )[0]
+
+            logits = logits[:logits.shape[0]//2]
+            logits = maybe_shard_with_gradients(logits)
 
             loss = self.loss(
                 all_chunk[:, in_chunk.shape[-1]-1:],

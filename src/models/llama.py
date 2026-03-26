@@ -34,7 +34,6 @@ if constants.XLA_AVAILABLE:
     from torchprime.torch_xla_models import offloading
 from utils.attention_utils import AtttentionProbe
 from utils.loss_utils import lm_loss_fn
-from utils.sharding_utils import maybe_shard_with_gradients
 
 
 logger = logging.get_logger(__name__)
@@ -247,22 +246,9 @@ class LlamaAttention(nn.Module):
     ) -> torch.FloatTensor:
         bsz, q_len, _ = hidden_states.shape
 
-        if hasattr(self, "qkv_proj"):
-            qkv_states = self.qkv_proj(hidden_states)
-            query_states, key_states, value_states = torch.split(
-                qkv_states,
-                [
-                    self.num_heads * self.head_dim,
-                    self.num_key_value_heads * self.head_dim,
-                    self.num_key_value_heads * self.head_dim,
-                ],
-                dim=-1,
-            )
-
-        else:
-            query_states = self.q_proj(hidden_states)
-            key_states = self.k_proj(hidden_states)
-            value_states = self.v_proj(hidden_states)
+        query_states = self.q_proj(hidden_states)
+        key_states = self.k_proj(hidden_states)
+        value_states = self.v_proj(hidden_states)
 
         query_states = query_states.view(
             bsz, q_len, self.num_heads, self.head_dim
@@ -500,7 +486,6 @@ class LlamaForCausalLM(nn.Module):
         attention_mask: torch.FloatTensor | None = None, # only used in non-kernel attention
         shift_states: bool = False,
         logits_to_keep: slice | None = None,
-        sequences_to_keep: slice | None = None,
         return_states: bool = False,
     ) -> tuple[torch.FloatTensor, torch.FloatTensor | None]:
         """
@@ -528,9 +513,6 @@ class LlamaForCausalLM(nn.Module):
             lm_states = lm_states[..., :-1, :].contiguous()
         elif logits_to_keep is not None:
             lm_states = lm_states[:, logits_to_keep, :].contiguous()
-        if sequences_to_keep is not None:
-            lm_states = lm_states[sequences_to_keep, :, :].contiguous()
-            lm_states = maybe_shard_with_gradients(lm_states)
 
         logits = self.lm_head(lm_states)
         logits = logits.to(torch.float32)

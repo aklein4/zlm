@@ -27,9 +27,8 @@ class ItttFunction(torch.autograd.Function):
         z: torch.FloatTensor,
         mod: "ItttLinear",
         momentum: torch.FloatTensor,
-        state: torch.FloatTensor,
     ) -> torch.FloatTensor:
-        ctx.save_for_backward(x, momentum, state)
+        ctx.save_for_backward(x)
         ctx.mod = mod
         return z.clone()
 
@@ -41,66 +40,16 @@ class ItttFunction(torch.autograd.Function):
         grad: torch.FloatTensor
     ) -> tuple[None, torch.FloatTensor, None]:
 
-        og_grad = grad.clone()
-
-        x, momentum, state = ctx.saved_tensors
+        x, = ctx.saved_tensors
         mod: ItttLinear = ctx.mod
-        g = grad
-
-        if mod.normalize_vectors:
-            
-            x: torch.FloatTensor = x.float()
-            g = g.float()
-
-            x = F.rms_norm(x, [x.shape[-1]], eps=mod.eps) # [b, s, i]
-            g = F.normalize(g, dim=-2, eps=mod.eps) * math.sqrt(x.shape[-2])  # [b, s, r]
-
-        if mod.center_x:
-
-            x = x - x.mean(dim=-2, keepdim=True)
-
-        x = x.to(mod.momentum_dtype)
-        g = g.to(mod.momentum_dtype)
 
         # [b, r, i]
         update = (
-            g.transpose(-2, -1) @ x
-        ) / math.sqrt(x.shape[-2]) # approx 1 std
-
-        new_momentum = torch.lerp(
-            momentum,
-            update,
-            1 - mod.momentum_beta
-        ).detach()
-
-        ns_fn = newton_schulz
-        if not constants.XLA_AVAILABLE and False:
-            ns_fn = lambda x, eps: cuda_newton_schulz()(x, eps=eps).clone()
-
-        if mod.fancy_momentum:
-
-            whitened = ns_fn(
-                momentum,
-                eps=mod.eps
-            )
-            new_whitened = ns_fn(
-                new_momentum,
-                eps=mod.eps
-            )
-            change = (
-                (new_whitened - whitened * mod.momentum_beta) /
-                (1 - mod.momentum_beta)
-            )
-
-        else:
-            change = ns_fn(
-                new_momentum,
-                eps=mod.eps
-            )
-
-        state_delta = -change.detach().to(mod.state_dtype)
+            grad.to(mod.momentum_dtype).transpose(-2, -1) @
+            x.to(mod.momentum_dtype)
+        )
     
-        return None, og_grad, None, new_momentum, state_delta
+        return None, grad, None, update
 
         
 class ItttLinear(nn.Module):
@@ -126,10 +75,6 @@ class ItttLinear(nn.Module):
 
         self.momentum_dtype = getattr(torch, config.momentum_dtype)
         self.state_dtype = getattr(torch, config.state_dtype)
-
-        self.normalize_vectors = config.get("normalize_vectors", True)
-        self.center_x = config.get("center_x", False)
-        self.fancy_momentum = config.get("fancy_momentum", False)
 
         # save linear
         self.linear = linear
@@ -175,6 +120,7 @@ class ItttLinear(nn.Module):
     def get_lr(self):
         return (
             self.base_lr *
+            math.sqrt(max(self.in_features, self.rank)) * math.sqrt(1/self.in_features) *
             torch.exp(self.log_lr * self.scalar_scaler)
         )
 
@@ -192,7 +138,7 @@ class ItttLinear(nn.Module):
         s = lr[None] * self.state.detach()
 
         z = torch.einsum("boi,bsi->bso", s, x)
-        z = ItttFunction.apply(x, z, self, self.momentum, self.state)
+        z = ItttFunction.apply(x, z, self, self.momentum)
 
         z = z + self.base_state_proj(x)
 
@@ -223,9 +169,7 @@ class ItttLinear(nn.Module):
         self.register_buffer("state", state, persistent=False)
         self.register_buffer("momentum", momentum, persistent=False)
         
-        self.state.requires_grad_(True)
-        self.state.grad = torch.zeros_like(self.state)
-        self.state.grad = maybe_shard_with_gradients(self.state.grad)
+        self.state.requires_grad_(False)
 
         self.momentum.requires_grad_(True)
         self.momentum.grad = torch.zeros_like(self.momentum)
@@ -238,7 +182,6 @@ class ItttLinear(nn.Module):
             return
 
         self.state.zero_()
-        self.state.grad.zero_()
 
         self.momentum.zero_()
         self.momentum.grad.zero_()
@@ -249,10 +192,22 @@ class ItttLinear(nn.Module):
         if self.disable_ittt:
             return
         
-        self.state.add_(self.state.grad)
-        self.state.grad.zero_()
+        update = self.momentum.grad
+
+        new_momentum = torch.lerp(
+            self.momentum,
+            update,
+            1 - self.momentum_beta
+        )
+
+        whitened = newton_schulz(
+            new_momentum, eps=self.eps
+        )
+        state_delta = -whitened.to(self.state_dtype)
         
-        self.momentum.copy_(self.momentum.grad)
+        self.state.add_(state_delta.detach())
+        
+        self.momentum.copy_(new_momentum.detach())
         self.momentum.grad.zero_()
 
 
@@ -262,8 +217,6 @@ class ItttModel(LlamaForCausalLM):
     def __init__(self, config):
         super().__init__(config)
 
-        attn_ittt = config.get("attn_ittt", False)
-
         for layer in self.model.layers:
             layer: LlamaDecoderLayer
 
@@ -272,36 +225,6 @@ class ItttModel(LlamaForCausalLM):
                 config
             )
 
-            if attn_ittt:
-                a = layer.self_attn
-
-                qkv_proj = nn.Linear(
-                    a.hidden_size,
-                    (
-                        a.num_heads * a.head_dim +
-                        a.num_key_value_heads * a.head_dim * 2
-                    ),
-                    bias=False # this is fine for most cases
-                )
-                qkv_proj.weight.data.copy_(
-                    torch.cat(
-                        [
-                            a.q_proj.weight.data,
-                            a.k_proj.weight.data,
-                            a.v_proj.weight.data,
-                        ],
-                        dim=0
-                    )
-                )
-
-                a.qkv_proj = ItttLinear(
-                    qkv_proj,
-                    config
-                )
-                a.q_proj = None
-                a.k_proj = None
-                a.v_proj = None
-                
 
     @torch.no_grad()
     def init_state(self, bs: int, device: torch.device):
@@ -319,10 +242,57 @@ class ItttModel(LlamaForCausalLM):
 
     @torch.no_grad()
     def update_state(self):
-        for m in self.modules():
-            if isinstance(m, ItttLinear):
-                m.update_state()
-                    
+        
+        try:
+            ref: ItttLinear = self.model.layers[0].mlp.down_proj
+        except:
+            ref: ItttLinear = self.model.layers[0]._orig_mod.mlp.down_proj
+        if ref.disable_ittt:
+            return
+
+        updates = []
+        momentums = []
+        for layer in self.model.layers:
+            layer: LlamaDecoderLayer
+
+            try:
+                m: ItttLinear = layer.mlp.down_proj
+            except:
+                m: ItttLinear = layer._orig_mod.mlp.down_proj
+
+            updates.append(m.momentum.grad)
+            momentums.append(m.momentum)
+        
+        updates = torch.stack(updates, dim=1)
+        momentums = torch.stack(momentums, dim=1)
+
+        updates = maybe_shard_with_gradients(updates)
+        momentums = maybe_shard_with_gradients(momentums)
+
+        new_momentums = torch.lerp(
+            momentums,
+            updates,
+            1 - ref.momentum_beta
+        )
+
+        whitened = newton_schulz(
+            new_momentums, eps=ref.eps
+        )
+
+        state_deltas = -whitened.to(ref.state_dtype)
+
+        for i, layer in enumerate(self.model.layers):
+            layer: LlamaDecoderLayer
+
+            try:
+                m: ItttLinear = layer.mlp.down_proj
+            except:
+                m: ItttLinear = layer._orig_mod.mlp.down_proj
+
+            m.state.add_(state_deltas[:, i].detach())
+            m.momentum.copy_(new_momentums[:, i].detach())
+            m.momentum.grad.zero_()
+
 
     def compute_logits(
         self,
