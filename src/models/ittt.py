@@ -10,6 +10,8 @@ import math
 from omegaconf import DictConfig
 from tqdm import tqdm
 
+from transformers.activations import ACT2FN
+
 from models.llama import LlamaForCausalLM, LlamaDecoderLayer
 from utils.sharding_utils import maybe_shard_with_gradients
 from utils.torch_utils import newton_schulz, cuda_newton_schulz
@@ -24,13 +26,13 @@ class ItttFunction(torch.autograd.Function):
     def forward(
         ctx,
         x: torch.FloatTensor,
-        z: torch.FloatTensor,
+        y: torch.FloatTensor,
         mod: "ItttLinear",
         momentum: torch.FloatTensor,
     ) -> torch.FloatTensor:
         ctx.save_for_backward(x)
         ctx.mod = mod
-        return z.clone()
+        return y.clone()
 
 
     @staticmethod
@@ -56,16 +58,15 @@ class ItttLinear(nn.Module):
 
     def __init__(
         self,
-        linear: nn.Linear,
+        in_features: int,
+        out_features: int,
         config: DictConfig,
-        rank: int | None = None,
     ):
         super().__init__()
 
         # save config
-        self.in_features = linear.in_features
-        self.out_features = linear.out_features
-        self.rank = rank if rank is not None else config.rank
+        self.in_features = in_features
+        self.out_features = out_features
 
         self.base_lr = config.base_lr
         self.momentum_beta = config.momentum_beta
@@ -75,19 +76,13 @@ class ItttLinear(nn.Module):
 
         self.momentum_dtype = getattr(torch, config.momentum_dtype)
         self.state_dtype = getattr(torch, config.state_dtype)
-
-        # save linear
-        self.linear = linear
         
         # ittt params
         self.log_lr = nn.Parameter(
-            torch.zeros(self.rank, self.in_features)
+            torch.zeros(self.out_features, self.in_features)
         )
-        self.base_state_proj = nn.Linear(
-            self.in_features, self.rank, bias=False
-        )
-        self.out_proj = nn.Linear(
-            self.rank, self.out_features, bias=False
+        self.base_proj = nn.Linear(
+            self.in_features, self.out_features, bias=False
         )
 
         # ephemeral state
@@ -95,32 +90,15 @@ class ItttLinear(nn.Module):
         self.momentum: nn.Buffer
 
         # weight initialization
-        self.base_state_proj.weight.data.zero_()
-        self.out_proj.weight.data.normal_(
-            std=config.initializer_range
+        self.base_proj.weight.data.normal_(
+            std=1/math.sqrt(self.in_features)
         )
-
-        # self.svd_init()
-
-        # for baselines
-        self.disable_ittt = config.get("disable_ittt", False)
-
-    
-    # @torch.no_grad()
-    # def svd_init(self):
-
-    #     u, s, v = torch.linalg.svd(self.weight, full_matrices=False)
-
-    #     self.out_proj.copy_(
-    #         u[:, :self.rank] *
-    #         s[None, :self.rank]
-    #     )
     
 
     def get_lr(self):
         return (
             self.base_lr *
-            math.sqrt(max(self.in_features, self.rank)) * math.sqrt(1/self.in_features) *
+            math.sqrt(max(self.in_features, self.out_features)) * math.sqrt(1/self.in_features) *
             torch.exp(self.log_lr * self.scalar_scaler)
         )
 
@@ -129,34 +107,24 @@ class ItttLinear(nn.Module):
         self,
         x: torch.FloatTensor,
     ) -> torch.FloatTensor:
-        if self.disable_ittt:
-            return self.linear(x)
 
         assert x.ndim == 3, "x must be 3D (batch, seq_len, dim)"
 
-        lr = self.get_lr()
-        s = lr[None] * self.state.detach()
+        s = self.get_lr() * self.state.detach()
 
-        z = torch.einsum("boi,bsi->bso", s, x)
-        z = ItttFunction.apply(x, z, self, self.momentum)
+        y = torch.einsum("boi,bsi->bso", s, x)
+        y = ItttFunction.apply(x, y, self, self.momentum)
 
-        z = z + self.base_state_proj(x)
-
-        y_lora = self.out_proj(z)
-        y_base = self.linear(x)
-
-        y = y_base + y_lora
+        y = y + self.base_proj(y)
 
         return y
 
 
     @torch.no_grad()
     def init_state(self, bs: int, device: torch.device):
-        if self.disable_ittt:
-            return
 
         state = torch.zeros(
-            bs, self.rank, self.in_features,
+            bs, self.out_features, self.in_features,
             device=device, dtype=self.state_dtype,
         )
         momentum = torch.zeros_like(
@@ -178,8 +146,6 @@ class ItttLinear(nn.Module):
 
     @torch.no_grad()
     def empty_state(self):
-        if self.disable_ittt:
-            return
 
         self.state.zero_()
 
@@ -189,8 +155,6 @@ class ItttLinear(nn.Module):
     
     @torch.no_grad()
     def update_state(self):
-        if self.disable_ittt:
-            return
         
         update = self.momentum.grad
 
@@ -211,6 +175,41 @@ class ItttLinear(nn.Module):
         self.momentum.grad.zero_()
 
 
+class ItttMLP(nn.Module):
+    def __init__(
+        self,
+        config: DictConfig,
+    ):
+        super().__init__()
+        
+
+        self.hidden_size = config.hidden_size
+        self.intermediate_size = config.intermediate_size
+        self.ittt_size = config.ittt_size
+        
+        self.act_fn = ACT2FN[config.hidden_act]
+
+        self.gate_proj = nn.Linear(self.hidden_size, self.intermediate_size, bias=False)
+        self.up_proj = nn.Linear(self.hidden_size, self.intermediate_size, bias=False)
+        self.down_proj = nn.Linear(self.intermediate_size, self.hidden_size, bias=False)
+
+        self.ittt_gate_proj = ItttLinear(self.hidden_size, self.ittt_size, config)
+        self.ittt_up_proj = ItttLinear(self.hidden_size, self.ittt_size, config)
+        self.ittt_down_proj = ItttLinear(self.ittt_size, self.hidden_size, config)
+
+
+    def forward(self, x):
+    
+        y = self.down_proj(
+            self.act_fn(self.gate_proj(x)) * self.up_proj(x)
+        )
+        y_itt = self.ittt_down_proj(
+            self.act_fn(self.ittt_gate_proj(x)) * self.ittt_up_proj(x)
+        )
+
+        return y + y_itt
+
+
 class ItttModel(LlamaForCausalLM):
 
 
@@ -220,10 +219,7 @@ class ItttModel(LlamaForCausalLM):
         for layer in self.model.layers:
             layer: LlamaDecoderLayer
 
-            layer.mlp.down_proj = ItttLinear(
-                layer.mlp.down_proj,
-                config
-            )
+            layer.mlp = ItttMLP(config)
 
 
     @torch.no_grad()
@@ -241,14 +237,12 @@ class ItttModel(LlamaForCausalLM):
                 
 
     @torch.no_grad()
-    def update_state(self):
+    def update_state_module(self, name: str):
         
         try:
-            ref: ItttLinear = self.model.layers[0].mlp.down_proj
+            ref: ItttLinear = self.model.layers[0].get_submodule(name)
         except:
-            ref: ItttLinear = self.model.layers[0]._orig_mod.mlp.down_proj
-        if ref.disable_ittt:
-            return
+            ref: ItttLinear = self.model.layers[0]._orig_mod.get_submodule(name)
 
         updates = []
         momentums = []
@@ -256,9 +250,9 @@ class ItttModel(LlamaForCausalLM):
             layer: LlamaDecoderLayer
 
             try:
-                m: ItttLinear = layer.mlp.down_proj
+                m: ItttLinear = layer.get_submodule(name)
             except:
-                m: ItttLinear = layer._orig_mod.mlp.down_proj
+                m: ItttLinear = layer._orig_mod.get_submodule(name)
 
             updates.append(m.momentum.grad)
             momentums.append(m.momentum)
@@ -285,13 +279,19 @@ class ItttModel(LlamaForCausalLM):
             layer: LlamaDecoderLayer
 
             try:
-                m: ItttLinear = layer.mlp.down_proj
+                m: ItttLinear = layer.get_submodule(name)
             except:
-                m: ItttLinear = layer._orig_mod.mlp.down_proj
+                m: ItttLinear = layer._orig_mod.get_submodule(name)
 
             m.state.add_(state_deltas[:, i].detach())
             m.momentum.copy_(new_momentums[:, i].detach())
             m.momentum.grad.zero_()
+
+
+    @torch.no_grad()
+    def update_state(self):
+        for name in ["mlp.ittt_gate_proj", "mlp.ittt_up_proj", "mlp.ittt_down_proj"]:
+            self.update_state_module(name)
 
 
     def compute_logits(
