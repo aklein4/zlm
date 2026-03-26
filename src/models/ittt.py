@@ -112,6 +112,7 @@ class ItttLinear(nn.Module):
 
         s = self.get_lr() * self.state.detach()
 
+        print(s.shape, x.shape)
         y = torch.einsum("boi,bsi->bso", s, x)
         y = ItttFunction.apply(x, y, self, self.momentum)
 
