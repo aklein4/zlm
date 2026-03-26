@@ -110,13 +110,12 @@ class ItttLinear(nn.Module):
 
         assert x.ndim == 3, "x must be 3D (batch, seq_len, dim)"
 
-        s = self.get_lr() * self.state.detach()
+        s = self.get_lr()[None] * self.state.detach()
 
-        print(s.shape, x.shape)
         y = torch.einsum("boi,bsi->bso", s, x)
         y = ItttFunction.apply(x, y, self, self.momentum)
 
-        y = y + self.base_proj(y)
+        y = y + self.base_proj(x)
 
         return y
 
