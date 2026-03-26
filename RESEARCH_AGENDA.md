@@ -137,6 +137,7 @@ models
 - Many-shot In-Context Learning
    - ManyICLBench? 
    - LongBench v2 subset?
+   - Chess (convergent deep skill acquisition)
 
 ### If Time Permitting
 - Needle in a Haystack
