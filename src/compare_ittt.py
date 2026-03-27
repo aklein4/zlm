@@ -19,24 +19,24 @@ from utils.loss_utils import lm_loss_fn
 
 DEVICE = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
-LM_URL = 'aklein4/iTTT-TPU_attn-baseline-1b'
+LM_URL = 'aklein4/iTTT-TPU_attn-baseline-theta-1b'
 LM_STEP = 2000
 
-ITTT_URL = 'aklein4/iTTT-TPU_fancy-momentum-1b'
+ITTT_URL = 'aklein4/iTTT-TPU_mlp-1b'
 ITTT_STEP = 500
 
 DATA_URL = "Geralt-Targaryen/books3"
 TOKENIZER_URL = os.path.join(constants.LOCAL_DATA_PATH, "tokenizer")
 
 NUM_EXAMPLES = 64
-BS = 8
+BS = 2
 
 SEQUENCE_LENGTH = 1024 * 128
 
-THIS_PREFIX = "fancy_"
+THIS_PREFIX = "mlp_"
 PREFIX = "extrapolate_"
 
-DO_LM = False
+DO_LM = True
 
 
 def main():
@@ -124,13 +124,13 @@ def main():
         lm_losses = torch.cat(lm_losses, dim=0)
         torch.save(
             lm_losses,
-            os.path.join(constants.LOCAL_DATA_PATH, THIS_PREFIX+PREFIX+"lm_losses_for_comparison.pt")
+            os.path.join(constants.LOCAL_DATA_PATH, "theta_"+PREFIX+"lm_losses_for_comparison.pt")
         )
     
     ittt_losses = torch.cat(ittt_losses, dim=0)
     torch.save(
         ittt_losses,
-        os.path.join(constants.LOCAL_DATA_PATH, THIS_PREFIX+PREFIX+"ittt_losses_for_comparison.pt")
+        os.path.join(constants.LOCAL_DATA_PATH, "mlp_"+PREFIX+"ittt_losses_for_comparison.pt")
     )
 
 
@@ -143,16 +143,17 @@ def nan_mean(x):
 
 def analyze_results():
 
-    lm_losses = torch.load(os.path.join(constants.LOCAL_DATA_PATH, PREFIX+"lm_losses_for_comparison.pt")).float().numpy()
+    lm_losses = torch.load(os.path.join(constants.LOCAL_DATA_PATH, "theta_"+PREFIX+"lm_losses_for_comparison.pt")).float().numpy()
     ittt_losses = torch.load(os.path.join(constants.LOCAL_DATA_PATH, PREFIX+"ittt_losses_for_comparison.pt")).float().numpy()
-    norm_ittt_losses = torch.load(os.path.join(constants.LOCAL_DATA_PATH, "norm_"+PREFIX+"ittt_losses_for_comparison.pt")).float().numpy()
+    # norm_ittt_losses = torch.load(os.path.join(constants.LOCAL_DATA_PATH, "norm_"+PREFIX+"ittt_losses_for_comparison.pt")).float().numpy()
     fancy_ittt_losses = torch.load(os.path.join(constants.LOCAL_DATA_PATH, "fancy_"+PREFIX+"ittt_losses_for_comparison.pt")).float().numpy()
+    mlp_ittt_losses = torch.load(os.path.join(constants.LOCAL_DATA_PATH, "mlp_"+PREFIX+"ittt_losses_for_comparison.pt")).float().numpy()
 
     df = pd.DataFrame({
         "lm_loss": nan_mean(lm_losses),
         "ittt_loss": nan_mean(ittt_losses),
-        "norm_ittt_loss": nan_mean(norm_ittt_losses),
         "fancy_ittt_loss": nan_mean(fancy_ittt_losses),
+        "mlp_ittt_loss": nan_mean(mlp_ittt_losses),
     })
 
     print("\n === Average Losses === ")
@@ -163,7 +164,7 @@ def analyze_results():
     for col in df.columns:
 
         x = np.arange(len(df[col]))
-        y_running = df[col].rolling(window=2000)
+        y_running = df[col].rolling(window=5000)
         
         plt.plot(x, y_running.mean(), label=col)
     
@@ -173,24 +174,25 @@ def analyze_results():
     plt.title("iTTT Loss Comparison")
     plt.xlabel("Token Position")
     plt.ylabel("Loss (log perplexity)")
+    plt.ylim(3, 4)
 
     plt.savefig(PREFIX+"loss_comparison.png")
     plt.clf()
     
     diff = ittt_losses - lm_losses
-    norm_diff = norm_ittt_losses - lm_losses
     fancy_diff = fancy_ittt_losses - lm_losses
+    mlp_diff = mlp_ittt_losses - lm_losses
 
     df = pd.DataFrame({
         "ittt_diff": nan_mean(diff),
-        "norm_ittt_diff": nan_mean(norm_diff),
         "fancy_ittt_diff": nan_mean(fancy_diff),
+        "mlp_ittt_diff": nan_mean(mlp_diff),
     })
 
     for col in df.columns:
         
         x = np.arange(len(df[col]))
-        y_running = df[col].rolling(window=2000)
+        y_running = df[col].rolling(window=5000)
         
         plt.plot(x, y_running.mean(), label=col)
     
