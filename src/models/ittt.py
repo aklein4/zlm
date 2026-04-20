@@ -81,12 +81,22 @@ class ItttLinear(nn.Module):
         
         # ittt params
         self.log_lr = nn.Parameter(
-            torch.zeros(self.rank, self.in_features)
+            torch.zeros(self.rank, self.in_features//2)
         )
         self.base_state_proj = nn.Linear(
-            self.in_features, self.rank, bias=False
+            self.in_features//2, self.rank, bias=False
         )
         self.out_proj = nn.Linear(
+            self.rank, self.out_features, bias=False
+        )
+
+        self.asym_log_lr = nn.Parameter(
+            torch.zeros(self.rank, self.in_features//2)
+        )
+        self.asym_base_state_proj = nn.Linear(
+            self.in_features//2, self.rank, bias=False
+        )
+        self.asym_out_proj = nn.Linear(
             self.rank, self.out_features, bias=False
         )
 
@@ -97,6 +107,10 @@ class ItttLinear(nn.Module):
         # weight initialization
         self.base_state_proj.weight.data.zero_()
         self.out_proj.weight.data.normal_(
+            std=config.initializer_range
+        )
+        self.asym_base_state_proj.weight.data.zero_()
+        self.asym_out_proj.weight.data.normal_(
             std=config.initializer_range
         )
 
@@ -125,6 +139,14 @@ class ItttLinear(nn.Module):
         )
 
 
+    def get_asym_lr(self):
+        return (
+            self.base_lr *
+            math.sqrt(max(self.in_features, self.rank)) * math.sqrt(1/self.in_features) *
+            torch.exp(self.asym_log_lr * self.scalar_scaler)
+        )
+
+
     def forward(
         self,
         x: torch.FloatTensor,
@@ -134,18 +156,26 @@ class ItttLinear(nn.Module):
 
         assert x.ndim == 3, "x must be 3D (batch, seq_len, dim)"
 
+        x_s, x_asym = x.split(self.in_features//2, dim=-1)
+
         lr = self.get_lr()
         s = lr[None] * self.state.detach()
 
-        z = torch.einsum("boi,bsi->bso", s, x)
-        z = ItttFunction.apply(x, z, self, self.momentum)
+        lr_asym = self.get_asym_lr()
+        s_asym = lr_asym[None] * self.state.detach()
 
-        z = z + self.base_state_proj(x)
+        z = torch.einsum("boi,bsi->bso", s, x_s)
+        z = ItttFunction.apply(x_s, z, self, self.momentum)
+        z = z + self.base_state_proj(x_s)
+
+        z_asym = torch.einsum("boi,bsi->bso", s_asym, x_asym)
+        z_asym = z_asym + self.asym_base_state_proj(x_asym)
 
         y_lora = self.out_proj(z)
+        y_asym = self.asym_out_proj(z_asym)
         y_base = self.linear(x)
 
-        y = y_base + y_lora
+        y = y_base + y_lora + y_asym
 
         return y
 
@@ -156,7 +186,7 @@ class ItttLinear(nn.Module):
             return
 
         state = torch.zeros(
-            bs, self.rank, self.in_features,
+            bs, self.rank, self.in_features//2,
             device=device, dtype=self.state_dtype,
         )
         momentum = torch.zeros_like(
@@ -189,6 +219,7 @@ class ItttLinear(nn.Module):
     
     @torch.no_grad()
     def update_state(self):
+        raise NotImplementedError("update_state should be called on the model, not the layer")
         if self.disable_ittt:
             return
         
@@ -276,10 +307,16 @@ class ItttModel(LlamaForCausalLM):
         )
 
         whitened = newton_schulz(
+            momentums, eps=ref.eps
+        )
+        new_whitened = newton_schulz(
             new_momentums, eps=ref.eps
         )
 
-        state_deltas = -whitened.to(ref.state_dtype)
+        state_deltas = -(
+            (new_whitened - whitened * ref.momentum_beta) /
+            (1 - ref.momentum_beta)
+        ).to(ref.state_dtype)
 
         for i, layer in enumerate(self.model.layers):
             layer: LlamaDecoderLayer
