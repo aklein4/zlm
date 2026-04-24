@@ -10,7 +10,7 @@ import math
 from omegaconf import DictConfig
 from tqdm import tqdm
 
-from models.llama import LlamaForCausalLM, LlamaDecoderLayer
+from models.llama import LlamaForCausalLM, LlamaDecoderLayer, LlamaRMSNorm, LlamaMLP
 from utils.sharding_utils import maybe_shard_with_gradients
 from utils.torch_utils import newton_schulz, cuda_newton_schulz
 from utils.loss_utils import lm_loss_fn
@@ -81,22 +81,12 @@ class ItttLinear(nn.Module):
         
         # ittt params
         self.log_lr = nn.Parameter(
-            torch.zeros(self.rank, self.in_features//2)
+            torch.zeros(self.rank, self.in_features)
         )
         self.base_state_proj = nn.Linear(
-            self.in_features//2, self.rank, bias=False
+            self.in_features, self.rank, bias=False
         )
         self.out_proj = nn.Linear(
-            self.rank, self.out_features, bias=False
-        )
-
-        self.asym_log_lr = nn.Parameter(
-            torch.zeros(self.rank, self.in_features//2)
-        )
-        self.asym_base_state_proj = nn.Linear(
-            self.in_features//2, self.rank, bias=False
-        )
-        self.asym_out_proj = nn.Linear(
             self.rank, self.out_features, bias=False
         )
 
@@ -107,10 +97,6 @@ class ItttLinear(nn.Module):
         # weight initialization
         self.base_state_proj.weight.data.zero_()
         self.out_proj.weight.data.normal_(
-            std=config.initializer_range
-        )
-        self.asym_base_state_proj.weight.data.zero_()
-        self.asym_out_proj.weight.data.normal_(
             std=config.initializer_range
         )
 
@@ -139,14 +125,6 @@ class ItttLinear(nn.Module):
         )
 
 
-    def get_asym_lr(self):
-        return (
-            self.base_lr *
-            math.sqrt(max(self.in_features, self.rank)) * math.sqrt(1/self.in_features) *
-            torch.exp(self.asym_log_lr * self.scalar_scaler)
-        )
-
-
     def forward(
         self,
         x: torch.FloatTensor,
@@ -156,26 +134,18 @@ class ItttLinear(nn.Module):
 
         assert x.ndim == 3, "x must be 3D (batch, seq_len, dim)"
 
-        x_s, x_asym = x.split(self.in_features//2, dim=-1)
-
         lr = self.get_lr()
         s = lr[None] * self.state.detach()
 
-        lr_asym = self.get_asym_lr()
-        s_asym = lr_asym[None] * self.state.detach()
+        z = torch.einsum("boi,bsi->bso", s, x)
+        z = ItttFunction.apply(x, z, self, self.momentum)
 
-        z = torch.einsum("boi,bsi->bso", s, x_s)
-        z = ItttFunction.apply(x_s, z, self, self.momentum)
-        z = z + self.base_state_proj(x_s)
-
-        z_asym = torch.einsum("boi,bsi->bso", s_asym, x_asym)
-        z_asym = z_asym + self.asym_base_state_proj(x_asym)
+        z = z + self.base_state_proj(x)
 
         y_lora = self.out_proj(z)
-        y_asym = self.asym_out_proj(z_asym)
         y_base = self.linear(x)
 
-        y = y_base + y_lora + y_asym
+        y = y_base + y_lora
 
         return y
 
@@ -186,7 +156,7 @@ class ItttLinear(nn.Module):
             return
 
         state = torch.zeros(
-            bs, self.rank, self.in_features//2,
+            bs, self.rank, self.in_features,
             device=device, dtype=self.state_dtype,
         )
         momentum = torch.zeros_like(
@@ -255,6 +225,28 @@ class ItttModel(LlamaForCausalLM):
                 layer.mlp.down_proj,
                 config
             )
+
+        self.nepa_norm = LlamaRMSNorm(
+            config.hidden_size, eps=config.rms_norm_eps
+        )
+        self.nepa_head = LlamaMLP(config)
+
+
+    def forward(self, *args, **kwargs):
+        return_states = kwargs.pop("return_states", False)
+
+        logits, loss, hidden_states = super().forward(*args, **kwargs, return_states=True)
+
+        nepa_target = F.rms_norm(hidden_states, [hidden_states.shape[-1]], eps=self.config.rms_norm_eps)
+        nepa_target = nepa_target.sum(dim=1) - nepa_target.cumsum(dim=1)
+        nepa_target = F.rms_norm(nepa_target, [nepa_target.shape[-1]], eps=self.config.rms_norm_eps).detach()
+
+        nepa_pred = self.nepa_head(self.nepa_norm(hidden_states))
+
+        if return_states:
+            return logits, loss, hidden_states, nepa_pred, nepa_target
+    
+        return logits, loss, nepa_pred, nepa_target
 
 
     @torch.no_grad()

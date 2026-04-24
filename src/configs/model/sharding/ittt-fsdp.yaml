@@ -17,13 +17,15 @@ model.layers.*.mlp.down_proj.linear.weight: [null, fsdp]
 model.layers.*.mlp.down_proj.log_lr: [null, fsdp]
 model.layers.*.mlp.down_proj.base_state_proj.weight: [null, fsdp]
 model.layers.*.mlp.down_proj.out_proj.weight: [fsdp, null]
-model.layers.*.mlp.down_proj.asym_log_lr: [null, fsdp]
-model.layers.*.mlp.down_proj.asym_base_state_proj.weight: [null, fsdp]
-model.layers.*.mlp.down_proj.asym_out_proj.weight: [fsdp, null]
 
 model.layers.*.input_layernorm.weight: [fsdp]
 model.layers.*.post_attention_layernorm.weight: [fsdp]
 model.norm.weight: [fsdp]
+
+nepa_norm.weight: [fsdp]
+nepa_head.gate_proj.weight: [fsdp, null]
+nepa_head.up_proj.weight: [fsdp, null]
+nepa_head.down_proj.weight: [null, fsdp]
 
 
 # Activations

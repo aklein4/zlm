@@ -66,3 +66,5 @@ max_grad_value: null
 
 # You can add any additional configuration options for your trainer here
 # They will appear as attributes of config.trainer
+
+nepa_loss_weight: 1.0
