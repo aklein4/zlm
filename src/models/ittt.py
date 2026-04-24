@@ -238,7 +238,7 @@ class ItttModel(LlamaForCausalLM):
         logits, loss, hidden_states = super().forward(*args, **kwargs, return_states=True)
 
         nepa_target = F.rms_norm(hidden_states, [hidden_states.shape[-1]], eps=self.config.rms_norm_eps)
-        nepa_target = nepa_target.sum(dim=1) - nepa_target.cumsum(dim=1)
+        nepa_target = nepa_target.sum(dim=1, keepdim=True) - nepa_target.cumsum(dim=1)
         nepa_target = F.rms_norm(nepa_target, [nepa_target.shape[-1]], eps=self.config.rms_norm_eps).detach()
 
         nepa_pred = self.nepa_head(self.nepa_norm(hidden_states))
