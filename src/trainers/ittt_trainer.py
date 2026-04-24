@@ -79,7 +79,7 @@ class ItttTrainer(BaseTrainer):
             logits, _, nepa_pred, nepa_target = self.model(
                 all_chunk,
                 logits_to_keep=slice(in_chunk.shape[-1]-1, -1)
-            )[0]
+            )
             lm_loss = self.loss(
                 all_chunk[:, in_chunk.shape[-1]-1:],
                 logits
