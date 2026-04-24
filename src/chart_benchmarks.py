@@ -12,20 +12,25 @@ SAVE_PATH = os.path.join(constants.LOCAL_DATA_PATH, "benchmark_chart.png")
 
 BASE_PATH = os.path.join(constants.LOCAL_DATA_PATH, "evaluation_results")
 
+# CHECKPOINTS = {
+#     "aklein4--ZEBRA_muon-1p7b-once/000000024000": "Low-MI-09K",
+#     "aklein4--ZEBRA_muon-1p7b-mi/000000018000": "Diffusion-18K",
+#     "aklein4--ZEBRA_muon-1p7b-cont/000000009000": "Diffusion-09K",
+#     "../guidance_evaluation_results": "Guided",
+#     "../guidance_evaluation_results_2": "Guided-2",
+#     "aklein4--ZEBRA_ar-1p7b-kernel-strong/000000009000": "AR-09K",
+#     "aklein4--ZEBRA_ar-1p7b-sigreg/000000007000": "SIGReg-07K",
+#     "../no_noise_scaled_eval_results/aklein4--ZEBRA_ar-1p7b-kernel-strong/000000009000": "AR-NN-09K",
+#     # "aklein4--ZEBRA_baseline-1p7b/000000050000": "Baseline-50K",
+#     # "aklein4--ZEBRA_baseline-1p7b/000000020000": "Baseline-20K",
+#     # "aklein4--ZEBRA_baseline-1p7b/000000015000": "Baseline-15K",
+#     "aklein4--ZEBRA_baseline-1p7b/000000010000": "Baseline-10K",
+#     # "aklein4--ZEBRA_baseline-1p7b/000000005000": "Baseline-5K",
+# }
 CHECKPOINTS = {
-    "aklein4--ZEBRA_muon-1p7b-once/000000024000": "Low-MI-09K",
-    "aklein4--ZEBRA_muon-1p7b-mi/000000018000": "Diffusion-18K",
-    "aklein4--ZEBRA_muon-1p7b-cont/000000009000": "Diffusion-09K",
-    # "../guidance_evaluation_results": "Guided",
-    # "../guidance_evaluation_results_2": "Guided-2",
-    "aklein4--ZEBRA_ar-1p7b-kernel-strong/000000009000": "AR-09K",
-    "aklein4--ZEBRA_ar-1p7b-sigreg/000000007000": "SIGReg-07K",
-    "../no_noise_scaled_eval_results/aklein4--ZEBRA_ar-1p7b-kernel-strong/000000009000": "AR-NN-09K",
-    "aklein4--ZEBRA_baseline-1p7b/000000050000": "Baseline-50K",
-    # "aklein4--ZEBRA_baseline-1p7b/000000020000": "Baseline-20K",
-    # "aklein4--ZEBRA_baseline-1p7b/000000015000": "Baseline-15K",
-    "aklein4--ZEBRA_baseline-1p7b/000000010000": "Baseline-10K",
-    # "aklein4--ZEBRA_baseline-1p7b/000000005000": "Baseline-5K",
+    "../guidance_evaluation_results_2": "Diffusion Guided",
+    "../no_noise_scaled_eval_results/aklein4--ZEBRA_ar-1p7b-kernel-strong/000000009000": "Autoregressive",
+    "aklein4--ZEBRA_baseline-1p7b/000000010000": "Baseline LLM",
 }
 
 REASONING_BENCHMARKS = [
