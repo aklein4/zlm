@@ -226,28 +226,6 @@ class ItttModel(LlamaForCausalLM):
                 config
             )
 
-        self.nepa_norm = LlamaRMSNorm(
-            config.hidden_size, eps=config.rms_norm_eps
-        )
-        self.nepa_head = LlamaMLP(config)
-
-
-    def forward(self, *args, **kwargs):
-        return_states = kwargs.pop("return_states", False)
-
-        logits, loss, hidden_states = super().forward(*args, **kwargs, return_states=True)
-
-        nepa_target = F.rms_norm(hidden_states, [hidden_states.shape[-1]], eps=self.config.rms_norm_eps)
-        nepa_target = nepa_target.sum(dim=1, keepdim=True) - nepa_target.cumsum(dim=1)
-        nepa_target = F.rms_norm(nepa_target, [nepa_target.shape[-1]], eps=self.config.rms_norm_eps).detach()
-
-        nepa_pred = self.nepa_head(self.nepa_norm(hidden_states))
-
-        if return_states:
-            return logits, loss, hidden_states, nepa_pred, nepa_target
-    
-        return logits, loss, nepa_pred, nepa_target
-
 
     @torch.no_grad()
     def init_state(self, bs: int, device: torch.device):
@@ -305,9 +283,16 @@ class ItttModel(LlamaForCausalLM):
             new_momentums, eps=ref.eps
         )
 
-        state_deltas = -(
+        delta = (
             (new_whitened - whitened * ref.momentum_beta) /
             (1 - ref.momentum_beta)
+        )
+
+        delta = delta / (torch.linalg.norm(delta, dim=-2, keepdim=True) + self.config.rms_norm_eps) # RMS: 1/sqrt(delta.shape[-2])
+        delta = math.sqrt(delta.shape[-1]) * delta / (torch.linalg.norm(delta, dim=-1, keepdim=True) + self.config.rms_norm_eps) # RMS: 1
+
+        state_deltas = -(
+            delta / math.sqrt(max(delta.shape[-2], delta.shape[-1])) # RMS: 1/sqrt(max(r, i)) like muon
         ).to(ref.state_dtype)
 
         for i, layer in enumerate(self.model.layers):
