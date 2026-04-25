@@ -141,6 +141,7 @@ class ItttLinear(nn.Module):
         z = ItttFunction.apply(x, z, self, self.momentum)
 
         z = z + self.base_state_proj(x)
+        z = F.silu(z)
 
         y_lora = self.out_proj(z)
         y_base = self.linear(x)
@@ -288,11 +289,8 @@ class ItttModel(LlamaForCausalLM):
             (1 - ref.momentum_beta)
         )
 
-        delta = delta / (torch.linalg.norm(delta, dim=-2, keepdim=True) + self.config.rms_norm_eps) # RMS: 1/sqrt(delta.shape[-2])
-        delta = math.sqrt(delta.shape[-1]) * delta / (torch.linalg.norm(delta, dim=-1, keepdim=True) + self.config.rms_norm_eps) # RMS: 1
-
         state_deltas = -(
-            delta / math.sqrt(max(delta.shape[-2], delta.shape[-1])) # RMS: 1/sqrt(max(r, i)) like muon
+            delta
         ).to(ref.state_dtype)
 
         for i, layer in enumerate(self.model.layers):
