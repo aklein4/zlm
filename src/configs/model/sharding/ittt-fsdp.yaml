@@ -14,14 +14,7 @@ model.layers.*.mlp.gate_proj.weight: [fsdp, null]
 model.layers.*.mlp.up_proj.weight: [fsdp, null]
 model.layers.*.mlp.down_proj.weight: [null, fsdp]
 
-model.layers.*.mlp.ittt_gate_proj.log_lr: [fsdp, null]
-model.layers.*.mlp.ittt_gate_proj.base_proj.weight: [fsdp, null]
-
-model.layers.*.mlp.ittt_up_proj.log_lr: [fsdp, null]
-model.layers.*.mlp.ittt_up_proj.base_proj.weight: [fsdp, null]
-
 model.layers.*.mlp.ittt_down_proj.log_lr: [null, fsdp]
-model.layers.*.mlp.ittt_down_proj.base_proj.weight: [null, fsdp]
 
 model.layers.*.input_layernorm.weight: [fsdp]
 model.layers.*.post_attention_layernorm.weight: [fsdp]

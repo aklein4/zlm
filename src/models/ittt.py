@@ -81,18 +81,10 @@ class ItttLinear(nn.Module):
         self.log_lr = nn.Parameter(
             torch.zeros(self.out_features, self.in_features)
         )
-        self.base_proj = nn.Linear(
-            self.in_features, self.out_features, bias=False
-        )
 
         # ephemeral state
         self.state: nn.Buffer
         self.momentum: nn.Buffer
-
-        # weight initialization
-        self.base_proj.weight.data.normal_(
-            std=1/math.sqrt(self.in_features)
-        )
     
 
     def get_lr(self):
@@ -114,8 +106,6 @@ class ItttLinear(nn.Module):
 
         y = torch.einsum("boi,bsi->bso", s, x)
         y = ItttFunction.apply(x, y, self, self.momentum)
-
-        y = y + self.base_proj(x)
 
         return y
 
@@ -191,23 +181,24 @@ class ItttMLP(nn.Module):
 
         self.gate_proj = nn.Linear(self.hidden_size, self.intermediate_size, bias=False)
         self.up_proj = nn.Linear(self.hidden_size, self.intermediate_size, bias=False)
-        self.down_proj = nn.Linear(self.intermediate_size, self.hidden_size, bias=False)
+        self.down_proj = nn.Linear(self.intermediate_size-self.ittt_size, self.hidden_size, bias=False)
 
-        self.ittt_gate_proj = ItttLinear(self.hidden_size, self.ittt_size, config)
-        self.ittt_up_proj = ItttLinear(self.hidden_size, self.ittt_size, config)
         self.ittt_down_proj = ItttLinear(self.ittt_size, self.hidden_size, config)
 
 
     def forward(self, x):
     
-        y = self.down_proj(
-            self.act_fn(self.gate_proj(x)) * self.up_proj(x)
-        )
-        y_itt = self.ittt_down_proj(
-            self.act_fn(self.ittt_gate_proj(x)) * self.ittt_up_proj(x)
+        x = self.act_fn(self.gate_proj(x)) * self.up_proj(x)
+
+        x_inter, x_ittt = x.split(
+            [self.intermediate_size-self.ittt_size, self.ittt_size],
+            dim=-1
         )
 
-        return y + y_itt
+        y_inter = self.down_proj(x_inter)
+        y_ittt = self.ittt_down_proj(x_ittt)
+
+        return y_inter + y_ittt
 
 
 class ItttModel(LlamaForCausalLM):
@@ -270,10 +261,20 @@ class ItttModel(LlamaForCausalLM):
         )
 
         whitened = newton_schulz(
+            momentums, eps=ref.eps
+        )
+        new_whitened = newton_schulz(
             new_momentums, eps=ref.eps
         )
 
-        state_deltas = -whitened.to(ref.state_dtype)
+        delta = (
+            (new_whitened - whitened * ref.momentum_beta) /
+            (1 - ref.momentum_beta)
+        )
+
+        state_deltas = -(
+            delta
+        ).to(ref.state_dtype)
 
         for i, layer in enumerate(self.model.layers):
             layer: LlamaDecoderLayer
@@ -290,7 +291,7 @@ class ItttModel(LlamaForCausalLM):
 
     @torch.no_grad()
     def update_state(self):
-        for name in ["mlp.ittt_gate_proj", "mlp.ittt_up_proj", "mlp.ittt_down_proj"]:
+        for name in ["mlp.ittt_down_proj"]:
             self.update_state_module(name)
 
 
