@@ -144,18 +144,19 @@ def nan_mean(x):
 def analyze_results():
 
     lm_losses = torch.load(os.path.join(constants.LOCAL_DATA_PATH, "theta_"+PREFIX+"lm_losses_for_comparison.pt")).float().numpy()
-    # ittt_losses = torch.load(os.path.join(constants.LOCAL_DATA_PATH, PREFIX+"ittt_losses_for_comparison.pt")).float().numpy()
-    # norm_ittt_losses = torch.load(os.path.join(constants.LOCAL_DATA_PATH, "norm_"+PREFIX+"ittt_losses_for_comparison.pt")).float().numpy()
+    ittt_losses = torch.load(os.path.join(constants.LOCAL_DATA_PATH, PREFIX+"ittt_losses_for_comparison.pt")).float().numpy()
+    norm_ittt_losses = torch.load(os.path.join(constants.LOCAL_DATA_PATH, "norm_"+PREFIX+"ittt_losses_for_comparison.pt")).float().numpy()
     fancy_ittt_losses = torch.load(os.path.join(constants.LOCAL_DATA_PATH, "fancy_"+PREFIX+"ittt_losses_for_comparison.pt")).float().numpy()
-    # mlp_ittt_losses = torch.load(os.path.join(constants.LOCAL_DATA_PATH, "mlp_"+PREFIX+"ittt_losses_for_comparison.pt")).float().numpy()
+    mlp_ittt_losses = torch.load(os.path.join(constants.LOCAL_DATA_PATH, "mlp_"+PREFIX+"ittt_losses_for_comparison.pt")).float().numpy()
 
     fig, ax = plt.subplots(1, 2, figsize=(12,5))
 
     df = pd.DataFrame({
         "lm_loss": nan_mean(lm_losses)[:128*1024],
-        "ittt_loss": nan_mean(fancy_ittt_losses)[:128*1024],
-        # "fancy_ittt_loss": nan_mean(fancy_ittt_losses),
-        # "mlp_ittt_loss": nan_mean(mlp_ittt_losses),
+        "ittt_loss": nan_mean(ittt_losses)[:128*1024],
+        "norm_ittt_loss": nan_mean(norm_ittt_losses)[:128*1024],
+        "fancy_ittt_loss": nan_mean(fancy_ittt_losses)[:128*1024],
+        "mlp_ittt_loss": nan_mean(mlp_ittt_losses)[:128*1024],
     })
 
     print("\n === Average Losses === ")
@@ -163,12 +164,12 @@ def analyze_results():
         print(f"    {col}: {df[col].mean():.2f}")
     print("")
 
-    for col in df.columns:
+    for i, col in enumerate(df.columns):
 
         x = np.arange(len(df[col]))
         y_running = df[col].rolling(window=5000, min_periods=1000)
         
-        ax[0].plot(x, y_running.mean(), label=col)
+        ax[0].plot(x, y_running.mean(), label=col, color=(f"C{i-1}" if i > 0 else "black"))
     
     ax[0].legend()
     ax[0].grid()
@@ -176,27 +177,24 @@ def analyze_results():
     ax[0].set_title("Loss by Token Position")
     ax[0].set_xlabel("Token Position")
     ax[0].set_ylabel("Loss (log perplexity)")
-    # ax[0].set_ylim(3.0, 5.5)
+    ax[0].set_ylim(None, 4.0)
 
     # plt.savefig(PREFIX+"loss_comparison.png")
     # plt.clf()
-    
-    diff = fancy_ittt_losses - lm_losses
-    # fancy_diff = fancy_ittt_losses - lm_losses
-    # mlp_diff = mlp_ittt_losses - lm_losses
 
-    df = pd.DataFrame({
-        "ittt_diff": nan_mean(diff)[:128*1024],
-        # "fancy_ittt_diff": nan_mean(fancy_diff),
-        # "mlp_ittt_diff": nan_mean(mlp_diff),
+    diff_df = pd.DataFrame({
+        "ittt": nan_mean(ittt_losses - lm_losses)[:128*1024],
+        "norm_ittt": nan_mean(norm_ittt_losses - lm_losses)[:128*1024],
+        "fancy_ittt": nan_mean(fancy_ittt_losses - lm_losses),
+        "mlp_ittt": nan_mean(mlp_ittt_losses - lm_losses)[:128*1024],
     })
 
-    for col in df.columns:
+    for i, col in enumerate(diff_df.columns):
         
-        x = np.arange(len(df[col]))
-        y_running = df[col].rolling(window=5000)
+        x = np.arange(len(diff_df[col]))
+        y_running = diff_df[col].rolling(window=5000)
         
-        ax[1].plot(x, y_running.mean(), label=col)
+        ax[1].plot(x, y_running.mean(), label=col, color=f"C{i}")
     
     # plt.legend()
     plt.grid()
