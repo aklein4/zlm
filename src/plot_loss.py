@@ -6,7 +6,7 @@ import pandas as pd
 FILE = "losses.csv"
 
 RUNS = {
-    "fancy-momentum-1b": "iTTT",
+    "mlp-base-1b": "iTTT",
     "attn-baseline-theta-1b": "Dense Attn"
 }
 
@@ -31,7 +31,7 @@ def main():
     plt.ylabel("Training Loss")
     plt.legend()
     plt.grid()
-    plt.ylim(1.8, 3.0)
+    plt.ylim(1.6, 3.0)
     plt.title("Training Loss Over Tokens Seen")
     plt.tight_layout()
     plt.savefig("training_loss.png")
