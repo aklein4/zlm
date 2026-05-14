@@ -4,16 +4,16 @@ import math
 import numpy as np
 
 # Canvas settings
-WIDTH, HEIGHT = 1500, 500
+WIDTH, HEIGHT = 5*100+20, 5*100+20
 BACKGROUND = (0, 10, 50)
 
-GRID_WIDTH, GRID_HEIGHT = 75, 25
-BORDER = 3
-SQUARE_SIZE = 14
-GRID_SIZE = 20
+GRID_WIDTH, GRID_HEIGHT = 5, 5
+BORDER = 20
+SQUARE_SIZE = 80
+GRID_SIZE = 100
 
 MAX_JITTER = 5
-MAX_ROTATION = 30
+MAX_ROTATION = 10
 
 
 def cos_range(x):
@@ -49,7 +49,7 @@ for i in range(0, GRID_WIDTH):
         #     255,
         # )
 
-        color = np.array([0.0, 150, 200]) * (1 + 0.25 * (2 * random.random() - 1.0))
+        color = np.array([0.0, 150, 200]) * (1 + 0.1 * (2 * random.random() - 1.0))
         color = tuple(np.clip(color.astype(int), 0, 255)) + (255,)
 
         # Draw square on its own transparent layer
@@ -58,11 +58,13 @@ for i in range(0, GRID_WIDTH):
         draw.rectangle([0, 0, SQUARE_SIZE - 1, SQUARE_SIZE - 1], fill=color)
 
         # Random rotation
-        angle = np.random.standard_normal() * MAX_ROTATION * cos_range(1 - i*1.1 / GRID_WIDTH) 
+        angle = np.random.standard_normal() * MAX_ROTATION * (1 - i / (GRID_WIDTH-1)) 
         rotated = square.rotate(angle, expand=True, resample=Image.Resampling.BICUBIC)
 
-        x = i * GRID_SIZE + BORDER + np.random.standard_normal() * MAX_JITTER * max(1 - i*1.05 / GRID_WIDTH, 0)
-        y = j * GRID_SIZE + BORDER + np.random.standard_normal() * MAX_JITTER * max(1 - i*1.05 / GRID_WIDTH, 0)
+        x = i * GRID_SIZE + BORDER + np.random.standard_normal() * MAX_JITTER * max(1 - i / (GRID_WIDTH-1), 0)
+        y = j * GRID_SIZE + BORDER + np.random.standard_normal() * MAX_JITTER * max(1 - i / (GRID_WIDTH-1), 0)
+
+        print(i * GRID_SIZE + BORDER, i * GRID_SIZE + BORDER + SQUARE_SIZE)
 
         # Composite onto canvas
         canvas.paste(rotated, (int(x), int(y)), rotated)
