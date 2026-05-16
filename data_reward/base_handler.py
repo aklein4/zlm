@@ -7,7 +7,8 @@ class BaseHandler:
     subset: str | list = None
     split: str | list = None
 
-    kind: str = None
+    domain: str = None
+    reward_type: str = None
 
     verification_mode = None
 
@@ -74,30 +75,40 @@ class BaseHandler:
 
 
     def full_map(self, example):
-        m = self.map(example)
-        if len(m) == 3:
-            inp, out, reward = m
-            keep = True
-        elif len(m) == 4:
-            inp, out, reward, keep = m
 
-        if inp is None or out is None:
-            keep = False
-
-        return {
+        out = {
             "source": self.name(),
-            "kind": self.kind,
-            "input": inp,
-            "output": out,
-            "reward": reward,
-            "keep": keep
+            "domain": self.domain,
+            "reward_type": self.reward_type,
+            "cluster_key": None,
+            "input": None,
+            "output": None,
+            "reward": None,
         }
 
+        m = self.map(example)
+        if m is None:
+            return out
+        
+        for k in m.keys():
+            assert k in out, f"Invalid key '{k}' returned by map. Valid keys are: {list(out.keys())}"
+            out[k] = m[k]
 
-    def map(self, example):
+        if out["cluster_key"] is None:
+            out["cluster_key"] = out["input"]
+
+        return out
+
+
+    def map(self, example) -> dict:
         raise NotImplementedError("Subclasses must implement this method.")
     
 
     def filter(self, example):
-        return example["keep"]
+        return (
+            example["cluster_key"] is not None and
+            example["input"] is not None and
+            example["output"] is not None and
+            example["reward"] is not None
+        )
     

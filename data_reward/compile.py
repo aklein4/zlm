@@ -4,12 +4,12 @@ import random
 from handlers import HANDLERS
 
 
-DS_NAME = "aklein4/offline-RL-binary"
+DS_NAME = "aklein4/offline-RL-binary-2"
 LOG_FILE = "compilation_log.txt"
 
-NAMES_TO_DO = ["Anthropic/hh-rlhf"]
+NAMES_TO_DO = None
 
-DEBUG = True
+DEBUG = False
 
 
 def main():
@@ -46,7 +46,6 @@ def main():
             
             ds = ds.map(h.full_map, remove_columns=ds.column_names, load_from_cache_file=False)
             ds = ds.filter(h.filter, load_from_cache_file=False)
-            ds = ds.remove_columns("keep")
         
             ds.push_to_hub(
                 DS_NAME,
