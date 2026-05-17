@@ -81,8 +81,8 @@ class ItttLinear(nn.Module):
         self.log_lr = nn.Parameter(
             torch.zeros(self.out_features, self.in_features)
         )
-        self.base_proj = nn.Linear(
-            self.in_features, self.out_features, bias=False
+        self.out_proj = nn.Linear(
+            self.out_features, self.out_features, bias=False
         )
 
         # ephemeral state
@@ -90,8 +90,8 @@ class ItttLinear(nn.Module):
         self.momentum: nn.Buffer
 
         # weight initialization
-        self.base_proj.weight.data.normal_(
-            std=1/math.sqrt(self.in_features)
+        self.out_proj.weight.data.normal_(
+            std=1/math.sqrt(self.out_features)
         )
     
 
@@ -115,7 +115,7 @@ class ItttLinear(nn.Module):
         y = torch.einsum("boi,bsi->bso", s, x)
         y = ItttFunction.apply(x, y, self, self.momentum)
 
-        y = y + self.base_proj(x)
+        y = self.out_proj(y)
 
         return y
 
