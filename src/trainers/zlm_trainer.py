@@ -265,7 +265,7 @@ class ZLMTrainer(BaseTrainer):
         mean_effective_parties = self.get_effective_parties(mean_kl.sum(-1).sum(0))
 
         mi = self.mutual_information(mu)
-        mi_scale = wait_hook_progress
+        mi_scale = 1.0 * wait_hook_progress
 
         loss = (
             lm_loss +
