@@ -80,7 +80,7 @@ class ZLMTrainer(BaseTrainer):
         spectral_reg = (v.pow(2)/2 - v.log() - 1/2).mean()
         spectral_parties = self.get_effective_parties(v)
 
-        return spectral_reg.detach(), spectral_parties.detach()
+        return spectral_reg, spectral_parties
 
 
     def kl_loss(
@@ -229,7 +229,8 @@ class ZLMTrainer(BaseTrainer):
 
         # get the regularization loss
         regularize_scale = hook_progress
-        spectral_reg, spectral_parties = self.get_spectral_info(mu)
+        # spectral_reg, spectral_parties = self.get_spectral_info(mu)
+        spectral_reg, spectral_parties = (0.0, 0.0)
 
         loss = (
             lm_loss +
