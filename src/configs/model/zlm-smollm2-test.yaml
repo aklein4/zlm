@@ -57,7 +57,7 @@ pure_modules: []
 
 
 # pretrained model to use as base
-pretrained_llama: aklein4/SmolLM2-1.7B-TPU
+pretrained_llama: null
 
 # lengths
 input_length: 256
