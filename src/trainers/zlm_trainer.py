@@ -71,7 +71,7 @@ class ZLMTrainer(BaseTrainer):
             cov = torch.einsum(
                 'sbi,sbj->sij',
                 x, x
-            ) / x.shape[1] # [S, H, H]
+            ).float() / x.shape[1] # [S, H, H]
 
             v = torch.linalg.eigvalsh(
                 cov + self.model.config.rms_norm_eps * torch.eye(x.shape[-1], device=x.device, dtype=cov.dtype)[None]

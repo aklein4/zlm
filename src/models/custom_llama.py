@@ -245,6 +245,7 @@ class CustomLlamaModel(nn.Module):
 
     def __init__(self, config: DictConfig):
         super().__init__()
+        self.config = config
         self.vocab_size = config.vocab_size
         self.embed_tokens = nn.Embedding(config.vocab_size, config.hidden_size)
 
