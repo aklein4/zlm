@@ -99,7 +99,7 @@ class ZLMTrainer(BaseTrainer):
             kl.mean() / ((weights * kl).mean() + self.model.config.rms_norm_eps)
         )
 
-        mu_kl_scale["value"] = weights[None, :, None]
+        mu_kl_scale["value"] = weights[None, :, None].detach()
 
         return kl.sum(), weights
 
