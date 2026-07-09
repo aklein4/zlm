@@ -7,10 +7,10 @@ type: lm_trainer.LMTrainer  # Used to import the trainer from this class
 global_batch_size: 64
 
 # run for N steps
-max_steps: 1000000 
+max_steps: 1000000
 
 # Save a checkpoint every N steps
-checkpoint_interval: 5000  
+checkpoint_interval: 1000000
 
 
 # whether to autocast the forward pass and loss computation.
@@ -21,34 +21,27 @@ use_autocast: true
 # optimizer configuration
 optimizer:
 
-  # Used to import the optimizer from this class.
-  type: adamw.AdamW
+  type: muon.ScaledMuon
 
-  # kwargs passed to the optimizer constructor
   kwargs:
 
-    lr: 1.0e-4
+    lr: 2.0e-4
 
-    betas: [0.9, 0.95]
+    betas: [0.95, 0.98]
     
     eps: 1e-6
 
-    weight_decay: 0.1
-
-    update_clip: null
+    weight_decay: 0.01
 
 
 # Learning rate scheduler configuration
 lr_scheduler:
 
-  # name of the scheduler
-  # see  https://huggingface.co/docs/transformers/v4.52.3/en/main_classes/optimizer_schedules#transformers.get_scheduler
   type: warmup_stable_decay
 
   # get_scheduler requires this outside of kwargs
-  num_warmup_steps: 1000
+  num_warmup_steps: 100
 
-  # kwargs passed to the scheduler constructor
   kwargs:
 
     num_stable_steps: 1000000

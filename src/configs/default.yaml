@@ -24,7 +24,7 @@ matmul_precision: default # [default, high, highest]
 debug: false
 
 # Information about the W&B run where metrics will be logged.
-project: zlm-testing
+project: ZEBRA-v2
 name: test
 notes: null
 

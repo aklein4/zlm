@@ -225,7 +225,7 @@ class UnbiasedEMA(nn.Module):
 
     
     @torch.no_grad()
-    def zero_out(self) -> None:
+    def reset(self) -> None:
         self.num_updates.zero_()
         self.weight.zero_()
 

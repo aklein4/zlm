@@ -365,13 +365,23 @@ class CustomLlamaModel(nn.Module):
             ).float()
 
         # Create a causal attention mask
-        causal_mask = torch.triu(
-            torch.full((seq_length, seq_length), float("-inf"), device=inputs_embeds.device),
-            diagonal=1,
-        )
-        causal_mask = causal_mask.unsqueeze(0).unsqueeze(0)  # Add batch and head dimension
-        if attention_mask is not None:
-            causal_mask = causal_mask * attention_mask[:, None, None, :]
+        if self.config.attention_kernel is not None and "lash" in self.config.attention_kernel:
+            assert attention_mask is None, "Custom attention mask not compatible with flash attention"
+
+            # dummy value
+            if constants.XLA_AVAILABLE:
+                causal_mask = torch.zeros_like(position_ids)
+            else:
+                causal_mask = None
+
+        else:
+            causal_mask = torch.triu(
+                torch.full((seq_length, seq_length), float("-inf"), device=inputs_embeds.device),
+                diagonal=1,
+            )
+            causal_mask = causal_mask.unsqueeze(0).unsqueeze(0)  # Add batch and head dimension
+            if attention_mask is not None:
+                causal_mask = causal_mask * attention_mask[:, None, None, :]
 
         # currently cannot be None because scan needs differentiable inputs
         if constants.XLA_AVAILABLE:

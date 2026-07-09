@@ -31,7 +31,7 @@ optimizer:
     
     eps: 1e-6
 
-    weight_decay: 0.1
+    weight_decay: 0.01
 
 
 # Learning rate scheduler configuration

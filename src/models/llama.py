@@ -409,7 +409,10 @@ class LlamaModel(nn.Module):
             assert attention_mask is None, "Custom attention mask not compatible with flash attention"
 
             # dummy value
-            causal_mask = torch.zeros_like(position_ids)
+            if constants.XLA_AVAILABLE:
+                causal_mask = torch.zeros_like(position_ids)
+            else:
+                causal_mask = None
 
         else:
             causal_mask = torch.triu(
