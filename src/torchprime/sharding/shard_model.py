@@ -149,7 +149,7 @@ def shard_model_from_config(
     if isinstance(spec, str) and spec == "implied":
       shape = list(param.shape)
 
-      if len(shape) == 0:
+      if len(shape) == 0 or param.numel() <= 1:
         unsharded_params.add(name)
         return param
 
