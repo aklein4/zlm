@@ -74,7 +74,7 @@ class ZLMTrainer(BaseTrainer):
             ) / x.shape[1] # [S, H, H]
 
             v = torch.linalg.eigvalsh(
-                cov + self.model.mu_out_norm.eps * torch.eye(x.shape[-1], device=x.device, dtype=cov.dtype)[None]
+                cov + self.model.config.rms_norm_eps * torch.eye(x.shape[-1], device=x.device, dtype=cov.dtype)[None]
             ) # [S, H]
 
         spectral_reg = (v.pow(2)/2 - v.log() - 1/2).mean()
