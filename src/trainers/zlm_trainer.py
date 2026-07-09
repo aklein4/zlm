@@ -65,13 +65,13 @@ class ZLMTrainer(BaseTrainer):
         with torch.autocast(device_type=device_type, enabled=False):
 
             x = x.transpose(0, 1) # [S, B, H]
-            x = shard_with_gradients(x)
+            x = shard_with_gradients(x).float()
 
             x = x - x.mean(dim=1, keepdim=True)
             cov = torch.einsum(
                 'sbi,sbj->sij',
                 x, x
-            ).float() / x.shape[1] # [S, H, H]
+            ) / x.shape[1] # [S, H, H]
 
             v = torch.linalg.eigvalsh(
                 cov + self.model.config.rms_norm_eps * torch.eye(x.shape[-1], device=x.device, dtype=cov.dtype)[None]
@@ -229,8 +229,7 @@ class ZLMTrainer(BaseTrainer):
 
         # get the regularization loss
         regularize_scale = hook_progress
-        # spectral_reg, spectral_parties = self.get_spectral_info(mu)
-        spectral_reg, spectral_parties = (0.0, 0.0)
+        spectral_reg, spectral_parties = self.get_spectral_info(mu)
 
         loss = (
             lm_loss +
