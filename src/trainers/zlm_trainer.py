@@ -80,7 +80,7 @@ class ZLMTrainer(BaseTrainer):
         spectral_reg = (v.pow(2)/2 - v.log() - 1/2).mean()
         spectral_parties = self.get_effective_parties(v)
 
-        return spectral_reg, spectral_parties
+        return spectral_reg.detach(), spectral_parties.detach()
 
 
     def kl_loss(
