@@ -4,6 +4,7 @@ import numpy as np
 import string
 import sys
 import inspect
+from copy import deepcopy
 
 import datasets
 from transformers import PreTrainedTokenizer
@@ -22,7 +23,7 @@ class BaseBenchmark:
     subset: str = None
     split: str = None
 
-    is_train = False
+    is_default = False
 
 
     def __init__(
@@ -194,6 +195,8 @@ class BaseBenchmark:
 
 class MCQABenchmark(BaseBenchmark):
 
+    is_default = True
+
     def __init__(
         self,
         tokenizer: PreTrainedTokenizer,
@@ -300,6 +303,8 @@ class MCQABenchmark(BaseBenchmark):
 
 
 class MathBenchmark(BaseBenchmark):
+
+    is_default = True
 
     def __init__(
         self,
@@ -425,14 +430,14 @@ class arc_e_train(arc_e):
     name = "ARC-E-Train"
     split = "train"
 
-    is_train = True
+    is_default = False
 
 class arc_c_train(arc_c):
 
     name = "ARC-C-Train"
     split = "train"
 
-    is_train = True
+    is_default = False
 
 
 class sciq(MCQABenchmark):
@@ -659,14 +664,203 @@ class svamp(MathBenchmark):
         )
 
 
+class ManyICLBench(BaseBenchmark):
+
+    name = "ManyICLBench"
+
+    url = "launch/ManyICLBench"
+    subset = None
+    split = None
+
+    requires_batch_size_one = True
+
+    skip_subsets = [
+        "MT_",
+        "_cot",
+        "GSM8K",
+        "XLSUM"
+    ]
+
+
+    def __init__(
+        self,
+        tokenizer: PreTrainedTokenizer,
+        max_input_length: int,
+        max_output_length: int,
+        max_examples: int | None = None,
+        context_length: str | None = None,
+        max_test_examples: int | None = None,
+        runs_per_seed: int = 1,
+    ):
+
+        assert context_length is not None, "ManyICLBench requires a context_length benchmark_kwarg"
+        self.context_length = context_length
+        self.max_test_examples = max_test_examples
+        self.runs_per_seed = runs_per_seed
+
+        super().__init__(
+            tokenizer,
+            max_input_length,
+            max_output_length,
+            max_examples,
+        )
+
+
+    def get_dataset(self):
+
+        data = []
+        for subset in self.get_subsets():
+            
+            skip = False
+            for s in self.skip_subsets:
+                if subset.count(s) > 0:
+                    skip = True
+                    break
+            if skip:
+                continue
+            
+            for seed in self.get_seeds(subset):
+
+                ds = datasets.load_dataset(
+                    self.url,
+                    name=subset,
+                    split=seed,
+                    streaming=False,
+                )
+
+                do_add = False
+                for example in ds:
+                    if not example["Test Data"][0].endswith(".json"):
+                        do_add = True
+                    else:
+                        break
+
+                if not do_add:
+                    continue
+
+                if self.max_test_examples is not None:
+
+                    d = ds.to_dict()
+
+                    for i in range(self.runs_per_seed):
+                        if len(d["Test Data"][0]) < self.max_test_examples * (i+1):
+                            break
+
+                        new_d = deepcopy(d)
+                        new_d["Test Data"][0] = d["Test Data"][0][i*self.max_test_examples:(i+1)*self.max_test_examples]
+                        new_d["Test Target"][0] = d["Test Target"][0][i*self.max_test_examples:(i+1)*self.max_test_examples]
+
+                        data.append(datasets.Dataset.from_dict(new_d))
+
+                else:
+                    data.append(ds)
+
+
+
+        data = datasets.concatenate_datasets(data)
+
+        if self.context_length not in self.get_context_lengths(data):
+            raise ValueError(f"Invalid context_length for {self.name}: {self.context_length}. Must be one of {self.get_context_lengths(data)}.")
+
+        return data
+
+
+    def get_subsets(self):
+        return tuple(datasets.get_dataset_config_names(self.url))
+
+    def get_seeds(self, subset):
+        return tuple(datasets.get_dataset_split_names(self.url, subset))
+
+
+    def get_context_lengths(self, data):
+        lengths = list(data.column_names)
+        lengths.remove("Test Data")
+        lengths.remove("Test Target")
+        return tuple(lengths)
+    
+
+    def collate_fn(self, batch):
+        if len(batch) != 1:
+            raise ValueError(f"{self.name} requires batch_size=1.")
+        batch = batch[0]
+
+        input_text = batch[self.context_length]
+        input_ids = self.tokenizer(
+            input_text + "\n\n",
+            add_special_tokens=True,
+            return_tensors="pt",
+        ).input_ids.to(constants.DEVICE)
+
+        output_ids = []
+        answers = []
+        for q, a in zip(batch["Test Data"], batch["Test Target"]):
+
+            output_ids += self.tokenizer(
+                q,
+                add_special_tokens=False,
+                return_tensors="np"
+            ).input_ids[0].tolist()
+
+            a_ids = self.tokenizer(
+                " " + a + "\n\n",
+                add_special_tokens=False,
+                return_tensors="np"
+            ).input_ids[0].tolist()
+
+            indices = []
+            labels = []
+            for i in range(len(a_ids)):
+
+                indices.append(len(output_ids))
+                labels.append(a_ids[i])
+
+                output_ids.append(a_ids[i])
+
+            answers.append({
+                "indices": indices,
+                "labels": labels,
+            })
+
+        output_ids = torch.tensor(output_ids, device=constants.DEVICE).unsqueeze(0)
+
+        return {
+            "input_ids": input_ids,
+            "output_ids": output_ids,
+            "answers": answers,
+        }
+
+
+    def grade(self, batch, logits):
+        assert logits.shape[-2] == batch["output_ids"].shape[-1], f"Logits sequence length {logits.shape[-2]} does not match output_ids sequence length {batch['output_ids'].shape[-1]}"
+
+        mx = logits.argmax(dim=-1)[0].cpu()
+
+        num_correct = 0
+        for answer in batch["answers"]:
+
+            indices = answer["indices"]
+            labels = answer["labels"]
+
+            correct = True
+            for i, label in zip(indices, labels):
+                if mx[i] != label:
+                    correct = False
+                    break
+
+            if correct:
+                num_correct += 1
+
+        return num_correct / len(batch["answers"])
+
+
 BENCHMARK_DICT = {
     cls[1].name: cls[1]
     for cls in inspect.getmembers(sys.modules[__name__], inspect.isclass)
-    if issubclass(cls[1], BaseBenchmark) and cls[1].name is not None and not cls[1].is_train
+    if issubclass(cls[1], BaseBenchmark) and cls[1].name is not None
 }
 
-TRAIN_BENCHMARK_DICT = {
-    cls[1].name: cls[1]
-    for cls in inspect.getmembers(sys.modules[__name__], inspect.isclass)
-    if issubclass(cls[1], BaseBenchmark) and cls[1].name is not None and cls[1].is_train
+DEFAULT_BENCHMARK_DICT = {
+    name: cls
+    for name, cls in BENCHMARK_DICT.items()
+    if cls.is_default
 }

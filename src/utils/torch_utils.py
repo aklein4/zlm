@@ -50,7 +50,10 @@ class _ScaleGradient(torch.autograd.Function):
         if isinstance(scale, dict):
             scale = scale["value"]
 
-        return grad_output * scale.to(grad_output.dtype), None
+        if isinstance(scale, torch.Tensor):
+            scale = scale.to(grad_output.dtype)
+
+        return grad_output * scale, None
 
 
 
@@ -305,7 +308,7 @@ def newton_schulz(G, steps=5, eps=1e-7):
     
     X = G
     if G.size(-2) > G.size(-1):
-        X = X.mT
+        X = X.transpose(-2, -1)
 
     # Ensure spectral norm is at most 1
     X = X / (X.norm(dim=(-2, -1), keepdim=True) + eps)
@@ -322,7 +325,7 @@ def newton_schulz(G, steps=5, eps=1e-7):
             X, _ = _newton_schulz_inner(X, t)
         
     if G.size(-2) > G.size(-1):
-        X = X.mT
+        X = X.transpose(-2, -1)
 
     return X
 
@@ -330,11 +333,30 @@ def newton_schulz(G, steps=5, eps=1e-7):
 def _newton_schulz_inner(X, t):
     a, b, c = (3.4445, -4.7750,  2.0315)
 
-    A = X @ X.mT
+    A = X @ X.transpose(-2, -1)
     B = b * A + c * A @ A
     X = a * X + B @ X
 
     return X, X
+
+
+_cuda_newton_schulz = None
+def cuda_newton_schulz():
+    global _cuda_newton_schulz
+    if _cuda_newton_schulz is None:
+        _cuda_newton_schulz = torch.compile(
+            newton_schulz,
+            mode="reduce-overhead",
+            fullgraph=True,
+        ) 
+    return _cuda_newton_schulz
+
+
+def select_newton_schulz():
+    if constants.XLA_AVAILABLE or not torch.cuda.is_available():
+        return newton_schulz
+    else:
+        return cuda_newton_schulz()
 
 
 def shift(

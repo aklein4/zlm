@@ -14,6 +14,7 @@ def lm_loss_fn(
     ignore_index: int | None = None,
     shift_logits: bool = True,
     shift_labels: bool = True,
+    reduction: str = 'mean',
 ) -> torch.FloatTensor:
     """ Compute language modeling loss.
 
@@ -23,7 +24,8 @@ def lm_loss_fn(
         ignore_index (int, optional): index to ignore in loss computation. Defaults to -100.
         shift_logits (bool, optional): whether to shift logits for next-token prediction. Defaults to True.
         shift_labels (bool, optional): whether to shift labels for next-token prediction. Defaults to True.
-
+        reduction (str, optional): reduction method for loss. Defaults to 'mean'.
+        
     Returns:
         torch.FloatTensor: computed loss
     """
@@ -36,11 +38,23 @@ def lm_loss_fn(
     if ignore_index is None:
         ignore_index = IGNORE_INDEX
 
-    return F.cross_entropy(
+    out = F.cross_entropy(
         logits.reshape(-1, logits.shape[-1]),
         labels.reshape(-1),
         ignore_index=ignore_index,
+        reduction=reduction,
     )
+
+    if reduction == 'none':
+        out = out.reshape(labels.shape)
+
+        out = torch.where(
+            labels == ignore_index,
+            torch.full_like(out, float('nan')),
+            out,
+        )
+    
+    return out
 
 
 def lm_acc_fn(

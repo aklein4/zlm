@@ -142,9 +142,16 @@ class BaseTrainer:
             logger.info("All model parameters have sharding spec.")
 
         # Setup SPMD mesh and shard the model.
-        model, self.input_sharding_spec, self.minibatch = setup_sharding_and_mesh(
+        model, self.input_sharding_spec, self.minibatch, shard_info = setup_sharding_and_mesh(
             model, config
         )
+        logger.info("Sharding info:")
+        logger.info(f"    Seen params:      {len(shard_info['seen_params'])}")
+        logger.info(f"    Implied params:   {len(shard_info['implied_params'])}")
+        logger.info(f"    Seen modules:     {len(shard_info['seen_modules'])}")
+        logger.info(f"    Unused names:     {len((config_names - shard_info['seen_params']) - shard_info['seen_modules'])}")
+        logger.info(f"    Unsharded params: {len(shard_info['unsharded_params'])}")
+
         model = mark_pure_modules(model, config)
 
         model = advanced_remat(model, config)
@@ -176,6 +183,10 @@ class BaseTrainer:
             lr_schedulers = {}
 
             for key, c in config.trainer.multiple_optimizers.items():
+                if len(list(params[key])) == 0:
+                    logger.warning(f"No parameters found for optimizer {key}!")
+                    continue
+                
                 optimizer_config = c.optimizer
                 lr_scheduler_config = c.lr_scheduler
 
@@ -396,7 +407,10 @@ class BaseTrainer:
 
                 # keep track of something like number of tokens trained on
                 if "atom_count" in aux.keys():
-                    self.atoms_seen += aux["atom_count"].detach().item()
+                    if isinstance(aux["atom_count"], torch.Tensor):
+                        self.atoms_seen += aux["atom_count"].detach().item()
+                    else:
+                        self.atoms_seen += aux["atom_count"]
 
                 loss = loss.detach().item()
                 grad_norm = grad_norm.detach().item()
@@ -472,7 +486,17 @@ class BaseTrainer:
         loss.backward()
         
         grad_norm = self.clip_gradients()
+        
+        aux.update(self.optimization_step())
 
+        self.model.zero_grad(set_to_none=False)
+
+        return loss, aux, grad_norm
+
+
+    def optimization_step(self):
+
+        aux = {}
         key_name = lambda key, x: f"{key}_{x}" if len(self.optimizers) > 1 else x
 
         for key, optimizer in self.optimizers.items():
@@ -488,10 +512,8 @@ class BaseTrainer:
             lr = lr_scheduler.get_last_lr()[0]
             aux.update({key_name(key, "lr"): lr})
             lr_scheduler.step()
-        
-        self.model.zero_grad(set_to_none=False)
 
-        return loss, aux, grad_norm
+        return aux
 
 
     def forward(self, **batch) -> tuple[torch.Tensor, dict]:
@@ -503,13 +525,23 @@ class BaseTrainer:
     def clip_gradients(self):
         """Clip gradients by the specified max norm and/or max absolute value."""
         max_grad_norm = self.config.trainer.max_grad_norm
+        
+        parameters = self.get_trainable_parameters(self.model)
+        if isinstance(parameters, dict):
+            p = []
+            for v in parameters.values():
+                p += list(v)
+            parameters = p
+        else:
+            parameters = list(parameters)
+
         if max_grad_norm is None or max_grad_norm <= 0:
-            grad_norm = nn_utils.get_total_norm(self.model.parameters(), norm_type=2)
+            grad_norm = nn_utils.get_total_norm(parameters, norm_type=2)
         else:
             grad_norm = nn_utils.clip_grad_norm_(
-                self.model.parameters(), max_norm=max_grad_norm, norm_type=2
+                parameters, max_norm=max_grad_norm, norm_type=2
             )
         max_grad_value = self.config.trainer.max_grad_value
         if max_grad_value is not None and max_grad_value > 0:
-            nn_utils.clip_grad_value_(self.model.parameters(), clip_value=max_grad_value)
+            nn_utils.clip_grad_value_(parameters, clip_value=max_grad_value)
         return grad_norm

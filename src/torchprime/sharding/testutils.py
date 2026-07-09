@@ -62,7 +62,7 @@ def validate_shard_model_from_config_torch_xla_core(
   assert num_devices > 1, "The TPU VM should have more than 1 device for SPMD testing"
   device_ids = np.array(range(num_devices))
   mesh = Mesh(device_ids, mesh_shape, mesh_axis)
-  model = shard_torch_xla_model_from_config(model_to_shard, sharding_config, mesh)
+  model, _ = shard_torch_xla_model_from_config(model_to_shard, sharding_config, mesh)
   torch_xla.sync()
 
   # In order to shard activations, corresponding modules are

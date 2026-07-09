@@ -100,7 +100,7 @@ def shard_model_from_config(
   config: dict,
   shard_output: Callable[[torch.Tensor, tuple[str, ...]], torch.Tensor],
   shard_param: Callable[[torch.Tensor, tuple[str, ...]], torch.Tensor] | None = None,
-) -> torch.nn.Module:
+) -> tuple[torch.nn.Module, dict[str, set[str]]]:
   """
   Given a config of pattern to partition spec, shard the model accordingly.
 
@@ -138,14 +138,33 @@ def shard_model_from_config(
 
   config, shard_output_fns = _process_tail_index_syntax(config, shard_output)
   seen_params = set()
+  implied_params = set()
+  unsharded_params = set()
   seen_modules = set()
 
   def shard_weight(param, name):
     name = _process_sharding_name(name)
-    spec = config.get(name)
+    spec = config.get(name, "implied")
+
+    if isinstance(spec, str) and spec == "implied":
+      shape = list(param.shape)
+
+      if len(shape) == 0:
+        unsharded_params.add(name)
+        return param
+
+      implied_params.add(name)
+
+      imp_spec = [None] * len(shape)
+      imp_spec[shape.index(max(shape))] = "fsdp"
+
+      return shard_param(param, _to_tuple(imp_spec))
+      
     if spec is not None:
       seen_params.add(name)
       return shard_param(param, _to_tuple(spec))
+    
+    unsharded_params.add(name)
     return param
 
   def shard_activation(mod, name):
@@ -160,18 +179,13 @@ def shard_model_from_config(
 
   model = shard_model(model, shard_weight, shard_activation)
 
-  want_names = set(config.keys())
-  seen_names = seen_params.union(seen_modules)
-  diff = "\n".join(want_names - seen_names)
-  assert (
-    seen_names == want_names
-  ), f"""Requested to shard these names: {want_names}, but only sharded these: {seen_names}.
-
-These names were not found in the model:
-{diff}
-"""
-
-  return model
+  return model, {
+    "want_names": set(config.keys()),
+    "seen_params": seen_params,
+    "implied_params": implied_params,
+    "unsharded_params": unsharded_params,
+    "seen_modules": seen_modules,
+  }
 
 
 def shard_torchax_model_from_config(

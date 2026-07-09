@@ -20,6 +20,7 @@ def load_checkpoint(
     remove_folder: bool = False,
     model_type: str = None,
     skip_state_dict: bool = False,
+    config_name: str | None = None,
 ) -> torch.nn.Module:
     """
     Loads a model checkpoint from Hugging Face Hub or local folder.
@@ -33,6 +34,7 @@ def load_checkpoint(
         remove_folder (bool): Whether to remove the downloaded checkpoint folder after loading. Default is False.
         model_type (str): The type of the model to load. If None, it will be inferred from the checkpoint config. Default is None.
         skip_state_dict (bool): Whether to skip loading the state dict and only initialize the model architecture. Default is False.
+        config_name (str | None): The name of the config file to use instead of the one in the checkpoint. If None, it will use the config in the checkpoint. Default is None.
     """
     
     name = url.replace("/", "--")
@@ -52,17 +54,15 @@ def load_checkpoint(
         )
 
     # load the model
-    config_path = os.path.join(subfolder_path, "config.json")
+    if config_name is not None:
+        config_path = os.path.join(constants.BASE_PATH, "configs", "model", config_name+".yaml")
+    else:
+        config_path = os.path.join(subfolder_path, "config.json")
     config = omegaconf.OmegaConf.load(config_path)
     config.attention_kernel = attention_kernel
 
     if model_type is None:
         model_type = config.type
-    
-        # backwards compatibility
-        if "z_ar_steps" in config.keys():
-            model_type = "ar_zlm.ARZLMModel"
-
     model = import_model(model_type)(config)
 
     # load the weights

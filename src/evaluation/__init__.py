@@ -6,7 +6,7 @@ import json
 
 from transformers.utils.logging import disable_progress_bar, enable_progress_bar, is_progress_bar_enabled
 
-from evaluation.benchmarks import BENCHMARK_DICT
+from evaluation.benchmarks import BENCHMARK_DICT, DEFAULT_BENCHMARK_DICT
 import utils.constants as constants
 
 
@@ -20,6 +20,7 @@ def run_benchmarks(
     max_examples: int | None = None,
     autocast: bool = False, 
     model_kwargs: dict = {},
+    benchmark_kwargs: dict = {},
     save_path: str | None = None,
     meta_data: dict = {},
 ):
@@ -27,7 +28,7 @@ def run_benchmarks(
     disable_progress_bar()
     
     if benchmarks is None:
-        benchmarks = list(BENCHMARK_DICT.keys())
+        benchmarks = list(DEFAULT_BENCHMARK_DICT.keys())
     print(f"\nEvaluating on {len(benchmarks)} benchmarks:")
     for i in range(len(benchmarks)):
         print(f"  {i+1}. {benchmarks[i]}")
@@ -35,7 +36,6 @@ def run_benchmarks(
     if save_path is None:
         save_path = "evaluation_results"
     save_path = os.path.join(constants.LOCAL_DATA_PATH, save_path)
-    os.makedirs(save_path, exist_ok=True)
     print(f"\nEvaluation results will be saved to: {save_path}")  
 
     for i, benchmark_name in enumerate(benchmarks): 
@@ -43,11 +43,20 @@ def run_benchmarks(
             raise ValueError(f"Unsupported benchmark: {benchmark_name}")
         
         print(f"\nStarting benchmark {i+1}/{len(benchmarks)}: {benchmark_name}")
-        bench = BENCHMARK_DICT[benchmark_name](
+        benchmark_cls = BENCHMARK_DICT[benchmark_name]
+        if getattr(benchmark_cls, "requires_batch_size_one", False) and batch_size != 1:
+            raise ValueError(f"{benchmark_name} requires batch_size=1, got {batch_size}.")
+        
+        bench_kwargs = benchmark_kwargs.get(benchmark_name, {})
+        if not isinstance(bench_kwargs, dict):
+            raise ValueError(f"benchmark_kwargs for {benchmark_name} must be a dict.")
+
+        bench = benchmark_cls(
             tokenizer,
             max_input_length,
             max_output_length,
             max_examples,
+            **bench_kwargs,
         )
         print(f"Number of examples: {len(bench)}")
         loader = torch.utils.data.DataLoader(
@@ -74,9 +83,11 @@ def run_benchmarks(
                     )
 
                 grade = bench.grade(batch, logits)
+                if isinstance(grade, torch.Tensor):
+                    grade = grade.sum().item()
 
                 seen += batch["input_ids"].shape[0]
-                correct += grade.sum().item()
+                correct += grade
 
                 pbar.update(1)
                 pbar.set_postfix({
@@ -98,8 +109,12 @@ def run_benchmarks(
                 "autocast": autocast,
                 "max_examples": max_examples,
                 "model_kwargs": model_kwargs,
+                "benchmark_kwargs": benchmark_kwargs,
+                "benchmark_kwargs_for_benchmark": bench_kwargs,
             } | meta_data
         }
+
+        os.makedirs(save_path, exist_ok=True)
         with open(os.path.join(save_path, f"{benchmark_name}.json"), "w") as f:
             json.dump(results, f, indent=4)
 

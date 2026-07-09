@@ -65,6 +65,6 @@ def setup_sharding_and_mesh(
   # the training across devices following the SPMD paradigm.
   sharding_config = OmegaConf.to_container(config.model.sharding, resolve=True)
   assert isinstance(sharding_config, dict)
-  model = shard_torch_xla_model_from_config(model, config=sharding_config)
+  model, shard_info = shard_torch_xla_model_from_config(model, config=sharding_config)
 
-  return model, input_sharding_spec, minibatch
+  return model, input_sharding_spec, minibatch, shard_info

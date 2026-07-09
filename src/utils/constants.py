@@ -42,6 +42,7 @@ def DT():
     if XLA_AVAILABLE or torch.cuda.is_available():
         return torch.bfloat16
     return torch.float32
+
 # path to local data folder
 LOCAL_DATA_PATH = os.path.join(BASE_PATH, "local_data")
 
