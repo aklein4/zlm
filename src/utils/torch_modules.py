@@ -97,7 +97,7 @@ class ARLinear(nn.Module):
             self.register_parameter('bias', None)
 
         n = self.num_steps
-        mask = torch.ones(n, n)
+        mask = torch.ones(n, n, device=self.weight.device)
         mask = torch.tril(mask, diagonal=0 if self.self_attend else -1)
         mask = mask.repeat_interleave(self.out_features // n, dim=0).repeat_interleave(self.in_features // n, dim=1)
         self.register_buffer('mask', mask, persistent=True)
@@ -706,6 +706,5 @@ class AdaPool(nn.Module):
         output = self.out_proj(h)
         if self.normalize:
             output = self.norm(output)
-        
+
         return output
-    

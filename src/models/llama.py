@@ -23,6 +23,9 @@ from omegaconf import DictConfig
 from torch import nn
 import torch.nn.functional as F
 from transformers.activations import ACT2FN
+from transformers import PreTrainedModel
+from transformers.generation import GenerationMixin
+from transformers.modeling_outputs import CausalLMOutputWithPast
 from transformers.utils import logging
 
 from torchprime.layers.sequential import HomogeneousSequential
@@ -34,6 +37,7 @@ if constants.XLA_AVAILABLE:
     from torchprime.torch_xla_models import offloading
 from utils.attention_utils import AtttentionProbe
 from utils.loss_utils import lm_loss_fn
+from models.configuration import TPULlamaConfig, coerce_config
 
 
 logger = logging.get_logger(__name__)
@@ -280,7 +284,7 @@ class LlamaDecoderLayer(nn.Module):
 
     offload_name = "decoder_input"
     is_causal = True
-    
+
 
     def __init__(self, config: DictConfig, layer_idx: int):
         super().__init__()
@@ -421,7 +425,10 @@ class LlamaModel(nn.Module):
             )
             causal_mask = causal_mask.unsqueeze(0).unsqueeze(0)  # Add batch and head dimension
             if attention_mask is not None:
-                causal_mask = causal_mask * attention_mask[:, None, None, :]
+                causal_mask = causal_mask.masked_fill(
+                    ~attention_mask[:, None, None, :].bool(),
+                    float("-inf"),
+                )
 
         # create position embeddings to be shared across the decoder layers
         position_embeddings = self.rotary_emb(inputs_embeds, position_ids)
@@ -440,23 +447,27 @@ class LlamaModel(nn.Module):
         return hidden_states
 
 
-class LlamaForCausalLM(nn.Module):
+class LlamaForCausalLM(PreTrainedModel, GenerationMixin):
 
     transformer_type = LlamaModel
+    config_class = TPULlamaConfig
+    base_model_prefix = "model"
+    main_input_name = "input_ids"
+    _supports_cache_class = False
 
     
     def __init__(self, config):
-        super().__init__()
+        config = coerce_config(config, self.config_class)
+        super().__init__(config)
 
-        self.config = config
         self.model = self.transformer_type(config)
         self.model.do_norm = False
 
         self.vocab_size = config.vocab_size
         self.lm_head = nn.Linear(config.hidden_size, config.vocab_size, bias=False)
 
-        # Initialize weights and apply final processing
-        self.apply(self._init_weights)
+        # Initialize weights and apply Transformers final processing.
+        self.post_init()
 
     
     def _init_weights(self, module: nn.Module):
@@ -487,11 +498,19 @@ class LlamaForCausalLM(nn.Module):
         inputs_embeds: torch.FloatTensor | None = None,
         labels: torch.LongTensor | None = None,
         attention_mask: torch.FloatTensor | None = None, # only used in non-kernel attention
+        position_ids: torch.LongTensor | None = None,
+        past_key_values=None,
+        use_cache: bool | None = None,
+        cache_position: torch.LongTensor | None = None,
+        output_attentions: bool | None = None,
+        output_hidden_states: bool | None = None,
+        return_dict: bool | None = None,
         shift_states: bool = False,
-        logits_to_keep: slice | None = None,
+        logits_to_keep: int | slice | torch.Tensor | None = None,
         return_states: bool = False,
         cpu_logits: bool = False,
-    ) -> tuple[torch.FloatTensor, torch.FloatTensor | None]:
+        **kwargs,
+    ) -> CausalLMOutputWithPast | tuple:
         """
         Args:
             input_ids (torch.LongTensor | None): Indices of input sequence tokens in the vocabulary. Shape `(batch_size, sequence_length)`.
@@ -504,10 +523,38 @@ class LlamaForCausalLM(nn.Module):
             A tuple of `(logits, loss)` or `(logits, loss, hidden_states)`
         """
         
+        if past_key_values is not None:
+            raise NotImplementedError(
+                "LlamaForCausalLM does not yet support a KV cache. Pass use_cache=False."
+            )
+        if use_cache:
+            logger.warning_once(
+                "LlamaForCausalLM currently generates without a KV cache."
+            )
+        if output_attentions:
+            raise NotImplementedError("Returning attention weights is not supported.")
+
+        return_dict = return_dict if return_dict is not None else self.config.use_return_dict
+        output_hidden_states = (
+            output_hidden_states
+            if output_hidden_states is not None
+            else self.config.output_hidden_states
+        )
+
+        if input_ids is not None and attention_mask is not None:
+            input_ids = torch.where(
+                attention_mask.bool(), input_ids, torch.zeros_like(input_ids)
+            )
+
+        core_attention_mask = attention_mask
+        if self.config.attention_kernel is not None and "lash" in self.config.attention_kernel:
+            core_attention_mask = None
+
         hidden_states = self.model(
             input_ids=input_ids,
             inputs_embeds=inputs_embeds,
-            attention_mask=attention_mask,
+            attention_mask=core_attention_mask,
+            position_ids=position_ids,
         )
 
         lm_states = self.model.norm(hidden_states)
@@ -516,7 +563,11 @@ class LlamaForCausalLM(nn.Module):
             # Shift the hidden states to the right for causal language modeling
             lm_states = lm_states[..., :-1, :].contiguous()
         elif logits_to_keep is not None:
-            lm_states = lm_states[:, logits_to_keep, :].contiguous()
+            if isinstance(logits_to_keep, int):
+                if logits_to_keep > 0:
+                    lm_states = lm_states[:, -logits_to_keep:, :].contiguous()
+            else:
+                lm_states = lm_states[:, logits_to_keep, :].contiguous()
 
         if cpu_logits:
             logits = F.linear(
@@ -532,18 +583,66 @@ class LlamaForCausalLM(nn.Module):
         
         loss = None
         if labels is not None:
-        
             loss = lm_loss_fn(
                 logits,
                 labels=labels,
-                ignore_index=self.config.pad_token_id,
+                ignore_index=-100,
                 shift_logits=(not shift_states),
             )
 
-        if return_states:
-            return logits, loss, hidden_states
-        
-        return logits, loss
+        returned_hidden_states = None
+        if output_hidden_states or return_states:
+            returned_hidden_states = (hidden_states,)
+
+        if not return_dict:
+            output = (logits,)
+            if returned_hidden_states is not None:
+                output += (returned_hidden_states,)
+            return ((loss,) + output) if loss is not None else output
+
+        return CausalLMOutputWithPast(
+            loss=loss,
+            logits=logits,
+            past_key_values=None,
+            hidden_states=returned_hidden_states,
+            attentions=None,
+        )
+
+
+    def get_input_embeddings(self):
+        return self.model.embed_tokens
+
+
+    def set_input_embeddings(self, value):
+        self.model.embed_tokens = value
+
+
+    def get_output_embeddings(self):
+        return self.lm_head
+
+
+    def set_output_embeddings(self, value):
+        self.lm_head = value
+
+
+    def prepare_inputs_for_generation(
+        self,
+        input_ids,
+        attention_mask=None,
+        inputs_embeds=None,
+        **kwargs,
+    ):
+        model_inputs = {
+            "input_ids": input_ids,
+            "attention_mask": attention_mask,
+            "use_cache": False,
+        }
+        if inputs_embeds is not None and (
+            input_ids is None or input_ids.shape[1] == 0
+        ):
+            model_inputs["inputs_embeds"] = inputs_embeds
+            model_inputs["input_ids"] = None
+        return model_inputs
     
 
     def get_logits(
@@ -555,11 +654,13 @@ class LlamaForCausalLM(nn.Module):
 
         if output_ids is None:
             shift = kwargs.pop("shift_logits", True)
+            kwargs.pop("return_dict", None)
             return self.forward(
                 input_ids=input_ids,
                 shift_states=shift,
+                return_dict=True,
                 **kwargs
-            )[0]
+            ).logits
 
         all_ids = torch.cat(
             [
@@ -569,11 +670,13 @@ class LlamaForCausalLM(nn.Module):
             dim=1
         )
 
+        kwargs.pop("return_dict", None)
         out = self.forward(
             input_ids=all_ids,
             logits_to_keep=slice(-(output_ids.shape[-1]+1), -1),
+            return_dict=True,
             **kwargs
-        )[0]
+        ).logits
         return out
 
 
@@ -609,4 +712,3 @@ class LlamaForCausalLM(nn.Module):
                 return samples.squeeze(0)
 
             return samples
-    

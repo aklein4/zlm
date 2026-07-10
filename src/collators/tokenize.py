@@ -31,14 +31,23 @@ class TokenizeCollator:
         
         text = [x[self.text_key] for x in batch]
 
-        input_ids = self.tokenizer(
+        encoded = self.tokenizer(
             text,
             truncation=True,
             padding="max_length",
             max_length=self.sequence_length,
             return_tensors="pt"
-        )["input_ids"].long()
+        )
+        input_ids = encoded["input_ids"].long()
+        attention_mask = encoded["attention_mask"].bool()
+        labels = torch.where(
+            attention_mask,
+            input_ids,
+            torch.full_like(input_ids, -100),
+        )
 
         return {
-            "input_ids": input_ids
+            "input_ids": input_ids,
+            "attention_mask": attention_mask,
+            "labels": labels,
         }

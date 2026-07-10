@@ -3,6 +3,7 @@ import torch.nn as nn
 import torch.nn.functional as F
 
 from transformers.activations import ACT2FN
+from transformers import PreTrainedModel
 import math
 from omegaconf import DictConfig
 
@@ -18,6 +19,10 @@ from utils.torch_utils import (
 from models.llama import LlamaForCausalLM, LlamaRMSNorm
 from models.custom_llama import CustomLlamaModel, CustomLlamaDecoderLayer
 from models import load_checkpoint_state
+from models.configuration import ZLMConfig, coerce_config
+from models.modeling_outputs import ZLMCausalLMOutput
+from utils import constants
+from utils.loss_utils import lm_loss_fn
 from utils.torch_modules import ARLinear, UnbiasedEMA
 
 
@@ -105,11 +110,15 @@ class DecoderModel(CustomLlamaModel):
     layer_type = DecoderModelLayer
 
 
-class ZLMModel(nn.Module):
+class ZLMModel(PreTrainedModel):
+
+    config_class = ZLMConfig
+    base_model_prefix = "model"
+    main_input_name = "input_ids"
     
     def __init__(self, config: DictConfig):
-        super().__init__()
-        self.config = config
+        config = coerce_config(config, self.config_class)
+        super().__init__(config)
 
         # save config
         self.hidden_size = config.hidden_size
@@ -258,6 +267,110 @@ class ZLMModel(nn.Module):
         eigvals, eigvecs = torch.linalg.eigh(embed_cov)
         self.decoder_z_proj_in.weight.data.copy_(
             eigvecs[:, -self.latent_size:] * torch.sqrt(eigvals[None, -self.latent_size:])
+        )
+
+
+    def get_input_embeddings(self):
+        return self.embed_tokens
+
+
+    def set_input_embeddings(self, value):
+        self.embed_tokens = value
+
+
+    def get_output_embeddings(self):
+        return self.lm_head
+
+
+    def set_output_embeddings(self, value):
+        self.lm_head = value
+
+
+    def forward(
+        self,
+        input_ids: torch.LongTensor,
+        attention_mask: torch.BoolTensor | None = None,
+        labels: torch.LongTensor | None = None,
+        output_ids: torch.LongTensor | None = None,
+        decoder_attention_mask: torch.BoolTensor | None = None,
+        noise: torch.FloatTensor | None = None,
+        noise_scale: torch.FloatTensor | float | None = None,
+        z: torch.FloatTensor | None = None,
+        return_dict: bool | None = None,
+        **kwargs,
+    ) -> ZLMCausalLMOutput | tuple:
+        """Run conditional ZLM teacher forcing with Transformers-style inputs."""
+        if output_ids is None:
+            output_ids = labels
+        if output_ids is None:
+            raise ValueError("Pass labels or output_ids for ZLM teacher forcing.")
+
+        return_dict = return_dict if return_dict is not None else self.config.use_return_dict
+
+        if attention_mask is None:
+            attention_mask = input_ids != self.config.pad_token_id
+        else:
+            attention_mask = attention_mask.bool()
+
+        if decoder_attention_mask is None:
+            if labels is not None:
+                decoder_attention_mask = labels != -100
+            else:
+                decoder_attention_mask = output_ids != self.config.pad_token_id
+        else:
+            decoder_attention_mask = decoder_attention_mask.bool()
+
+        input_for_model = torch.where(
+            attention_mask, input_ids, torch.zeros_like(input_ids)
+        )
+        output_for_model = torch.where(
+            decoder_attention_mask, output_ids, torch.zeros_like(output_ids)
+        )
+
+        mu = None
+        if z is None:
+            z, mu = self.encode(
+                input_for_model,
+                output_for_model,
+                input_mask=attention_mask,
+                output_mask=decoder_attention_mask,
+                noise=noise,
+                noise_scale=noise_scale,
+            )
+
+        logits, latent_states = self.decode(
+            input_for_model,
+            output_for_model,
+            z,
+            input_mask=attention_mask,
+            output_mask=decoder_attention_mask,
+        )
+
+        loss = None
+        if labels is not None:
+            normalized_labels = torch.where(
+                decoder_attention_mask,
+                labels,
+                torch.full_like(labels, -100),
+            )
+            loss = lm_loss_fn(
+                logits,
+                normalized_labels,
+                ignore_index=-100,
+                shift_logits=False,
+                shift_labels=False,
+            )
+
+        if not return_dict:
+            output = (logits, z, mu, latent_states)
+            return ((loss,) + output) if loss is not None else output
+
+        return ZLMCausalLMOutput(
+            loss=loss,
+            logits=logits,
+            latent_states=z,
+            latent_means=mu,
+            hidden_states=(latent_states,),
         )
 
     
@@ -514,26 +627,53 @@ class ZLMModel(nn.Module):
         **rollout_kwargs,
     ):
 
-        from transformers.cache_utils import DynamicCache
+        from transformers.cache_utils import DynamicCache, StaticCache
         from tqdm import tqdm
+
+        if constants.XLA_AVAILABLE:
+            import torch_xla.core.xla_model as xm
 
         # handle the noise
         if noise is None:
             noise = self.sample_noise(input_ids)
 
-        # initialize the cache
-        cache = DynamicCache()
+        # Dynamic cache growth causes an XLA recompilation per length. Use a
+        # fixed-size cache on TPU and the lighter dynamic cache elsewhere.
+        if constants.XLA_AVAILABLE:
+            max_cache_len = (
+                input_ids.shape[1]
+                + self.z_length
+                + 1
+                + (num_output_tokens if num_output_tokens is not None else self.output_length)
+            )
+            cache = StaticCache(self.config, max_cache_len=max_cache_len)
+        else:
+            try:
+                cache = DynamicCache(config=self.config)
+            except TypeError:
+                # Transformers 4.52 accepted a parameterless DynamicCache.
+                cache = DynamicCache()
 
         # pass the input tokens through the decoder
         input_tokens = self.embed_tokens(input_ids)
         input_tokens += unsqueeze_to_batch(
             self.decoder_input_embeddings, input_tokens
         )
+        if input_mask is None:
+            input_position_ids = torch.arange(
+                input_ids.shape[1], device=input_ids.device
+            )[None].expand(input_ids.shape[0], -1)
+        else:
+            input_position_ids = input_mask.long().cumsum(dim=-1) - 1
         self.decoder_model(
             inputs_embeds=input_tokens,
             elementwise_pad_mask=input_mask,
             past_key_values=cache,
+            position_ids=input_position_ids,
+            cache_position=torch.arange(input_ids.shape[1], device=input_ids.device),
         )
+        if constants.XLA_AVAILABLE:
+            xm.mark_step()
         
         # initialize the position ids
         position_ids = torch.zeros(input_ids.shape[0], dtype=torch.long, device=input_ids.device)
@@ -559,11 +699,17 @@ class ZLMModel(nn.Module):
                 inputs_embeds=z_token[:, None, :],
                 past_key_values=cache,
                 position_ids=position_ids[:, None],
+                cache_position=torch.tensor(
+                    [input_ids.shape[1] + i], device=input_ids.device
+                ),
             )[:, -1, :] # [B, hidden_size]
             z_states = self.decoder_z_states_norm(z_states)
             
             # update the position ids
             position_ids += 1
+
+            if constants.XLA_AVAILABLE:
+                xm.mark_step()
 
             # we did an extra pass to put the last z in the cache
             if i >= self.z_length:
@@ -609,6 +755,10 @@ class ZLMModel(nn.Module):
                 inputs_embeds=prev_logit_token[:, None, :],
                 past_key_values=cache,
                 position_ids=position_ids[:, None],
+                cache_position=torch.tensor(
+                    [input_ids.shape[1] + self.z_length + 1 + i],
+                    device=input_ids.device,
+                ),
             )[:, -1, :] # [B, hidden_size]
 
             # update the position ids
@@ -631,6 +781,9 @@ class ZLMModel(nn.Module):
                 unsqueeze_to_batch(self.decoder_output_embeddings, prev_logit_token) +
                 self.embed_tokens(next_token)
             ) # [B, hidden_size]
+
+            if constants.XLA_AVAILABLE:
+                xm.mark_step()
 
         # stack output ids [B, output_length]
         output_ids = torch.stack(output_ids, dim=-1)

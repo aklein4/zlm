@@ -53,8 +53,22 @@ class SingleSequenceCollator:
             dim=1
         )
 
-        input_ids = torch.clip(input_ids, 0, self.vocab_size - 1)
+        invalid = (
+            (input_ids < 0)
+            | ((input_ids >= self.vocab_size) & (input_ids != self.pad_token_id))
+        )
+        if invalid.any():
+            raise ValueError("Batch contains token IDs outside the configured vocabulary.")
+
+        attention_mask = input_ids != self.pad_token_id
+        labels = torch.where(
+            attention_mask,
+            input_ids,
+            torch.full_like(input_ids, -100),
+        )
 
         return {
-            "input_ids": input_ids
+            "input_ids": input_ids,
+            "attention_mask": attention_mask,
+            "labels": labels,
         }

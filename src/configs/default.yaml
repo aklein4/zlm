@@ -5,7 +5,7 @@
 # See these configs for more information about the expected structure of the model, dataset, and trainer configs.
 defaults:
   - _self_ # refers to this config file
-  - model: tinyllama-test 
+  - model: smollm2-test
   - data: fineweb-tinyllama-1024
   - trainer: lm-test
 
@@ -27,6 +27,40 @@ debug: false
 project: ZEBRA-v2
 name: test
 notes: null
+
+
+# Portable initialization and exact training-resume configuration.
+checkpoint:
+
+  # Initialize only model weights from a local directory or Hub repository.
+  initialize_from: null
+  initialize_step: null
+  initialize_revision: main
+  initialize_strict: true
+
+  # Resume complete DCP training state from this local/shared directory.
+  resume_from: null
+  resume_step: null  # null selects the latest complete checkpoint
+  require_data_state: false
+  allow_model_config_mismatch: false
+
+  # Native DCP checkpoints are written here. null selects local_data/...
+  path: null
+  keep_last: null
+  save_on_completion: false
+  save_on_error: true
+
+  # Portable Transformers safetensors export and optional Hub publication.
+  export_safetensors: true
+  export_interval: 10000
+  max_shard_size: 5GB
+  tokenizer_url: null
+  upload_to_hub: true
+  hub_private: false
+
+  # Data loading errors are retried narrowly; exhaustion is never swallowed.
+  max_data_errors: 3
+  data_error_backoff_seconds: 1.0
 
 
 # The virtual device mesh shape to use within a TPU slice. This is also called

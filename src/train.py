@@ -14,11 +14,12 @@ import torch_xla
 import torch_xla.runtime as xr
 import torch_xla.backends as xla_backends
 import transformers
+from transformers.utils.versions import require_version
 
 import torch_xla.core.xla_model as xm
 
 from torchprime.torch_xla_models.model import model_utils
-from torchprime.torch_xla_models.utils.config_utils import config_vaidator
+from torchprime.torch_xla_models.utils.config_utils import config_validator
 
 from data.datasets import get_dataset
 from utils import constants
@@ -26,8 +27,9 @@ from utils.import_utils import import_model, import_trainer
 from models import load_checkpoint_state
 
 
-# Check transformers and get logger
-transformers.utils.check_min_version("4.39.3")
+# Model/cache contracts are tested against the pinned TPU version and newer v4
+# releases. Major Transformers upgrades require an explicit compatibility pass.
+require_version("transformers>=4.52.1,<5")
 logger = logging.getLogger(__name__)
 
 
@@ -42,7 +44,7 @@ def main(config: omegaconf.DictConfig):
     # Validate the config to avoid misuse and feature combination
     # Adding any new feature should update the config validator to
     # ensure different features can be combined together
-    config_vaidator(config)
+    config_validator(config)
 
     # Print the config for debugging
     if constants.PROCESS_IS_MAIN():
@@ -83,13 +85,28 @@ def main(config: omegaconf.DictConfig):
     with model_utils.set_default_dtype(getattr(torch, config.model.torch_dtype)):
         model = import_model(config.model.type)(config.model)
 
-    # load the pretrained model if specified
-    if config.model.pretrained_url is not None:
+    initialize_from = config.checkpoint.initialize_from
+    initialize_step = config.checkpoint.initialize_step
+    initialize_revision = config.checkpoint.initialize_revision
+    initialize_strict = config.checkpoint.initialize_strict
+
+    # Backward-compatible spelling. Unlike the old behavior, initialization
+    # never advances the training step; exact continuation uses resume_from.
+    if initialize_from is None and config.model.pretrained_url is not None:
+        initialize_from = config.model.pretrained_url
+        initialize_step = config.model.pretrained_step
+        initialize_strict = config.model.pretrained_strict
+
+    if initialize_from is not None and config.checkpoint.resume_from is not None:
+        raise ValueError("Configure either checkpoint initialization or resume, not both.")
+
+    if initialize_from is not None:
         model = load_checkpoint_state(
             model,
-            config.model.pretrained_url,
-            config.model.pretrained_step,
-            strict=config.model.pretrained_strict,
+            initialize_from,
+            initialize_step,
+            strict=initialize_strict,
+            revision=initialize_revision,
         )
 
     # TODO: initialize the model weights directly on the XLA device

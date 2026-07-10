@@ -10,10 +10,10 @@ type: llama.LlamaForCausalLM
 
 # HuggingFace URL of the checkpoint to load, or null if initializing from scratch
 pretrained_url: null
-# Step of the checkpoint to load
+# Legacy weight-initialization step; exact resume is configured under checkpoint
 pretrained_step: null
 # Whether to strictly enforce that the keys in the checkpoint match the model state dict
-pretrained_strict: null
+pretrained_strict: true
 
 
 # dtype of the model parameters. Should probably be float32

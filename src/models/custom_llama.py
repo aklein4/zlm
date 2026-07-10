@@ -23,6 +23,9 @@ from omegaconf import DictConfig
 from torch import nn
 import torch.nn.functional as F
 from transformers.activations import ACT2FN
+from transformers import PreTrainedModel
+from transformers.generation import GenerationMixin
+from transformers.modeling_outputs import CausalLMOutputWithPast
 from transformers.utils import logging
 from transformers.cache_utils import Cache
 
@@ -46,6 +49,7 @@ from models.llama import (
 from utils.torch_utils import gaussian_init
 from utils.attention_utils import AtttentionProbe
 from utils.loss_utils import lm_loss_fn
+from models.configuration import CustomLlamaConfig, coerce_config
 
 
 logger = logging.get_logger(__name__)
@@ -112,6 +116,7 @@ class CustomLlamaAttention(nn.Module):
         position_ids: torch.LongTensor | None = None,
         elementwise_pad_mask=None,
         past_key_values: Cache | None = None,
+        cache_position: torch.LongTensor | None = None,
     ) -> torch.FloatTensor:
         bsz, q_len, _ = hidden_states.shape
 
@@ -132,11 +137,6 @@ class CustomLlamaAttention(nn.Module):
         cos, sin = position_embeddings
         query_states, key_states = apply_rotary_pos_emb(query_states, key_states, cos, sin)
 
-        if (past_key_values is not None) and (not constants.XLA_AVAILABLE):
-            key_states, value_states = past_key_values.update(
-                key_states, value_states, self.layer_idx
-            )
-
         # apply elementwise attention bias 
         if elementwise_pad_mask is not None:
 
@@ -153,6 +153,14 @@ class CustomLlamaAttention(nn.Module):
                 + key_offset[:, None].to(key_states.dtype)
             )
 
+        if isinstance(past_key_values, Cache):
+            key_states, value_states = past_key_values.update(
+                key_states,
+                value_states,
+                self.layer_idx,
+                {"cache_position": cache_position},
+            )
+
         attn_output = self.attention_block(
             query_states,
             key_states,
@@ -167,7 +175,7 @@ class CustomLlamaAttention(nn.Module):
 
 
 class CustomLlamaDecoderLayer(nn.Module):
-    
+
     offload_name: str = "decoder_input"
     is_causal: bool = True
 
@@ -193,6 +201,7 @@ class CustomLlamaDecoderLayer(nn.Module):
         position_embeddings: tuple[torch.Tensor, torch.Tensor] | None = None,    # necessary, but kept here for BC
         elementwise_pad_mask=None,
         past_key_values: Cache | None = None,
+        cache_position: torch.LongTensor | None = None,
     ) -> torch.Tensor:
         """
         Args:
@@ -220,6 +229,7 @@ class CustomLlamaDecoderLayer(nn.Module):
             position_embeddings=position_embeddings,
             elementwise_pad_mask=elementwise_pad_mask,
             past_key_values=past_key_values,
+            cache_position=cache_position,
         )
         hidden_states = residual + hidden_states
 
@@ -344,6 +354,7 @@ class CustomLlamaModel(nn.Module):
         position_ids: torch.LongTensor | None = None,
         elementwise_pad_mask: torch.BoolTensor | None = None,
         past_key_values: Cache | None = None,
+        cache_position: torch.LongTensor | None = None,
     ) -> torch.Tensor:
         assert (input_ids is not None) ^ (inputs_embeds is not None), (
             "You have to specify either input_ids or inputs_embeds, but not both."
@@ -376,13 +387,51 @@ class CustomLlamaModel(nn.Module):
                 causal_mask = None
 
         else:
-            causal_mask = torch.triu(
-                torch.full((seq_length, seq_length), float("-inf"), device=inputs_embeds.device),
-                diagonal=1,
-            )
+            if isinstance(past_key_values, Cache):
+                key_length = past_key_values.get_max_cache_shape()
+                if key_length < 0:
+                    past_length = past_key_values.get_seq_length(0)
+                    key_length = past_length + seq_length
+                if cache_position is None:
+                    past_length = past_key_values.get_seq_length(0)
+                    cache_position = torch.arange(
+                        past_length,
+                        past_length + seq_length,
+                        device=inputs_embeds.device,
+                    )
+                key_position = torch.arange(
+                    key_length, device=inputs_embeds.device
+                )
+                causal_mask = torch.zeros(
+                    seq_length,
+                    key_length,
+                    device=inputs_embeds.device,
+                )
+                causal_mask = causal_mask.masked_fill(
+                    key_position[None, :] > cache_position[:, None],
+                    float("-inf"),
+                )
+            else:
+                causal_mask = torch.triu(
+                    torch.full(
+                        (seq_length, seq_length),
+                        float("-inf"),
+                        device=inputs_embeds.device,
+                    ),
+                    diagonal=1,
+                )
             causal_mask = causal_mask.unsqueeze(0).unsqueeze(0)  # Add batch and head dimension
             if attention_mask is not None:
-                causal_mask = causal_mask * attention_mask[:, None, None, :]
+                if attention_mask.shape[-1] < causal_mask.shape[-1]:
+                    attention_mask = F.pad(
+                        attention_mask,
+                        (0, causal_mask.shape[-1] - attention_mask.shape[-1]),
+                        value=False,
+                    )
+                causal_mask = causal_mask.masked_fill(
+                    ~attention_mask[:, None, None, :].bool(),
+                    float("-inf"),
+                )
 
         # currently cannot be None because scan needs differentiable inputs
         if constants.XLA_AVAILABLE:
@@ -406,6 +455,7 @@ class CustomLlamaModel(nn.Module):
             position_embeddings=position_embeddings,
             elementwise_pad_mask=elementwise_pad_mask,
             past_key_values=past_key_values,
+            cache_position=cache_position,
         )
 
         if self.do_norm:
@@ -413,23 +463,27 @@ class CustomLlamaModel(nn.Module):
         return hidden_states
 
 
-class CustomLlamaForCausalLM(nn.Module):
+class CustomLlamaForCausalLM(PreTrainedModel, GenerationMixin):
 
     transformer_type = CustomLlamaModel
+    config_class = CustomLlamaConfig
+    base_model_prefix = "model"
+    main_input_name = "input_ids"
+    _supports_cache_class = True
 
 
     def __init__(self, config):
-        super().__init__()
+        config = coerce_config(config, self.config_class)
+        super().__init__(config)
 
-        self.config = config
         self.model = self.transformer_type(config)
         self.model.do_norm = False
 
         self.vocab_size = config.vocab_size
         self.lm_head = nn.Linear(config.hidden_size, config.vocab_size, bias=False)
 
-        # Initialize weights and apply final processing
-        self.apply(self._init_weights)
+        # Initialize weights and apply Transformers final processing.
+        self.post_init()
 
     
     def _init_weights(self, module: nn.Module):
@@ -463,18 +517,57 @@ class CustomLlamaForCausalLM(nn.Module):
         inputs_embeds: torch.FloatTensor | None = None,
         labels: torch.LongTensor | None = None,
         attention_mask: torch.FloatTensor | None = None, # only used in non-kernel attention
+        position_ids: torch.LongTensor | None = None,
         shift_states: bool = False,
         elementwise_pad_mask: torch.BoolTensor | None = None,
         past_key_values: Cache | None = None,
+        use_cache: bool | None = None,
+        cache_position: torch.LongTensor | None = None,
+        output_attentions: bool | None = None,
+        output_hidden_states: bool | None = None,
+        return_dict: bool | None = None,
         return_states: bool = False,
-    ) -> tuple[torch.FloatTensor, torch.FloatTensor | None]:
+        **kwargs,
+    ) -> CausalLMOutputWithPast | tuple:
+
+        if output_attentions:
+            raise NotImplementedError("Returning attention weights is not supported.")
+
+        return_dict = return_dict if return_dict is not None else self.config.use_return_dict
+        output_hidden_states = (
+            output_hidden_states
+            if output_hidden_states is not None
+            else self.config.output_hidden_states
+        )
+
+        if elementwise_pad_mask is None and attention_mask is not None:
+            elementwise_pad_mask = attention_mask.bool()
+        if (
+            isinstance(past_key_values, Cache)
+            and past_key_values.get_seq_length() > 0
+            and elementwise_pad_mask is not None
+            and input_ids is not None
+        ):
+            if position_ids is None:
+                position_ids = attention_mask.long().cumsum(dim=-1)[:, -input_ids.shape[1]:] - 1
+            elementwise_pad_mask = elementwise_pad_mask[:, -input_ids.shape[1]:]
+        if input_ids is not None and elementwise_pad_mask is not None:
+            input_ids = torch.where(
+                elementwise_pad_mask, input_ids, torch.zeros_like(input_ids)
+            )
+
+        core_attention_mask = attention_mask
+        if self.config.attention_kernel is not None and "lash" in self.config.attention_kernel:
+            core_attention_mask = None
         
         hidden_states = self.model(
             input_ids=input_ids,
             inputs_embeds=inputs_embeds,
-            attention_mask=attention_mask,
+            attention_mask=core_attention_mask,
+            position_ids=position_ids,
             elementwise_pad_mask=elementwise_pad_mask,
-            past_key_values=past_key_values,
+            past_key_values=past_key_values if use_cache is not False else None,
+            cache_position=cache_position,
         )
 
         lm_states = self.model.norm(hidden_states)
@@ -491,18 +584,67 @@ class CustomLlamaForCausalLM(nn.Module):
         
         loss = None
         if labels is not None:
-        
             loss = lm_loss_fn(
                 logits,
                 labels=labels,
-                ignore_index=self.config.pad_token_id,
+                ignore_index=-100,
                 shift_logits=(not shift_states),
             )
 
-        if return_states:
-            return logits, loss, hidden_states
-        
-        return logits, loss
+        returned_hidden_states = None
+        if output_hidden_states or return_states:
+            returned_hidden_states = (hidden_states,)
+
+        if not return_dict:
+            output = (logits,)
+            if past_key_values is not None:
+                output += (past_key_values,)
+            if returned_hidden_states is not None:
+                output += (returned_hidden_states,)
+            return ((loss,) + output) if loss is not None else output
+
+        return CausalLMOutputWithPast(
+            loss=loss,
+            logits=logits,
+            past_key_values=past_key_values,
+            hidden_states=returned_hidden_states,
+            attentions=None,
+        )
+
+
+    def get_input_embeddings(self):
+        return self.model.embed_tokens
+
+
+    def set_input_embeddings(self, value):
+        self.model.embed_tokens = value
+
+
+    def get_output_embeddings(self):
+        return self.lm_head
+
+
+    def set_output_embeddings(self, value):
+        self.lm_head = value
+
+
+    def prepare_inputs_for_generation(
+        self,
+        input_ids,
+        past_key_values=None,
+        attention_mask=None,
+        cache_position=None,
+        **kwargs,
+    ):
+        if past_key_values is not None and past_key_values.get_seq_length() > 0:
+            input_ids = input_ids[:, -1:]
+        return {
+            "input_ids": input_ids,
+            "attention_mask": attention_mask,
+            "past_key_values": past_key_values,
+            "cache_position": cache_position,
+            "use_cache": True,
+        }
     
 
     def get_logits(
@@ -534,11 +676,11 @@ class CustomLlamaForCausalLM(nn.Module):
             torch.zeros_like(all_ids)
         )
 
-        logits, _ = self.forward(
+        logits = self.forward(
             input_ids=ids_for_model,
             shift_states=slice(-(output_ids.shape[-1]+1), -1),
-            elementwise_pad_mask=elementwise_pad_mask
-        )
+            elementwise_pad_mask=elementwise_pad_mask,
+            return_dict=True,
+        ).logits
 
         return logits
-    

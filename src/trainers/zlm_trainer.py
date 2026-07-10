@@ -54,6 +54,18 @@ class ZLMTrainer(BaseTrainer):
                 m.weight.no_muon = True
 
 
+    def extra_trainer_state_dict(self):
+        return {
+            "hooked": self.hooked,
+            "hook_step": self.hook_step,
+        }
+
+
+    def load_extra_trainer_state_dict(self, state):
+        self.hooked = state["hooked"].to(self.device)
+        self.hook_step = state["hook_step"].to(self.device)
+
+
     def get_effective_parties(self, x):
         p = x / (x.sum() + self.model.config.rms_norm_eps)
 
@@ -109,7 +121,14 @@ class ZLMTrainer(BaseTrainer):
         return kl.sum(), weights
 
 
-    def forward(self, input_ids, output_ids):
+    def forward(
+        self,
+        input_ids,
+        output_ids,
+        attention_mask=None,
+        decoder_attention_mask=None,
+        labels=None,
+    ):
         pad_token_id = self.model.config.pad_token_id
 
         # get the hook progress
@@ -127,8 +146,16 @@ class ZLMTrainer(BaseTrainer):
         )
 
         # prepare inputs
-        input_mask = (input_ids != pad_token_id)
-        output_mask = (output_ids != pad_token_id)
+        input_mask = (
+            attention_mask.bool()
+            if attention_mask is not None
+            else input_ids != pad_token_id
+        )
+        output_mask = (
+            decoder_attention_mask.bool()
+            if decoder_attention_mask is not None
+            else output_ids != pad_token_id
+        )
 
         # model doesn't actually have the pad token embedding
         input_for_model = torch.where(
@@ -161,17 +188,25 @@ class ZLMTrainer(BaseTrainer):
         )
 
         # get the lm loss metrics
+        if labels is None:
+            labels = output_ids
+        labels = torch.where(
+            output_mask,
+            labels,
+            torch.full_like(labels, -100),
+        )
+
         lm_loss = lm_loss_fn(
             logits,
-            output_ids,
-            ignore_index=pad_token_id,
+            labels,
+            ignore_index=-100,
             shift_labels=False,
             shift_logits=False,
         )
         lm_acc = lm_acc_fn(
             logits,
-            output_ids,
-            ignore_index=pad_token_id,
+            labels,
+            ignore_index=-100,
             shift_labels=False,
             shift_logits=False,
         )
@@ -215,7 +250,7 @@ class ZLMTrainer(BaseTrainer):
             mu_for_kl.detach(), mu_for_kl.detach().mean(0, keepdim=True)
         )
 
-        denom = (output_ids != pad_token_id).float().sum() + self.model.config.rms_norm_eps
+        denom = output_mask.float().sum() + self.model.config.rms_norm_eps
         latent_denom = mu.shape[0] * mu.shape[1]
 
         # calculate kls per token
@@ -277,7 +312,7 @@ class ZLMTrainer(BaseTrainer):
 
             "noise_scale": noise_scale,
             
-            "atom_count": (output_ids != pad_token_id).long().sum(),
+            "atom_count": output_mask.long().sum(),
         }
 
         return loss, aux

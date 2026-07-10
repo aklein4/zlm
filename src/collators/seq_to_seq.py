@@ -28,19 +28,31 @@ class SeqToSeqCollator:
         self,
         batch,
     ):
-        return {
-            "input_ids": handle_ids(
+        input_ids = handle_ids(
                 batch,
                 "input_ids",
                 self.input_length,
                 self.pad_token_id,
-            ),
-            "output_ids": handle_ids(
+            )
+        output_ids = handle_ids(
                 batch,
                 "output_ids",
                 self.output_length,
                 self.pad_token_id,
             )
+        attention_mask = input_ids != self.pad_token_id
+        decoder_attention_mask = output_ids != self.pad_token_id
+
+        return {
+            "input_ids": input_ids,
+            "attention_mask": attention_mask,
+            "output_ids": output_ids,
+            "decoder_attention_mask": decoder_attention_mask,
+            "labels": torch.where(
+                decoder_attention_mask,
+                output_ids,
+                torch.full_like(output_ids, -100),
+            ),
         }
 
 

@@ -8,10 +8,8 @@ distributed TPU training.
 import logging
 import math
 import os
+from pathlib import Path
 from timeit import default_timer as timer
-import shutil
-import json
-import re
 import time
 
 import torch
@@ -19,7 +17,6 @@ import torch.nn.utils as nn_utils
 import torch_xla
 import torch_xla.core.xla_model as xm
 import torch_xla.distributed.parallel_loader as pl
-import torch_xla.distributed.spmd as xs
 import torch_xla.runtime as xr
 
 from omegaconf import DictConfig, OmegaConf
@@ -45,7 +42,15 @@ import huggingface_hub as hf
 from utils.import_utils import import_optimizer, import_collator
 from utils import constants
 from utils.remat_utils import advanced_remat
-from utils.git_utils import get_current_commit_hash
+from utils.git_utils import get_current_commit_hash, is_worktree_dirty
+from utils.checkpointing import (
+    CheckpointManifest,
+    SUCCESS_FILE,
+    TrainingCheckpointManager,
+    materialize_model_state,
+    prime_optimizer,
+    save_portable_model,
+)
 
 
 logger = logging.getLogger(__name__)
@@ -77,21 +82,55 @@ class BaseTrainer:
         
         self.global_batch_size = self.config.trainer.global_batch_size
         self.train_dataset = train_dataset
+        self.global_step = 0
+        self.epoch = 0
+        self.atoms_seen = 0
 
         self.model = self.prepare_model(model, config)
 
         self.optimizers, self.lr_schedulers = self.prepare_optimization(self.model, config)
 
+        checkpoint_path = self.config.checkpoint.path
+        if checkpoint_path is None:
+            checkpoint_path = os.path.join(
+                constants.LOCAL_DATA_PATH,
+                "training_checkpoints",
+                f"{self.config.project}_{self.config.name}",
+            )
+        if self.config.checkpoint.resume_from is not None:
+            checkpoint_path = self.config.checkpoint.resume_from
+            resume_path = Path(checkpoint_path)
+            if (resume_path / SUCCESS_FILE).exists() and resume_path.name.isdigit():
+                inferred_step = int(resume_path.name)
+                configured_step = self.config.checkpoint.resume_step
+                if configured_step is not None and configured_step != inferred_step:
+                    raise ValueError(
+                        f"resume_step={configured_step} does not match {resume_path}."
+                    )
+                self.config.checkpoint.resume_step = inferred_step
+                checkpoint_path = resume_path.parent
+        self.checkpoint_manager = TrainingCheckpointManager(
+            checkpoint_path,
+            is_main_process=constants.PROCESS_IS_MAIN,
+            process_index=constants.PROCESS_INDEX,
+            process_count=constants.PROCESS_COUNT,
+            barrier=xm.rendezvous,
+            keep_last=self.config.checkpoint.keep_last,
+        )
+
         # set up saving
         if not self.config.debug and constants.PROCESS_IS_MAIN():
             os.makedirs(constants.LOCAL_DATA_PATH, exist_ok=True)
 
-            # create the huggingface save repo
-            self.repo_name = f"{constants.HF_ID}/{self.config.project}_{self.config.name}"
-
-            hf.create_repo(
-                self.repo_name, private=False, exist_ok=True
-            )
+            if self.config.checkpoint.upload_to_hub:
+                if constants.HF_ID is None:
+                    raise ValueError("Set HF_ID before enabling checkpoint Hub uploads.")
+                self.repo_name = f"{constants.HF_ID}/{self.config.project}_{self.config.name}"
+                hf.create_repo(
+                    self.repo_name,
+                    private=self.config.checkpoint.hub_private,
+                    exist_ok=True,
+                )
 
             # create the wandb project
             notes = f"GIT HASH: {get_current_commit_hash()}"
@@ -105,6 +144,9 @@ class BaseTrainer:
             )
 
         self.post_init()
+
+        if self.config.checkpoint.resume_from is not None:
+            self.restore_checkpoint(self.config.checkpoint.resume_step)
 
         # Execute all initialization work queued so far before starting training.
         torch_xla.sync()
@@ -261,60 +303,204 @@ class BaseTrainer:
         self,
         step: int,
     ):
-        logger.info("[SAVING] Starting distributed checkpoint...")
+        """Save exact training state, then optionally export portable weights."""
+        if self.config.debug:
+            logger.info("Skipping checkpoint %d in debug mode", step)
+            return
+        if step != self.global_step:
+            raise ValueError(
+                f"Cannot save step {step}; the trainer has completed "
+                f"{self.global_step} updates."
+            )
 
-        # wait for existing operations
+        logger.info("[SAVING] Starting distributed checkpoint...")
+        xm.mark_step()
         xm.wait_device_ops()
         xm.rendezvous(f"checkpoint_start_{step}")
 
-        # move the model to CPU for saving
-        logger.info("Moving model to CPU for checkpoint saving...")
+        distributed_state = {"model": self.model.state_dict()}
+        distributed_state.update({
+            f"optimizer_{name}": optimizer.state_dict()
+            for name, optimizer in self.optimizers.items()
+        })
+        manifest = CheckpointManifest(
+            global_step=step,
+            examples_seen=step * self.global_batch_size,
+            atoms_seen=self.atoms_seen,
+            git_commit=get_current_commit_hash(),
+            git_dirty=is_worktree_dirty(),
+            world_size=constants.PROCESS_COUNT(),
+        )
+        checkpoint_dir = self.checkpoint_manager.save(
+            step,
+            distributed_state,
+            self.trainer_state_dict(),
+            manifest,
+        )
+
+        export_error_path = checkpoint_dir / "_EXPORT_ERROR"
+        if constants.PROCESS_IS_MAIN():
+            try:
+                export_interval = self.config.checkpoint.export_interval
+                should_export = (
+                    self.config.checkpoint.export_safetensors
+                    and export_interval is not None
+                    and step % export_interval == 0
+                )
+                if should_export:
+                    export_dir = checkpoint_dir / "transformers"
+                    state = materialize_model_state(
+                        self.model,
+                        checkpoint_dir / "distributed",
+                    )
+                    save_portable_model(
+                        self.model,
+                        export_dir,
+                        state_dict=state,
+                        max_shard_size=self.config.checkpoint.max_shard_size,
+                    )
+                    OmegaConf.save(self.config, export_dir / "train_config.yaml")
+                    self._save_tokenizer(export_dir)
+
+                    if self.config.checkpoint.upload_to_hub:
+                        logger.info("Uploading checkpoint to %s", self.repo_name)
+                        hf.HfApi().upload_folder(
+                            repo_id=self.repo_name,
+                            folder_path=export_dir,
+                            path_in_repo=f"{step:012d}",
+                            repo_type="model",
+                        )
+                export_error_path.unlink(missing_ok=True)
+            except Exception as error:
+                export_error_path.write_text(f"{type(error).__name__}: {error}\n")
+        xm.rendezvous(f"checkpoint_exported_{step}")
+
+        if export_error_path.exists():
+            raise RuntimeError(
+                f"Checkpoint {step} was saved, but portable export failed: "
+                f"{export_error_path.read_text().strip()}"
+            )
+
+        logger.info("[SAVING] Finished distributed checkpoint.")
+
+
+    def _save_tokenizer(self, save_dir: Path) -> None:
+        tokenizer_url = self.config.checkpoint.tokenizer_url
+        if tokenizer_url is None and "tokenizer_url" in self.config.data.collator.kwargs:
+            tokenizer_url = self.config.data.collator.kwargs.tokenizer_url
+        if tokenizer_url is None:
+            return
+
+        from transformers import AutoTokenizer
+
+        tokenizer = AutoTokenizer.from_pretrained(tokenizer_url)
+        if tokenizer.pad_token is None:
+            tokenizer.add_special_tokens({"pad_token": "[PAD]"})
+        tokenizer.save_pretrained(save_dir)
+
+
+    def trainer_state_dict(self) -> dict:
         state = {
-            k: xs.clear_sharding(v.clone()).detach().cpu()
-            for k, v in self.model.state_dict().items()
+            "global_step": self.global_step,
+            "epoch": self.epoch,
+            "atoms_seen": self.atoms_seen,
+            "config": OmegaConf.to_container(self.config, resolve=True),
+            "lr_schedulers": {
+                name: scheduler.state_dict()
+                for name, scheduler in self.lr_schedulers.items()
+            },
+            "extra": self.extra_trainer_state_dict(),
         }
-        xm.mark_step()
-        xm.wait_device_ops()
-        xm.rendezvous(f"checkpoint_model_moved_{step}")
-        logger.info("Moded model to CPU for checkpoint saving.")
+        if hasattr(self.train_dataset, "state_dict"):
+            state["dataset"] = self.train_dataset.state_dict()
+        return self._state_to_cpu(state)
 
-        if constants.PROCESS_IS_MAIN(): 
 
-            save_path = os.path.join(
-                constants.LOCAL_DATA_PATH,
-                "tmp_checkpoint",
+    def extra_trainer_state_dict(self) -> dict:
+        return {}
+
+
+    def load_extra_trainer_state_dict(self, state: dict) -> None:
+        if state:
+            logger.warning("Ignoring unsupported extra trainer state: %s", state.keys())
+
+
+    def _state_to_cpu(self, state):
+        if isinstance(state, torch.Tensor):
+            return state.detach().cpu()
+        if isinstance(state, dict):
+            return {key: self._state_to_cpu(value) for key, value in state.items()}
+        if isinstance(state, list):
+            return [self._state_to_cpu(value) for value in state]
+        if isinstance(state, tuple):
+            return tuple(self._state_to_cpu(value) for value in state)
+        return state
+
+
+    def restore_checkpoint(self, step: int | None = None) -> int:
+        if step is None:
+            step = self.checkpoint_manager.latest_step()
+        if step is None:
+            raise FileNotFoundError(
+                f"No complete checkpoint found in {self.checkpoint_manager.root_dir}."
             )
-            shutil.rmtree(save_path, ignore_errors=True)
-            os.makedirs(save_path, exist_ok=True)
 
-            logger.info(f"Saving config to {save_path}")
-            with open(os.path.join(save_path, "config.json"), "w") as f:
-                json.dump(OmegaConf.to_container(self.config.model, resolve=True), f, indent=4)
-            logger.info(f"Saved config to {save_path}/config.json")
+        if step > 0:
+            for optimizer in self.optimizers.values():
+                prime_optimizer(optimizer)
 
-            logger.info(f"Saving model state to {save_path}")
-            torch.save(state, os.path.join(save_path, "model.pt"))
-            # np_state = {k: v.numpy() for k, v in state.items()}
-            # print({k: np.reshape(v, (-1,))[:10] for k, v in np_state.items()})
-            # np.save(os.path.join(save_path, "model.npy"), np_state)
-            logger.info(f"Saved model state to {save_path}/model.pt")
-            
-            api = hf.HfApi()
-            out_path = f"{step:012d}"
+        distributed_state = {"model": self.model.state_dict()}
+        distributed_state.update({
+            f"optimizer_{name}": optimizer.state_dict()
+            for name, optimizer in self.optimizers.items()
+        })
+        manifest, trainer_state = self.checkpoint_manager.restore(
+            step,
+            distributed_state,
+        )
 
-            logger.info(f"Uploading checkpoint to {self.repo_name}")
-            api.upload_folder(
-                repo_id=self.repo_name,
-                folder_path=save_path,
-                path_in_repo=out_path,
-                repo_type="model",
+        saved_model_config = trainer_state.get("config", {}).get("model")
+        current_model_config = OmegaConf.to_container(self.config.model, resolve=True)
+        if (
+            saved_model_config is not None
+            and saved_model_config != current_model_config
+            and not self.config.checkpoint.allow_model_config_mismatch
+        ):
+            raise ValueError(
+                "The checkpoint model configuration differs from the current "
+                "configuration. Set checkpoint.allow_model_config_mismatch=true "
+                "only for an intentional migration."
             )
-            logger.info(f"Uploaded checkpoint to {self.repo_name}/{out_path}")
 
-            shutil.rmtree(save_path, ignore_errors=True)
-        
-        xm.rendezvous(f"checkpoint_saved_{step}")
-        logger.info("[SAVING] Finished distributed checkpoint.")      
+        self.model.load_state_dict(distributed_state["model"])
+        for name, optimizer in self.optimizers.items():
+            optimizer.load_state_dict(distributed_state[f"optimizer_{name}"])
+        for name, scheduler in self.lr_schedulers.items():
+            scheduler.load_state_dict(trainer_state["lr_schedulers"][name])
+
+        self.global_step = manifest.global_step
+        self.epoch = trainer_state["epoch"]
+        self.atoms_seen = trainer_state["atoms_seen"]
+        self.load_extra_trainer_state_dict(trainer_state.get("extra", {}))
+
+        if "dataset" in trainer_state:
+            if not hasattr(self.train_dataset, "load_state_dict"):
+                raise TypeError(
+                    "The checkpoint has dataset state, but the current dataset cannot restore it."
+                )
+            self.train_dataset.load_state_dict(trainer_state["dataset"])
+        elif self.config.checkpoint.require_data_state:
+            raise ValueError(
+                "Exact resume was requested, but the dataset has no checkpointable state."
+            )
+        else:
+            logger.warning(
+                "Dataset state is unavailable; model and optimizer resume is exact, "
+                "but input data will restart from the current dataset position."
+            )
+
+        logger.info("Restored training checkpoint at global step %d", self.global_step)
+        return self.global_step
     
 
     def train_loop(self) -> None:
@@ -346,43 +532,42 @@ class BaseTrainer:
         logger.info(f"    Model parameters: {sum(p.numel() for p in self.model.parameters()):,}")
         logger.info(f"    Model dtype: {list(self.model.parameters())[0].dtype}")
 
-        # initialize counters
-        epoch = 0 # TODO: currently hangs on new epoch
-        step = 0
+        # global_step is the number of completed optimizer updates. Logs,
+        # checkpoint names, and loop termination all use this same convention.
         error_count = 0
-        self.atoms_seen = 0 # must be self. for step_closure
         training_start_time = timer()
 
         # run the training loop
         # TODO: enable multi-epoch training
-        while step < max_step:
+        while self.global_step < max_step:
             try:
                 batch = next(train_iterator)
-            except:
-                logger.warning("Unexpected error when fetching data at step %d, retrying", step)
+            except StopIteration as error:
+                logger.error("DataLoader exhausted at global step %d", self.global_step)
+                if self.config.checkpoint.save_on_error:
+                    self.save_checkpoint(self.global_step)
+                raise RuntimeError("DataLoader exhausted before max_steps") from error
+            except Exception:
+                logger.exception(
+                    "Unexpected error when fetching data at global step %d",
+                    self.global_step,
+                )
                 error_count += 1
-                if error_count > 1000:
-                    logger.error("Too many errors when fetching data, saving checkpoint and exiting")
-                    self.save_checkpoint(step)
+                if error_count > self.config.checkpoint.max_data_errors:
+                    if self.config.checkpoint.save_on_error:
+                        self.save_checkpoint(self.global_step)
                     raise RuntimeError("Too many errors when fetching data")
-                time.sleep(1)
+                time.sleep(self.config.checkpoint.data_error_backoff_seconds)
                 continue
             error_count = 0
-            
-            # skip steps for pretrained model
-            if self.config.model.pretrained_step is not None and step < self.config.model.pretrained_step:
-                if step % 10 == 0:
-                    logger.info(f"Skipping step {step} as it is before the pretrained step {self.config.model.pretrained_step}")
-                step += 1
-                continue
 
             # can be reached by forward
-            self.step = step
+            self.step = self.global_step
 
             # when context parallel and load balance context parallel is enabled,
             # we will reorder the sequence here for each batch
             if lb_cp_enabled(self.config):
-                return {
+                batch = {
                     key: reorder_sequence(
                         tensor=value,
                         cp_size=self.config.ici_mesh.context,
@@ -396,6 +581,8 @@ class BaseTrainer:
             trace_start_time = timer()
             loss, aux, grad_norm = self.train_step(batch)
             trace_end_time = timer()
+            self.global_step += 1
+            completed_step = self.global_step
 
             # post-step closure for logging
             def step_closure(
@@ -437,15 +624,15 @@ class BaseTrainer:
                 to_wandb["trace_time_ms"] = (trace_end_time - trace_start_time) * 1000
                 to_wandb["epoch"] = epoch
 
-                to_wandb["examples_seen"] = (step + 1) * self.global_batch_size
+                to_wandb["examples_seen"] = step * self.global_batch_size
                 if "atom_count" in aux.keys():
                     to_wandb["atoms_seen"] = self.atoms_seen
 
                 to_wandb["loss_nan"] = 1 - int(math.isfinite(loss))
 
                 to_wandb["training_time_elapsed_hr"] = training_time_elapsed
-                to_wandb["avg_time_per_step_s"] = training_time_elapsed * 3600 / (step + 1)
-                to_wandb["avg_steps_per_hr"] = (step + 1) / training_time_elapsed
+                to_wandb["avg_time_per_step_s"] = training_time_elapsed * 3600 / step
+                to_wandb["avg_steps_per_hr"] = step / training_time_elapsed
 
                 if not self.config.debug and constants.PROCESS_IS_MAIN():
                     wandb.log(to_wandb, step=step)
@@ -455,8 +642,8 @@ class BaseTrainer:
                 step_closure,
                 args=(
                     training_start_time,
-                    epoch,
-                    step,
+                    self.epoch,
+                    completed_step,
                     loss.detach().clone(),
                     grad_norm.detach().clone(),
                     {k: (v.detach().clone() if isinstance(v, torch.Tensor) else v) for k, v in aux.items()},
@@ -468,12 +655,15 @@ class BaseTrainer:
             xm.mark_step()
 
             # save checkpoint
-            if (step+1) % self.config.trainer.checkpoint_interval == 0:    
-                self.save_checkpoint(step+1)
-
-            step += 1
+            if self.global_step % self.config.trainer.checkpoint_interval == 0:
+                self.save_checkpoint(self.global_step)
 
         xm.wait_device_ops()
+        if (
+            self.config.checkpoint.save_on_completion
+            and self.global_step % self.config.trainer.checkpoint_interval != 0
+        ):
+            self.save_checkpoint(self.global_step)
         logger.info("Finished training run")
 
 

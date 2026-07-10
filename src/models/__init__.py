@@ -1,85 +1,173 @@
-""" Models """
+"""Model registration and portable checkpoint loading."""
 
-import torch
+from __future__ import annotations
 
-import omegaconf
-import os
-import huggingface_hub as hf
+import logging
+from pathlib import Path
 import shutil
 
-from utils.import_utils import import_model
+import huggingface_hub as hf
+import omegaconf
+import torch
+
 from utils import constants
+from utils.checkpointing import canonicalize_state_dict
+from utils.import_utils import import_model
+
+
+logger = logging.getLogger(__name__)
+
+
+def register_transformers_auto_classes():
+    """Register local model classes with Transformers AutoClasses."""
+    from transformers import AutoConfig, AutoModel, AutoModelForCausalLM
+
+    from models.configuration import CustomLlamaConfig, TPULlamaConfig, ZLMConfig
+    from models.llama import LlamaForCausalLM
+    from models.custom_llama import CustomLlamaForCausalLM
+    from models.zlm import ZLMModel
+
+    AutoConfig.register(TPULlamaConfig.model_type, TPULlamaConfig, exist_ok=True)
+    AutoConfig.register(CustomLlamaConfig.model_type, CustomLlamaConfig, exist_ok=True)
+    AutoConfig.register(ZLMConfig.model_type, ZLMConfig, exist_ok=True)
+    AutoModelForCausalLM.register(
+        TPULlamaConfig, LlamaForCausalLM, exist_ok=True
+    )
+    AutoModelForCausalLM.register(
+        CustomLlamaConfig, CustomLlamaForCausalLM, exist_ok=True
+    )
+    AutoModel.register(ZLMConfig, ZLMModel, exist_ok=True)
+
+    return {
+        "causal_lm": (LlamaForCausalLM, CustomLlamaForCausalLM),
+        "conditional_generation": ZLMModel,
+    }
+
+
+def _resolve_checkpoint_dir(
+    url: str,
+    step: int | None,
+    ignore_cache: bool,
+    revision: str,
+) -> tuple[Path, bool]:
+    """Resolve either a real local directory or a Hub checkpoint directory."""
+    source = Path(url).expanduser()
+    if source.exists():
+        checkpoint_dir = source
+        if step is not None and (source / f"{step:012d}").is_dir():
+            checkpoint_dir = source / f"{step:012d}"
+        if (checkpoint_dir / "transformers").is_dir():
+            checkpoint_dir = checkpoint_dir / "transformers"
+        return checkpoint_dir, False
+
+    name = url.replace("/", "--")
+    local_path = Path(constants.CHECKPOINTS_PATH) / name
+    subfolder = f"{step:012d}" if step is not None else None
+    checkpoint_dir = local_path / subfolder if subfolder is not None else local_path
+
+    if ignore_cache:
+        shutil.rmtree(checkpoint_dir, ignore_errors=True)
+
+    if not checkpoint_dir.exists():
+        allow_patterns = [f"{subfolder}/*"] if subfolder is not None else None
+        hf.snapshot_download(
+            repo_id=url,
+            revision=revision,
+            allow_patterns=allow_patterns,
+            local_dir=local_path,
+        )
+
+    if (checkpoint_dir / "transformers").is_dir():
+        checkpoint_dir = checkpoint_dir / "transformers"
+
+    return checkpoint_dir, True
+
+
+def _load_state_dict(checkpoint_dir: Path) -> dict[str, torch.Tensor]:
+    """Load safetensors when available, with legacy model.pt fallback."""
+    from torchprime.torch_xla_models.model.model_utils import (
+        load_safetensors_to_state_dict,
+    )
+
+    if (
+        (checkpoint_dir / "model.safetensors").exists()
+        or (checkpoint_dir / "model.safetensors.index.json").exists()
+    ):
+        state_dict = load_safetensors_to_state_dict(str(checkpoint_dir))
+    else:
+        state_path = checkpoint_dir / "model.pt"
+        if not state_path.exists():
+            raise FileNotFoundError(
+                f"No safetensors or legacy model.pt found in {checkpoint_dir}."
+            )
+        state_dict = torch.load(
+            state_path,
+            map_location="cpu",
+            weights_only=True,
+        )
+
+    return canonicalize_state_dict(state_dict)
 
 
 def load_checkpoint(
     url: str,
-    step: int,
+    step: int | None = None,
     attention_kernel: str = "other", # uses non-kernel attention by default
     strict: bool = True,
     ignore_cache: bool = False,
     remove_folder: bool = False,
-    model_type: str = None,
+    model_type: str | None = None,
     skip_state_dict: bool = False,
     config_name: str | None = None,
+    revision: str = "main",
 ) -> torch.nn.Module:
-    """
-    Loads a model checkpoint from Hugging Face Hub or local folder.
+    """Load a complete model from a local directory or Hugging Face Hub."""
+    if not isinstance(strict, bool):
+        raise TypeError("strict must be an explicit boolean.")
 
-    Args:
-        url (str): The URL or local path of the checkpoint to load.
-        step (int): The training step corresponding to the checkpoint to load.
-        attention_kernel (str): The attention kernel used in the model. Default is "other" for non-kernel attention.
-        strict (bool): Whether to strictly enforce that the keys in state_dict match the keys returned by model's state_dict(). Default is True.
-        ignore_cache (bool): Whether to ignore the local cache and redownload the checkpoint. Default is False.
-        remove_folder (bool): Whether to remove the downloaded checkpoint folder after loading. Default is False.
-        model_type (str): The type of the model to load. If None, it will be inferred from the checkpoint config. Default is None.
-        skip_state_dict (bool): Whether to skip loading the state dict and only initialize the model architecture. Default is False.
-        config_name (str | None): The name of the config file to use instead of the one in the checkpoint. If None, it will use the config in the checkpoint. Default is None.
-    """
-    
-    name = url.replace("/", "--")
-    local_path = os.path.join(constants.CHECKPOINTS_PATH, name)
-    
-    subfolder = f"{step:012d}"
-    subfolder_path = os.path.join(local_path, subfolder)
+    checkpoint_dir, downloaded = _resolve_checkpoint_dir(
+        url, step, ignore_cache, revision
+    )
 
-    if ignore_cache:
-        shutil.rmtree(subfolder_path, ignore_errors=True)
-        
-    if not os.path.exists(subfolder_path):
-        hf.snapshot_download(
-            repo_id=url,
-            allow_patterns=[subfolder + "/*"],
-            local_dir=local_path,
-        )
-
-    # load the model
     if config_name is not None:
-        config_path = os.path.join(constants.BASE_PATH, "configs", "model", config_name+".yaml")
+        config_path = (
+            Path(constants.BASE_PATH) / "configs" / "model" / f"{config_name}.yaml"
+        )
     else:
-        config_path = os.path.join(subfolder_path, "config.json")
+        config_path = checkpoint_dir / "config.json"
     config = omegaconf.OmegaConf.load(config_path)
     config.attention_kernel = attention_kernel
 
     if model_type is None:
-        model_type = config.type
-    model = import_model(model_type)(config)
+        model_type = config.get("type", None)
 
-    # load the weights
+    if model_type is not None:
+        model = import_model(model_type)(config)
+    else:
+        from transformers import AutoConfig, AutoModel, AutoModelForCausalLM
+
+        register_transformers_auto_classes()
+        transformers_config = AutoConfig.from_pretrained(checkpoint_dir)
+        transformers_config.attention_kernel = attention_kernel
+        if transformers_config.model_type == "zlm":
+            model = AutoModel.from_config(transformers_config)
+        else:
+            model = AutoModelForCausalLM.from_config(transformers_config)
+
     if not skip_state_dict:
-        state_path = os.path.join(subfolder_path, "model.pt")
-        state_dict = torch.load(state_path, map_location="cpu")
+        load_result = model.load_state_dict(
+            _load_state_dict(checkpoint_dir),
+            strict=strict,
+        )
+        if not strict and (load_result.missing_keys or load_result.unexpected_keys):
+            logger.warning(
+                "Non-strict checkpoint load: missing=%s unexpected=%s",
+                load_result.missing_keys,
+                load_result.unexpected_keys,
+            )
 
-        # remove and xla specific keys
-        cleaned_state_dict = {
-            k.replace("_orig_mod.", ""): v
-            for k, v in state_dict.items()
-        }
-
-        model.load_state_dict(cleaned_state_dict, strict=strict)
-
-    if remove_folder:
-        shutil.rmtree(subfolder_path, ignore_errors=True)
+    if remove_folder and downloaded:
+        shutil.rmtree(checkpoint_dir, ignore_errors=True)
 
     return model
 
@@ -87,52 +175,31 @@ def load_checkpoint(
 def load_checkpoint_state(
     model: torch.nn.Module,
     url: str,
-    step: int,
+    step: int | None = None,
     strict: bool = True,
     ignore_cache: bool = False,
     remove_folder: bool = False,
+    revision: str = "main",
 ):
-    """
-    Loads a checkpoint state dict from Hugging Face Hub or local folder into a given model.
+    """Load portable weights into an existing model."""
+    if not isinstance(strict, bool):
+        raise TypeError("strict must be an explicit boolean.")
 
-    Args:
-        model (torch.nn.Module): The model into which the checkpoint state dict will be loaded.
-        url (str): The URL or local path of the checkpoint to load.
-        step (int): The training step corresponding to the checkpoint to load.
-        strict (bool): Whether to strictly enforce that the keys in state_dict match the keys returned by model's state_dict(). Default is True.
-        ignore_cache (bool): Whether to ignore the local cache and redownload the checkpoint. Default is False.
-        remove_folder (bool): Whether to remove the downloaded checkpoint folder after loading. Default is False.
-    """
-    
-    name = url.replace("/", "--")
-    local_path = os.path.join(constants.CHECKPOINTS_PATH, name)
-    
-    subfolder = f"{step:012d}"
-    subfolder_path = os.path.join(local_path, subfolder)
-
-    if ignore_cache:
-        shutil.rmtree(subfolder_path, ignore_errors=True)
-        
-    if not os.path.exists(subfolder_path):
-        hf.snapshot_download(
-            repo_id=url,
-            allow_patterns=[subfolder + "/*"],
-            local_dir=local_path,
+    checkpoint_dir, downloaded = _resolve_checkpoint_dir(
+        url, step, ignore_cache, revision
+    )
+    load_result = model.load_state_dict(
+        _load_state_dict(checkpoint_dir),
+        strict=strict,
+    )
+    if not strict and (load_result.missing_keys or load_result.unexpected_keys):
+        logger.warning(
+            "Non-strict checkpoint load: missing=%s unexpected=%s",
+            load_result.missing_keys,
+            load_result.unexpected_keys,
         )
 
-    # load the weights
-    state_path = os.path.join(subfolder_path, "model.pt")
-    state_dict = torch.load(state_path, map_location="cpu")
-
-    # remove and xla specific keys
-    cleaned_state_dict = {
-        k.replace("_orig_mod.", ""): v
-        for k, v in state_dict.items()
-    }
-
-    model.load_state_dict(cleaned_state_dict, strict=strict)
-
-    if remove_folder:
-        shutil.rmtree(subfolder_path, ignore_errors=True)
+    if remove_folder and downloaded:
+        shutil.rmtree(checkpoint_dir, ignore_errors=True)
 
     return model
