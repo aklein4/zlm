@@ -9,7 +9,7 @@ from utils.scheduling_utils import linear_warmup, cosine_warmup
 from utils.torch_utils import scale_gradient, unsqueeze_to_batch
 from utils.loss_utils import lm_loss_fn, lm_acc_fn 
 from utils.sharding_utils import shard_with_gradients
-
+from utils.torch_modules import ARLinear
 
 class ZLMTrainer(BaseTrainer):
     
@@ -47,6 +47,10 @@ class ZLMTrainer(BaseTrainer):
         self.model.decoder_start_output_token.no_muon = True
 
         self.model.uncond_tokens.no_muon = True
+
+        # for m in self.model.modules():
+        #     if isinstance(m, ARLinear):
+        #         m.weight.no_muon = True
 
 
     def get_effective_parties(self, x):
