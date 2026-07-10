@@ -11,6 +11,7 @@ from utils.loss_utils import lm_loss_fn, lm_acc_fn
 from utils.sharding_utils import shard_with_gradients
 from utils.torch_modules import ARLinear
 
+
 class ZLMTrainer(BaseTrainer):
     
     model: ZLMModel
@@ -48,9 +49,9 @@ class ZLMTrainer(BaseTrainer):
 
         self.model.uncond_tokens.no_muon = True
 
-        # for m in self.model.modules():
-        #     if isinstance(m, ARLinear):
-        #         m.weight.no_muon = True
+        for m in self.model.modules():
+            if isinstance(m, ARLinear):
+                m.weight.no_muon = True
 
 
     def get_effective_parties(self, x):
@@ -149,6 +150,7 @@ class ZLMTrainer(BaseTrainer):
             input_mask=input_mask, output_mask=output_mask,
             noise=noise,
             noise_scale=noise_scale,
+            enable_noise_in=self.hooked,
         )
 
         logit_grad_scale = {}
@@ -232,7 +234,7 @@ class ZLMTrainer(BaseTrainer):
         mean_kl_parties = self.get_effective_parties(mean_weights)
 
         # get the regularization loss
-        regularize_scale = hook_progress
+        regularize_scale = 1.0 # hook_progress
         spectral_reg, spectral_parties = self.get_spectral_info(mu)
 
         loss = (

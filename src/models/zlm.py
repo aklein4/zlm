@@ -305,6 +305,7 @@ class ZLMModel(nn.Module):
         output_mask: torch.BoolTensor=None,
         noise_scale: torch.FloatTensor = None,
         return_extra: bool = False,
+        enable_noise_in: torch.BoolTensor=None,
     ):
 
         if noise is None:
@@ -324,7 +325,7 @@ class ZLMModel(nn.Module):
             shift(
                 self.encoder_noise_proj_in(noise),
                 n=1, dim=-2, direction="right", narrow=True
-            )
+            ) * (enable_noise_in.float() if enable_noise_in is not None else 1)
         )
 
         tokens = torch.cat(
