@@ -150,7 +150,6 @@ class ZLMTrainer(BaseTrainer):
             input_mask=input_mask, output_mask=output_mask,
             noise=noise,
             noise_scale=noise_scale,
-            enable_noise_in=self.hooked,
         )
 
         logit_grad_scale = {}
@@ -190,7 +189,7 @@ class ZLMTrainer(BaseTrainer):
         self.hook_step += self.hooked.long()
 
         # gradient scales
-        mu_kl_grad_scale = double_wait_hook_progress
+        mu_kl_grad_scale = wait_hook_progress
         mu_for_kl = scale_gradient(mu, mu_kl_grad_scale)
         z_for_kl = self.model.add_noise(mu_for_kl, noise)
 
@@ -234,7 +233,7 @@ class ZLMTrainer(BaseTrainer):
         mean_kl_parties = self.get_effective_parties(mean_weights)
 
         # get the regularization loss
-        regularize_scale = 1.0 # hook_progress
+        regularize_scale = hook_progress
         spectral_reg, spectral_parties = self.get_spectral_info(mu)
 
         loss = (
