@@ -72,4 +72,4 @@ min_lm_loss_scale: 0.05
 
 # loss weighting configuration
 beta: 0.2
-regularize_weight: 1.0
+regularize_weight: 0.2
