@@ -239,6 +239,13 @@ class ZLMModel(nn.Module):
         # for training
         self.lm_loss_ema = UnbiasedEMA([1], config.lm_loss_ema_beta, eps=config.rms_norm_eps)
 
+        # optional extras
+        self.is_probe = config.get("is_probe", False)
+        if self.is_probe:
+            self.progress_embeddings = nn.Parameter(
+                torch.zeros(self.hidden_size)
+            )
+
         if config.pretrained_llama is None:
             self.apply(gaussian_init)
 
@@ -376,6 +383,7 @@ class ZLMModel(nn.Module):
         input_mask: torch.BoolTensor=None,
         output_mask: torch.BoolTensor=None,
         logit_grad_scale: float = None,
+        progress: torch.IntTensor=None,
     ):
 
         input_tokens = self.embed_tokens(input_ids) + unsqueeze_to_batch(
@@ -388,6 +396,15 @@ class ZLMModel(nn.Module):
         z_projed = self.decoder_z_proj_in(
             self.decoder_z_norm_in(z)
         )
+        if progress is not None:
+            assert self.is_probe, "Progress can only be used when is_probe is True"
+            ar = torch.arange(self.z_length, device=progress.device, dtype=progress.dtype)
+            progress_mask = progress[:, None] > ar[None]
+            z_projed = torch.where(
+                progress_mask[:, :, None],
+                z_projed,
+                expand_to_batch(self.progress_embeddings, z_projed),
+            )
         z_tokens = (
             unsqueeze_to_batch(self.decoder_z_tokens, z_projed) +
             shift(
