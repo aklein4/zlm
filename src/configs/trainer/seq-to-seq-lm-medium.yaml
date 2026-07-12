@@ -7,10 +7,15 @@ type: seq_to_seq_lm_trainer.SeqToSeqLMTrainer  # Used to import the trainer from
 global_batch_size: 512
 
 # run for N steps
-max_steps: 1000000 
+max_steps: 1000000
 
 # Save a checkpoint every N steps
-checkpoint_interval: 1000000
+checkpoint_interval: 1000
+
+
+# whether to autocast the forward pass and loss computation.
+# currently only supports autocasting to bfloat16
+use_autocast: true
 
 
 # optimizer configuration

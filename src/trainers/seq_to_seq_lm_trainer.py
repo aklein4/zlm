@@ -11,12 +11,13 @@ class SeqToSeqLMTrainer(BaseTrainer):
 
 
     def post_init(self):
-        self.model.model.embed_tokens.weight.no_muon = True
         try:
             self.model.lm_head.weight.no_muon = True
-        except:
+            self.model.model.embed_tokens.weight.no_muon = True
+        except AttributeError:
             # ShardedModule
             self.model.lm_head._orig_mod.weight.no_muon = True
+            self.model.model.embed_tokens._orig_mod.weight.no_muon = True
 
 
     def forward(self, input_ids, output_ids):
@@ -26,7 +27,7 @@ class SeqToSeqLMTrainer(BaseTrainer):
             [
                 input_ids,
                 torch.full_like(output_ids[:, :1], self.model.config.bos_token_id),
-                output_ids
+                output_ids[:, :-1]
             ],
             dim=1
         )
@@ -34,7 +35,7 @@ class SeqToSeqLMTrainer(BaseTrainer):
             [
                 (input_ids != pad_token_id),
                 torch.ones_like(output_ids[:, :1], dtype=torch.bool),
-                (output_ids != pad_token_id)
+                (output_ids[:, :-1] != pad_token_id)
             ],
             dim=1
         )
@@ -47,7 +48,7 @@ class SeqToSeqLMTrainer(BaseTrainer):
 
         logits, _ = self.model(
             input_ids=ids_for_model,
-            shift_states=slice(-(output_ids.shape[-1]+1), -1),
+            shift_states=slice(-(output_ids.shape[-1]), None),
             elementwise_pad_mask=elementwise_pad_mask
         )
 
@@ -73,6 +74,5 @@ class SeqToSeqLMTrainer(BaseTrainer):
             "lm_acc": lm_acc,
             "elbo": lm_loss,
             "atom_count": (output_ids != pad_token_id).long().sum(),
-            "logit_nan": (~torch.isfinite(logits)).any().long(),
         }
     

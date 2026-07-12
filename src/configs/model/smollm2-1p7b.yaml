@@ -6,7 +6,7 @@ defaults:
 
 # Used to import the model from this class
 # should contain the path within the model folder and the class name
-type: llama.LlamaForCausalLM
+type: custom_llama.CustomLlamaForCausalLM
 
 # HuggingFace URL of the checkpoint to load, or null if initializing from scratch
 pretrained_url: null
@@ -58,3 +58,7 @@ pure_modules: []
 
 # You can add any additional configuration options for your model here
 # They will appear as attributes of config.model
+
+# value added to pad token attention scores
+# only used when elementwise_pad_mask is passed
+pad_attention_bias_value: -100.0

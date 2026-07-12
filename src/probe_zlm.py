@@ -16,7 +16,7 @@ import utils.constants as constants
 
 
 URL = "aklein4/ZEBRA-v2_360m-alpha-probe"
-STEP = 19000
+STEP = 26000
 
 TOKENIZER_PATH = os.path.join(constants.LOCAL_DATA_PATH, "tokenizer")
 
@@ -33,31 +33,31 @@ TOKENIZER_PATH = os.path.join(constants.LOCAL_DATA_PATH, "tokenizer")
 #     ],
 # )
 
-MESSAGES = format_chat(
-    [
-        {
-            "role": "user",
-            "content": "Write a 1 paragraph introduction to a DND campaign where the 4 player characters meet in a tavern. You should describe each of the characters in the narrative.",
-        },
-        {
-            "role": "assistant",
-            "content": "In a bustling tavern at the heart of a lively town, four adventurers find themselves seated at the same worn wooden table. A towering half-orc barbarian with a scarred face and a massive greataxe slung across his back grunts a greeting. Beside him, a nimble elven rogue with a mischievous glint in her eyes twirls a dagger between her fingers. Across from them, a human wizard with a long, flowing robe and a staff adorned with glowing runes adjusts his spectacles, eyeing the others curiously. Finally, a cheerful halfling bard with a lute strapped to his back and a wide, infectious smile raises a mug of ale in a friendly toast. As the tavern's warm light flickers over their faces, the four adventurers exchange stories, laughter, and the promise of shared quests to come."
-        }
-    ],
-)
-
 # MESSAGES = format_chat(
 #     [
 #         {
 #             "role": "user",
-#             "content": "Describe 4 player characters that might be part of a party in a DND compaign.",
+#             "content": "Write a 1 paragraph introduction to a DND campaign where the 4 player characters meet in a tavern. You should describe each of the characters in the narrative.",
 #         },
 #         {
 #             "role": "assistant",
-#             "content": "1. A towering half-orc barbarian with a scarred face and a massive greataxe slung across his back.\n\n2. A nimble elven rogue with a mischievous glint in her eyes and a dagger twirling between her fingers.\n\n3. A human wizard with a long, flowing robe and a staff adorned with glowing runes, adjusting his spectacles.\n\n4. A cheerful halfling bard with a lute strapped to his back and a wide, infectious smile."
+#             "content": "In a bustling tavern at the heart of a lively town, four adventurers find themselves seated at the same worn wooden table. A towering half-orc barbarian with a scarred face and a massive greataxe slung across his back grunts a greeting. Beside him, a nimble elven rogue with a mischievous glint in her eyes twirls a dagger between her fingers. Across from them, a human wizard with a long, flowing robe and a staff adorned with glowing runes adjusts his spectacles, eyeing the others curiously. Finally, a cheerful halfling bard with a lute strapped to his back and a wide, infectious smile raises a mug of ale in a friendly toast. As the tavern's warm light flickers over their faces, the four adventurers exchange stories, laughter, and the promise of shared quests to come."
 #         }
 #     ],
 # )
+
+MESSAGES = format_chat(
+    [
+        {
+            "role": "user",
+            "content": "Describe 4 player characters that might be part of a party in a DND compaign.",
+        },
+        {
+            "role": "assistant",
+            "content": "1. A towering half-orc barbarian with a scarred face and a massive greataxe slung across his back.\n\n2. A nimble elven rogue with a mischievous glint in her eyes and a dagger twirling between her fingers.\n\n3. A human wizard with a long, flowing robe and a staff adorned with glowing runes, adjusting his spectacles.\n\n4. A cheerful halfling bard with a lute strapped to his back and a wide, infectious smile."
+        }
+    ],
+)
 
 # MESSAGES = format_no_cot(
 #     "Bob had a farm with animals. He had 12 cows and twice as many sheep. He decided to buy 3 pigs for every sheep he had. How many animals were on the farm after the transaction?",
