@@ -1,0 +1,13 @@
+
+# save memory by offloading these activations to the host RAM
+offload_tensors:
+ - decoder_input
+
+# Compile the sequence of decoder layers at `model.layers` using scan.
+scan_layers: 'model.layers'
+
+activation_checkpoint_layers:
+ - CustomLlamaDecoderLayer
+
+optimization_barrier_layers:
+ - CustomLlamaDecoderLayer
