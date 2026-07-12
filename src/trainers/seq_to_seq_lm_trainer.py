@@ -12,12 +12,13 @@ class SeqToSeqLMTrainer(BaseTrainer):
 
     def post_init(self):
         try:
-            self.model.lm_head.weight.no_muon = True
             self.model.model.embed_tokens.weight.no_muon = True
         except AttributeError:
-            # ShardedModule
-            self.model.lm_head._orig_mod.weight.no_muon = True
             self.model.model.embed_tokens._orig_mod.weight.no_muon = True
+        try:
+            self.model.lm_head.weight.no_muon = True
+        except AttributeError:
+            self.model.lm_head._orig_mod.weight.no_muon = True
 
 
     def forward(self, input_ids, output_ids):
