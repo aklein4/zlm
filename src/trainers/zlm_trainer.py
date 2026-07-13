@@ -233,7 +233,7 @@ class ZLMTrainer(BaseTrainer):
         mean_kl_parties = self.get_effective_parties(mean_weights)
 
         # get the regularization loss
-        regularize_scale = wait_hook_progress
+        regularize_scale = hook_progress
         spectral_reg, spectral_parties = self.get_spectral_info(mu)
 
         loss = (
