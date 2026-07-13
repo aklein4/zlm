@@ -4,13 +4,8 @@ import torch.nn.functional as F
 
 import numpy as np
 
-import utils.constants as constants
-if constants.XLA_AVAILABLE:
-    from torch_xla.distributed.spmd.xla_sharding import XLAPatchedLinear
-
-from utils.torch_utils import attach_gradient, unsqueeze_to_batch
+from utils.torch_utils import attach_gradient, unsqueeze_to_batch, fixed_linear
 from utils.sharding_utils import maybe_shard_with_gradients
-
 
 class GroupRMSNorm(nn.Module):
 
@@ -127,10 +122,7 @@ class ARLinear(nn.Module):
         else:
             masked_weight = self.weight * self.mask.to(self.weight.dtype)
 
-        if constants.XLA_AVAILABLE:
-            return XLAPatchedLinear.apply(x, masked_weight, self.bias)
-        else:
-            return F.linear(x, masked_weight, self.bias)
+        return fixed_linear(x, masked_weight, self.bias)
         
 
 class ContinuousEmbedding(nn.Module):

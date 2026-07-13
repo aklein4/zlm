@@ -5,6 +5,7 @@ import torch.nn.functional as F
 import utils.constants as constants
 if constants.XLA_AVAILABLE:
     from torch_xla.experimental.scan import scan
+    from torch_xla.distributed.spmd.xla_sharding import XLAPatchedLinear
 
 """
 A collection of PyTorch utility functions that might be useful.
@@ -407,3 +408,9 @@ def safe_repeat(
         [x] * n_repeats,
         dim=dim
     )
+
+
+def fixed_linear(x, weight, bias=None):
+    if constants.XLA_AVAILABLE:
+        return XLAPatchedLinear.apply(x, weight, bias)
+    return F.linear(x, weight, bias)
