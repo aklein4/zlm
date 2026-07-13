@@ -113,6 +113,7 @@ class ARLinear(nn.Module):
         self.cache = None
 
 
+    @torch.no_grad()
     def set_cache(self, on):
         if on:
             self.cache = self.weight * self.mask.to(self.weight.dtype)

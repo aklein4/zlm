@@ -22,8 +22,11 @@ def run_benchmarks(
     model_kwargs: dict = {},
     benchmark_kwargs: dict = {},
     save_path: str | None = None,
+    seed: int = 42,
     meta_data: dict = {},
 ):
+    assert constants.DEVICE.type == "cuda", "Evaluation currently only supports CUDA devices."
+
     pb_was_enabled = is_progress_bar_enabled()
     disable_progress_bar()
     
@@ -38,17 +41,21 @@ def run_benchmarks(
     save_path = os.path.join(constants.LOCAL_DATA_PATH, save_path)
     print(f"\nEvaluation results will be saved to: {save_path}")  
 
+    all_results = {}
     for i, benchmark_name in enumerate(benchmarks): 
         if benchmark_name not in BENCHMARK_DICT:
             raise ValueError(f"Unsupported benchmark: {benchmark_name}")
         
+        torch.manual_seed(seed)
+        torch.cuda.manual_seed_all(seed)
+
         print(f"\nStarting benchmark {i+1}/{len(benchmarks)}: {benchmark_name}")
         benchmark_cls = BENCHMARK_DICT[benchmark_name]
         if getattr(benchmark_cls, "requires_batch_size_one", False) and batch_size != 1:
             raise ValueError(f"{benchmark_name} requires batch_size=1, got {batch_size}.")
         
-        bench_kwargs = benchmark_kwargs.get(benchmark_name, {})
-        if not isinstance(bench_kwargs, dict):
+        curr_bench_kwargs = benchmark_kwargs.get(benchmark_name, {})
+        if not isinstance(curr_bench_kwargs, dict):
             raise ValueError(f"benchmark_kwargs for {benchmark_name} must be a dict.")
 
         bench = benchmark_cls(
@@ -56,9 +63,9 @@ def run_benchmarks(
             max_input_length,
             max_output_length,
             max_examples,
-            **bench_kwargs,
+            **curr_bench_kwargs,
         )
-        print(f"Number of examples: {len(bench)}")
+        print(f"  Number of examples: {len(bench)}")
         loader = torch.utils.data.DataLoader(
             bench,
             batch_size=batch_size,
@@ -109,9 +116,15 @@ def run_benchmarks(
                 "autocast": autocast,
                 "max_examples": max_examples,
                 "model_kwargs": model_kwargs,
-                "benchmark_kwargs": benchmark_kwargs,
-                "benchmark_kwargs_for_benchmark": bench_kwargs,
+                "benchmark_kwargs": curr_bench_kwargs,
+                "seed": seed,
             } | meta_data
+        }
+
+        all_results[benchmark_name] = {
+            "seen": seen,
+            "correct": correct,
+            "accuracy": correct / seen,
         }
 
         os.makedirs(save_path, exist_ok=True)
@@ -122,6 +135,25 @@ def run_benchmarks(
         print(f"  seen: {seen:_}")
         print(f"  correct: {correct:_}")
         print(f"  accuracy: {100*correct/seen:.1f}%")
+
+    # summarize all results
+    with open(os.path.join(save_path, "summary.json"), "w") as f:
+        summary = {
+            "meta": {
+                "model": model.__class__.__name__,
+                "tokenizer": tokenizer.__class__.__name__,
+                "max_input_length": max_input_length,
+                "max_output_length": max_output_length,
+                "batch_size": batch_size,
+                "autocast": autocast,
+                "max_examples": max_examples,
+                "model_kwargs": model_kwargs,
+                "benchmark_kwargs": benchmark_kwargs,
+                "seed": seed,
+            } | meta_data,
+            "results": all_results,
+        }
+        json.dump(summary, f, indent=4)
 
     print(f"\nFinished all benchmarks. Results saved to: {save_path}\n")
 

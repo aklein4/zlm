@@ -129,16 +129,20 @@ class BaseBenchmark:
 
 
     def largest_input(self):
-        lengths = [
-            np.sum(np.array(ids) != self.tokenizer.pad_token_id) for ids in self.dataset["input_ids"]
-        ]
-        return np.max(lengths)
-    
+        if not hasattr(self, "cached_largest_input"):
+            lengths = [
+                np.sum(np.array(ids) != self.tokenizer.pad_token_id) for ids in self.dataset["input_ids"]
+            ]
+            self.cached_largest_input = np.max(lengths)
+        return self.cached_largest_input
+
     def largest_output(self):
-        lengths = [
-            np.sum(np.array(ids) != self.tokenizer.pad_token_id) for ids in self.dataset["output_ids"]
-        ]
-        return np.max(lengths)
+        if not hasattr(self, "cached_largest_output"):
+            lengths = [
+                np.sum(np.array(ids) != self.tokenizer.pad_token_id) for ids in self.dataset["output_ids"]
+            ]
+            self.cached_largest_output = np.max(lengths)
+        return self.cached_largest_output
     
 
     def __len__(self):

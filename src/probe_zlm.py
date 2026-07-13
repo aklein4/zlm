@@ -65,6 +65,8 @@ MESSAGES = format_chat(
 #     108
 # )
 
+SAVED_SAMPLE = "zlm_sample.pt"
+
 BATCH_SIZE = 64
 
 SEED = 42
@@ -95,22 +97,30 @@ def main():
         TOKENIZER_PATH,
     )
 
-    input_text, output_text = MESSAGES
-    input_ids = tokenizer(
-        [input_text],
-        return_tensors="pt",
-    ).input_ids.to(constants.DEVICE)
-    output_ids = tokenizer(
-        [output_text],
-        return_tensors="pt",
-    ).input_ids.to(constants.DEVICE)
+    if SAVED_SAMPLE is not None and os.path.exists(SAVED_SAMPLE):
+        sample = torch.load(SAVED_SAMPLE)
+        input_ids = sample["input_ids"].to(constants.DEVICE)
+        output_ids = sample["output_ids"].to(constants.DEVICE)
+        z = sample["z"].to(constants.DEVICE)
+
+    else:
+        input_text, output_text = MESSAGES
+        input_ids = tokenizer(
+            [input_text],
+            return_tensors="pt",
+        ).input_ids.to(constants.DEVICE)
+        output_ids = tokenizer(
+            [output_text],
+            return_tensors="pt",
+        ).input_ids.to(constants.DEVICE)
+
+        with torch.autocast("cuda", torch.bfloat16, enabled=torch.cuda.is_available()):
+            z, mu = model.encode(
+                input_ids, output_ids
+            )
 
     logps = []
     with torch.autocast("cuda", torch.bfloat16, enabled=torch.cuda.is_available()):
-
-        z, mu = model.encode(
-            input_ids, output_ids
-        )
 
         for i in tqdm(range(0, model.z_length+1, BATCH_SIZE)):
            
@@ -141,7 +151,7 @@ def main():
             logps.append(logp)
     
     logps = torch.cat(logps, dim=0).float()
-    logps = torch.minimum(logps, logps[-1:])
+    # logps = torch.minimum(logps, logps[-1:])
 
     mn = logps.amin(dim=0, keepdim=True)
     mx = logps.amax(dim=0, keepdim=True)

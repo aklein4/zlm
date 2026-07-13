@@ -132,11 +132,6 @@ class CustomLlamaAttention(nn.Module):
         cos, sin = position_embeddings
         query_states, key_states = apply_rotary_pos_emb(query_states, key_states, cos, sin)
 
-        if (past_key_values is not None) and (not constants.XLA_AVAILABLE):
-            key_states, value_states = past_key_values.update(
-                key_states, value_states, self.layer_idx
-            )
-
         # apply elementwise attention bias 
         if elementwise_pad_mask is not None:
 
@@ -151,6 +146,11 @@ class CustomLlamaAttention(nn.Module):
             key_states = (
                 key_states * key_scale[:, None].to(key_states.dtype)
                 + key_offset[:, None].to(key_states.dtype)
+            )
+
+        if (past_key_values is not None) and (not constants.XLA_AVAILABLE):
+            key_states, value_states = past_key_values.update(
+                key_states, value_states, self.layer_idx
             )
 
         attn_output = self.attention_block(
@@ -390,6 +390,7 @@ class CustomLlamaModel(nn.Module):
                 past_key_values = position_ids.clone() # this is fine as a dummy value
 
         # convert the boolean pad mask to scale and offset masks
+        # if None, create a mask with all ones so that dimensions are still masked
         if elementwise_pad_mask is None:
             elementwise_pad_mask = torch.ones_like(position_ids, dtype=torch.bool)
         elementwise_pad_mask = self.get_elementwise_pad_mask(elementwise_pad_mask)
