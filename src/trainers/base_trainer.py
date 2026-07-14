@@ -359,9 +359,9 @@ class BaseTrainer:
             try:
                 batch = next(train_iterator)
             except:
-                logger.warning("Unexpected error when fetching data at step %d, retrying", step)
                 error_count += 1
-                if error_count > 1000:
+                logger.warning("Unexpected error (%d) when fetching data at step %d, retrying", error_count, step)
+                if error_count > 1000 and step > 1:
                     logger.error("Too many errors when fetching data, saving checkpoint and exiting")
                     self.save_checkpoint(step)
                     raise RuntimeError("Too many errors when fetching data")
