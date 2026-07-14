@@ -12,7 +12,7 @@ import utils.constants as constants
 
 
 URL = "aklein4/ZEBRA-v2_360m-alpha-lowReg"
-STEP = 21000
+STEP = 30000
 
 TOKENIZER_PATH = os.path.join(constants.LOCAL_DATA_PATH, "tokenizer")
 
