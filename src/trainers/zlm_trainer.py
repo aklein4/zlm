@@ -10,6 +10,7 @@ from utils.torch_utils import scale_gradient, unsqueeze_to_batch
 from utils.loss_utils import lm_loss_fn, lm_acc_fn 
 from utils.sharding_utils import shard_with_gradients
 from utils.torch_modules import ARLinear
+from utils.cauchy import sp_cauchy_kl
 
 
 class ZLMTrainer(BaseTrainer):
@@ -46,8 +47,6 @@ class ZLMTrainer(BaseTrainer):
 
         self.model.decoder_z_tokens.no_muon = True
         self.model.decoder_start_output_token.no_muon = True
-
-        self.model.uncond_tokens.no_muon = True
 
         for m in self.model.modules():
             if isinstance(m, ARLinear):
@@ -97,7 +96,12 @@ class ZLMTrainer(BaseTrainer):
         mu_kl_scale = {}
         scaled_mu = scale_gradient(mu, mu_kl_scale)
     
-        kl = ((scaled_mu - pred_mu).pow(2) / 2).sum((0, -1)) # [S,]
+        kl = sp_cauchy_kl(
+            self.model._sphere_shape(scaled_mu),
+            self.model.concentration,
+            self.model._sphere_shape(pred_mu),
+        ) # [B, S, N_ar]
+        kl = kl.sum((0, -1)) # [S,]
 
         weights = kl
         weights = weights * ( # normalize so that mean(kl*weights) = mean(kl)
@@ -200,19 +204,10 @@ class ZLMTrainer(BaseTrainer):
         pred_mu = self.model.decoder_head(
             z_states_for_kl, z_for_kl
         )
-        uncond_pred_mu = self.model.uncond_decoder_head(
-            self.model.uncond_tokens[None], z_for_kl.detach()
-        )
 
         # get kl
         kl, weights = self.kl_loss(
             mu_for_kl, pred_mu
-        )
-        uncond_kl, uncond_weights = self.kl_loss(
-            mu_for_kl.detach(), uncond_pred_mu
-        )
-        mean_kl, mean_weights = self.kl_loss(
-            mu_for_kl.detach(), mu_for_kl.detach().mean(0, keepdim=True)
         )
 
         denom = (output_ids != pad_token_id).float().sum() + self.model.config.rms_norm_eps
@@ -224,22 +219,15 @@ class ZLMTrainer(BaseTrainer):
         kl_parties = self.get_effective_parties(weights)
         elbo = lm_loss + kl_per_token
 
-        uncond_kl_per_token = uncond_kl / denom
-        uncond_kl_per_latent = uncond_kl / latent_denom
-        uncond_kl_parties = self.get_effective_parties(uncond_weights)
-
-        mean_kl_per_token = mean_kl / denom
-        mean_kl_per_latent = mean_kl / latent_denom
-        mean_kl_parties = self.get_effective_parties(mean_weights)
-
         # get the regularization loss
         regularize_scale = hook_progress
-        spectral_reg, spectral_parties = self.get_spectral_info(mu)
+        spectral_reg, spectral_parties = self.get_spectral_info(
+            self.model._l2_to_rms(mu)
+        )
 
         loss = (
             lm_loss +
             self.config.trainer.beta * kl_per_token +
-            self.config.trainer.beta * uncond_kl_per_token +
             self.config.trainer.regularize_weight * regularize_scale * spectral_reg
         )
 
@@ -256,14 +244,6 @@ class ZLMTrainer(BaseTrainer):
             "kl_per_token": kl_per_token,
             "kl_per_latent": kl_per_latent,
             "kl_full_parties": kl_parties,
-
-            "uncond_kl_per_token": uncond_kl_per_token,
-            "uncond_kl_per_latent": uncond_kl_per_latent,
-            "uncond_kl_parties": uncond_kl_parties,
-
-            "mean_kl_per_token": mean_kl_per_token,
-            "mean_kl_per_latent": mean_kl_per_latent,
-            "mean_kl_parties": mean_kl_parties,
             
             "regularize_scale": regularize_scale,
             "regularize_loss": spectral_reg,

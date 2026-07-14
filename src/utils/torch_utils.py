@@ -410,6 +410,57 @@ def safe_repeat(
     )
 
 
+def slerp(
+    v0: torch.Tensor,
+    v1: torch.Tensor,
+    t: float | torch.Tensor,
+    eps: float = 1e-7,
+) -> torch.Tensor:
+    """Spherically interpolate along the last dimension."""
+    
+    return_dtype = v0.dtype
+
+    v0 = v0.float()
+    v1 = v1.float()
+
+    if isinstance(t, float):
+        t = torch.full_like(v0[..., :1], t)
+    else:
+        t = t.unsqueeze(-1)
+    t = unsqueeze_to_batch(t, v0).float()
+
+    v0_norm = v0.norm(dim=-1, keepdim=True)
+    v1_norm = v1.norm(dim=-1, keepdim=True)
+    
+    v0 = F.normalize(v0, dim=-1, eps=eps)
+    v1 = F.normalize(v1, dim=-1, eps=eps)
+
+    theta = (v0 * v1).sum(dim=-1, keepdim=True).clamp(-1 + eps, 1 - eps).acos()
+    sin_theta = theta.sin()
+
+    result = (
+        v0 * ((1 - t) * theta).sin() +
+        v1 * (t * theta).sin()
+    ) / sin_theta.clamp_min(eps)
+
+    # Slerp is unstable for parallel vectors, where lerp is equivalent.
+    # TODO: this could be better
+    lerp = (1 - t) * v0 + t * v1
+    result = torch.where(sin_theta.abs() > eps, result, lerp)
+    result = torch.where(
+        result.norm(dim=-1, keepdim=True) > eps,
+        result,
+        torch.where(
+            t < 0.5, v0, v1
+        )
+    )
+    
+    result = F.normalize(result, dim=-1, eps=eps)
+    result = result * ((1 - t) * v0_norm + t * v1_norm)
+
+    return result.to(return_dtype)
+
+
 def fixed_linear(x, weight, bias=None):
     if constants.XLA_AVAILABLE:
         return XLAPatchedLinear.apply(x, weight, bias)

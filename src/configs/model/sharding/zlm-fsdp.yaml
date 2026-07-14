@@ -18,7 +18,6 @@ decoder_model.layers.*: [[data, fsdp], null, null]
 # heads
 encoder_mu_proj_out: [[data, fsdp], null, null]
 decoder_head: [[data, fsdp], null, null]
-uncond_decoder_head: [[data, fsdp], null, null]
 
 
 # output

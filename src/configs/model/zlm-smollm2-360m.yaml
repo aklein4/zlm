@@ -66,10 +66,8 @@ z_length: 384
 
 # latent configuration
 latent_size: 64
-z_ar_steps: 16
-
-# norm config
-use_z_norm_in: true
+z_ar_steps: 8
+concentration: 0.735
 
 # head configuration
 head_intermediate_size: 2560

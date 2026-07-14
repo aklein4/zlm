@@ -65,18 +65,15 @@ output_length: 512
 z_length: 384
 
 # latent configuration
-latent_size: 64
-z_ar_steps: 16
-
-# norm config
-use_z_norm_in: true
+latent_size: 35
+z_ar_steps: 7
+concentration: 0.735
 
 # head configuration
-head_intermediate_size: 256
+head_intermediate_size: 252
 
 # training configuration
 lm_loss_ema_beta: 0.75
-
 
 # value added to pad token attention scores
 # only used when elementwise_pad_mask is passed

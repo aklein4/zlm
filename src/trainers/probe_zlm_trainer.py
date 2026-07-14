@@ -28,8 +28,6 @@ class ProbeZLMTrainer(BaseTrainer):
         self.model.decoder_z_tokens.no_muon = True
         self.model.decoder_start_output_token.no_muon = True
 
-        self.model.uncond_tokens.no_muon = True
-
         for m in self.model.modules():
             if isinstance(m, ARLinear):
                 m.weight.no_muon = True

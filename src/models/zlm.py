@@ -13,12 +13,14 @@ from utils.torch_utils import (
     shift,
     scale_gradient,
     gaussian_init,
+    slerp,
 )
 
 from models.llama import LlamaForCausalLM, LlamaRMSNorm
 from models.custom_llama import CustomLlamaModel, CustomLlamaDecoderLayer
 from models import load_checkpoint_state
 from utils.torch_modules import ARLinear, UnbiasedEMA
+from utils.cauchy import sample_sp_cauchy_noise, sample_sp_cauchy_noise_like, sample_sp_cauchy
 import utils.constants as constants
 
 
@@ -28,8 +30,12 @@ class ARHead(nn.Module):
         self,
         config: DictConfig,
         ar_steps: int = None,
+        input_fn = None,
+        output_fn = None,
     ):
         super().__init__()
+        self.input_fn = input_fn
+        self.output_fn = output_fn
 
         self.ar_steps = ar_steps
         if self.ar_steps is None:
@@ -77,6 +83,8 @@ class ARHead(nn.Module):
         hidden_states: torch.FloatTensor,
         z: torch.FloatTensor,
     ) -> torch.FloatTensor:
+        if self.input_fn is not None:
+            z = self.input_fn(z)
 
         g = (
             self.states_gate_proj(hidden_states) +
@@ -89,10 +97,14 @@ class ARHead(nn.Module):
 
         h = self.act(g) * u
 
-        return (
+        out = (
             self.down_proj(h) +
             self.cross_proj(hidden_states)
         )
+
+        if self.output_fn is not None:
+            out = self.output_fn(out)
+        return out
 
 
 class EncoderModelLayer(CustomLlamaDecoderLayer):
@@ -121,6 +133,9 @@ class ZLMModel(nn.Module):
 
         self.latent_size = config.latent_size
         self.z_ar_steps = config.z_ar_steps
+        self.sphere_size = self.latent_size // self.z_ar_steps
+        
+        self.concentration = config.concentration
 
         # create the transformer backbones
         self.encoder_model = EncoderModel(config)
@@ -213,30 +228,17 @@ class ZLMModel(nn.Module):
         # create the input functions
         self.encoder_noise_proj_in = nn.Linear(self.latent_size, self.hidden_size, bias=False)
         
-        if self.config.use_z_norm_in:
-            self.decoder_z_norm_in = LlamaRMSNorm(
-                self.latent_size, eps=config.rms_norm_eps, elementwise_affine=False
-            )
-        else:
-            self.decoder_z_norm_in = nn.Identity()
         self.decoder_z_proj_in = nn.Linear(self.latent_size, self.hidden_size, bias=False)
 
-        # create the encoder outputs
+        # create the output functions
         self.encoder_mu_proj_out = nn.Linear(
             self.hidden_size, self.latent_size, bias=False
         )
-        self.encoder_mu_norm_out = LlamaRMSNorm(
-            self.latent_size, eps=config.rms_norm_eps, elementwise_affine=False
-        )
 
-        # create the decoder outputs
-        self.decoder_head = ARHead(config)
+        self.decoder_head = ARHead(
+            config, input_fn=self._l2_to_rms, output_fn=self._group_l2_norm
+        )
         
-        self.uncond_decoder_head = ARHead(config, ar_steps=self.latent_size)
-        self.uncond_tokens = nn.Parameter(
-            torch.randn(self.z_length, self.hidden_size)
-        )
-
         # for training
         self.lm_loss_ema = UnbiasedEMA([1], config.lm_loss_ema_beta, eps=config.rms_norm_eps)
 
@@ -257,7 +259,6 @@ class ZLMModel(nn.Module):
             gaussian_init(self.encoder_mu_proj_out)
 
             self.decoder_head.apply(gaussian_init)
-            self.uncond_decoder_head.apply(gaussian_init)
 
         # ignore noise on encoder input at init
         self.encoder_noise_proj_in.weight.data.zero_()
@@ -268,6 +269,28 @@ class ZLMModel(nn.Module):
             eigvecs[:, -self.latent_size:] * torch.sqrt(eigvals[None, -self.latent_size:])
         )
 
+
+    def _sphere_shape(self, x: torch.FloatTensor) -> torch.FloatTensor:
+        assert x.shape[-1] == self.latent_size, f"Expected last dimension to be {self.latent_size}, but got {x.shape[-1]}"
+        return x.reshape(*x.shape[:-1], self.z_ar_steps, self.sphere_size)
+
+    def _vec_shape(self, x: torch.FloatTensor) -> torch.FloatTensor:
+        assert x.shape[-2] == self.z_ar_steps and x.shape[-1] == self.sphere_size, f"Expected last two dimensions to be ({self.z_ar_steps}, {self.sphere_size}), but got ({x.shape[-2]}, {x.shape[-1]})"
+        return x.reshape(*x.shape[:-2], self.latent_size)
+
+
+    def _group_l2_norm(self, x: torch.FloatTensor) -> torch.FloatTensor:
+        x = self._sphere_shape(x)
+        x = F.normalize(x.float(), dim=-1).to(x.dtype)
+        return self._vec_shape(x)
+    
+
+    def _rms_to_l2(self, x: torch.FloatTensor) -> torch.FloatTensor:
+        return x / math.sqrt(self.sphere_size)
+
+    def _l2_to_rms(self, x: torch.FloatTensor) -> torch.FloatTensor:
+        return x * math.sqrt(self.sphere_size)
+
     
     def sample_noise(
         self, 
@@ -276,16 +299,12 @@ class ZLMModel(nn.Module):
 
         input_tokens = self.embed_tokens(torch.zeros_like(input_ids))
         
-        # generate the noise
-        noise = torch.randn(
-            *input_ids.shape[:-1],
-            self.z_length,
-            self.latent_size,
-            device=input_tokens.device,
-            dtype=input_tokens.dtype,
+        noise = sample_sp_cauchy_noise(
+            [input_ids.shape[0], self.z_length, self.z_ar_steps, self.sphere_size],
+            device=input_tokens.device, dtype=input_tokens.dtype
         )
 
-        return noise
+        return self._vec_shape(noise)
 
     
     def add_noise(
@@ -295,13 +314,21 @@ class ZLMModel(nn.Module):
         noise_scale: float | None = None,
     ) -> torch.FloatTensor:
 
+        mu = self._sphere_shape(mu)
+
         if noise is None:
-            noise = torch.randn_like(mu)
+            noise = sample_sp_cauchy_noise_like(mu)
+        else:
+            noise = self._sphere_shape(noise)
 
-        if noise_scale is None:
-            noise_scale = 1.0
+        z = sample_sp_cauchy(
+            mu, self.concentration, noise
+        )
+  
+        if noise_scale is not None:
+            z = slerp(mu, z, noise_scale)
 
-        return mu + noise_scale * noise
+        return self._vec_shape(z)
 
 
     def encode(
@@ -330,7 +357,7 @@ class ZLMModel(nn.Module):
         z_tokens = (
             unsqueeze_to_batch(self.encoder_z_tokens, noise) +
             shift(
-                self.encoder_noise_proj_in(noise),
+                self.encoder_noise_proj_in(self._l2_to_rms(noise)),
                 n=1, dim=-2, direction="right", narrow=True
             )
         )
@@ -366,7 +393,7 @@ class ZLMModel(nn.Module):
         z_states = hidden_states[:, -self.z_length:, :]
         
         mu = self.encoder_mu_proj_out(z_states)
-        mu = self.encoder_mu_norm_out(mu)
+        mu = self._group_l2_norm(mu)
 
         z = self.add_noise(mu, noise, noise_scale)
 
@@ -395,8 +422,9 @@ class ZLMModel(nn.Module):
         )
 
         z_projed = self.decoder_z_proj_in(
-            self.decoder_z_norm_in(z)
+            self._l2_to_rms(z)
         )
+
         if progress is not None:
             assert self.is_probe, "Progress can only be used when is_probe is True"
             ar = torch.arange(self.z_length, device=progress.device, dtype=progress.dtype)
@@ -406,6 +434,7 @@ class ZLMModel(nn.Module):
                 z_projed,
                 expand_to_batch(self.progress_embeddings, z_projed),
             )
+            
         z_tokens = (
             unsqueeze_to_batch(self.decoder_z_tokens, z_projed) +
             shift(
@@ -479,6 +508,8 @@ class ZLMModel(nn.Module):
         guidance_scale: float | None = None,
         token_index: int | None = None,
     ):
+        # TODO: update to cauchy
+
         do_guide = guidance_scale is not None
         if do_guide:
             assert token_index is not None
@@ -548,6 +579,7 @@ class ZLMModel(nn.Module):
         verbose: bool=False,
         **rollout_kwargs,
     ):
+        # TODO: update to cauchy
 
         from transformers.cache_utils import DynamicCache
         from tqdm import tqdm
