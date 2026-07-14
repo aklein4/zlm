@@ -19,6 +19,7 @@ from models.llama import LlamaForCausalLM, LlamaRMSNorm
 from models.custom_llama import CustomLlamaModel, CustomLlamaDecoderLayer
 from models import load_checkpoint_state
 from utils.torch_modules import ARLinear, UnbiasedEMA
+import utils.constants as constants
 
 
 class ARHead(nn.Module):
@@ -498,7 +499,7 @@ class ZLMModel(nn.Module):
 
         # naive iteration to perform AR head sampling
         z = torch.zeros_like(noise)
-        for t in range(self.z_ar_steps):
+        for t in range(self.latent_size if do_guide else self.z_ar_steps):
 
             g = g_states + self.decoder_head.z_gate_proj(z)
             u = u_states + self.decoder_head.z_up_proj(z)
@@ -513,7 +514,24 @@ class ZLMModel(nn.Module):
 
                 mu = mu + guidance_scale * (mu - uncond_mu)
 
-            z = self.add_noise(mu, noise, noise_temperature)
+            if noise_temperature != 1.0:
+                assert not do_guide, "Noise temperature adjustment is not compatible with guidance."
+
+                slc = slice(t*self.latent_size//self.z_ar_steps, (t+1)*self.latent_size//self.z_ar_steps)
+                
+                mu_curr = mu[..., slc]
+                noise_curr = noise[..., slc]
+
+                z_curr = mu_curr + noise_temperature * noise_curr
+
+                base_norm = (mu_curr.norm(dim=-1, keepdim=True).pow(2) + noise_curr.shape[-1]).sqrt()
+                adj_norm = (mu_curr.norm(dim=-1, keepdim=True).pow(2) + noise_curr.shape[-1] * noise_temperature**2).sqrt()
+
+                z_curr = z_curr * (base_norm / adj_norm)
+                z[..., slc] = z_curr
+
+            else:
+                z = self.add_noise(mu, noise, noise_temperature)
 
         return z
 
@@ -534,6 +552,17 @@ class ZLMModel(nn.Module):
         from transformers.cache_utils import DynamicCache
         from tqdm import tqdm
 
+        # create compiled functions
+        if not hasattr(self, "sample_inited"):
+            self.compile_inited = True
+
+            self._decoder_fn = self.decoder_model.forward
+            self._ar_fn = self.ar_rollout
+
+            if not constants.XLA_AVAILABLE:
+                self._decoder_fn = torch.compile(self._decoder_fn, fullgraph=True, dynamic=True)
+                self._ar_fn = torch.compile(self._ar_fn, fullgraph=True, dynamic=True, mode="reduce-overhead")
+
         # handle the noise
         if noise is None and encoded_z is None:
             noise = self.sample_noise(input_ids)
@@ -549,7 +578,7 @@ class ZLMModel(nn.Module):
         input_tokens += unsqueeze_to_batch(
             self.decoder_input_embeddings, input_tokens
         )
-        self.decoder_model(
+        self._decoder_fn(
             inputs_embeds=input_tokens,
             elementwise_pad_mask=input_mask,
             past_key_values=cache,
@@ -576,7 +605,7 @@ class ZLMModel(nn.Module):
                 self.decoder_z_proj_in(self.decoder_z_norm_in(prev_z))
             ) # [B, hidden_size]
 
-            z_states = self.decoder_model(
+            z_states = self._decoder_fn(
                 inputs_embeds=z_token[:, None, :],
                 past_key_values=cache,
                 position_ids=position_ids[:, None],
@@ -592,12 +621,12 @@ class ZLMModel(nn.Module):
 
             # sample the next z
             if encoded_z is None:
-                prev_z = self.ar_rollout(
+                prev_z = self._ar_fn(
                     z_states,
                     noise[:, i, :],
                     token_index=i,
                     **rollout_kwargs,
-                )
+                ).clone()
 
             else:
                 prev_z = encoded_z[:, i, :] # [B, latent_size]
@@ -625,7 +654,7 @@ class ZLMModel(nn.Module):
         for i in tqdm(range(num_output_tokens), desc="sampling output", disable=(not verbose)):
 
             # pass the previous output token through the decoder
-            logit_states = self.decoder_model(
+            logit_states = self._decoder_fn(
                 inputs_embeds=prev_logit_token[:, None, :],
                 past_key_values=cache,
                 position_ids=position_ids[:, None],
