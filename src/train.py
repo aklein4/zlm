@@ -50,6 +50,8 @@ def main(config: omegaconf.DictConfig):
         print(omegaconf.OmegaConf.to_yaml(config), flush=True)
         print(" ========================= \n", flush=True)
 
+    print("DISABLE XET:", os.environ["HF_HUB_DISABLE_XET"])
+
     # set up logging
     logger.setLevel(logging.INFO)
     if constants.PROCESS_IS_MAIN():
