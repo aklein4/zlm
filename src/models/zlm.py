@@ -505,64 +505,24 @@ class ZLMModel(nn.Module):
         z_states: torch.FloatTensor,
         noise: torch.FloatTensor,
         noise_temperature: float = 1.0,
-        guidance_scale: float | None = None,
-        token_index: int | None = None,
     ):
-        # TODO: update to cauchy
-
-        do_guide = guidance_scale is not None
-        if do_guide:
-            assert token_index is not None
 
         g_states = self.decoder_head.states_gate_proj(z_states)
         u_states = self.decoder_head.states_up_proj(z_states)
         cross = self.decoder_head.cross_proj(z_states)
-        if do_guide:
-            uncond_g_states = self.uncond_decoder_head.states_gate_proj(
-                unsqueeze_to_batch(self.uncond_tokens[token_index], z_states)
-            )
-            uncond_u_states = self.uncond_decoder_head.states_up_proj(
-                unsqueeze_to_batch(self.uncond_tokens[token_index], z_states)
-            )
-            uncond_cross = self.uncond_decoder_head.cross_proj(
-                unsqueeze_to_batch(self.uncond_tokens[token_index], z_states)
-            )
 
         # naive iteration to perform AR head sampling
         z = torch.zeros_like(noise)
-        for t in range(self.latent_size if do_guide else self.z_ar_steps):
+        for t in range(self.z_ar_steps):
 
-            g = g_states + self.decoder_head.z_gate_proj(z)
-            u = u_states + self.decoder_head.z_up_proj(z)
+            z_in = self.decoder_head.input_fn(z)
+            g = g_states + self.decoder_head.z_gate_proj(z_in)
+            u = u_states + self.decoder_head.z_up_proj(z_in)
+
             h = self.decoder_head.act(g) * u
-            mu = cross + self.decoder_head.down_proj(h)
+            mu = self.decoder_head.output_fn(cross + self.decoder_head.down_proj(h))
 
-            if do_guide:
-                uncond_g = uncond_g_states + self.uncond_decoder_head.z_gate_proj(z)
-                uncond_u = uncond_u_states + self.uncond_decoder_head.z_up_proj(z)
-                uncond_h = self.uncond_decoder_head.act(uncond_g) * uncond_u
-                uncond_mu = uncond_cross + self.uncond_decoder_head.down_proj(uncond_h)
-
-                mu = mu + guidance_scale * (mu - uncond_mu)
-
-            if noise_temperature != 1.0:
-                assert not do_guide, "Noise temperature adjustment is not compatible with guidance."
-
-                slc = slice(t*self.latent_size//self.z_ar_steps, (t+1)*self.latent_size//self.z_ar_steps)
-                
-                mu_curr = mu[..., slc]
-                noise_curr = noise[..., slc]
-
-                z_curr = mu_curr + noise_temperature * noise_curr
-
-                base_norm = (mu_curr.norm(dim=-1, keepdim=True).pow(2) + noise_curr.shape[-1]).sqrt()
-                adj_norm = (mu_curr.norm(dim=-1, keepdim=True).pow(2) + noise_curr.shape[-1] * noise_temperature**2).sqrt()
-
-                z_curr = z_curr * (base_norm / adj_norm)
-                z[..., slc] = z_curr
-
-            else:
-                z = self.add_noise(mu, noise, noise_temperature)
+            z = self.add_noise(mu, noise, noise_scale=noise_temperature)
 
         return z
 
@@ -585,8 +545,8 @@ class ZLMModel(nn.Module):
         from tqdm import tqdm
 
         # create compiled functions
-        if not hasattr(self, "sample_inited"):
-            self.compile_inited = True
+        if not getattr(self, "_compile_inited", False):
+            self._compile_inited = True
 
             self._decoder_fn = self.decoder_model.forward
             self._ar_fn = self.ar_rollout
@@ -596,7 +556,7 @@ class ZLMModel(nn.Module):
                 self._ar_fn = torch.compile(self._ar_fn, fullgraph=True, dynamic=True, mode="reduce-overhead")
 
         # handle the noise
-        if noise is None and encoded_z is None:
+        if noise is None:
             noise = self.sample_noise(input_ids)
 
         # initialize the cache
@@ -634,7 +594,7 @@ class ZLMModel(nn.Module):
             # pass the previous z token through the decoder
             z_token = (
                 unsqueeze_to_batch(self.decoder_z_tokens[i], prev_z) +
-                self.decoder_z_proj_in(self.decoder_z_norm_in(prev_z))
+                self.decoder_z_proj_in(self._l2_to_rms(prev_z))
             ) # [B, hidden_size]
 
             z_states = self._decoder_fn(
@@ -656,7 +616,6 @@ class ZLMModel(nn.Module):
                 prev_z = self._ar_fn(
                     z_states,
                     noise[:, i, :],
-                    token_index=i,
                     **rollout_kwargs,
                 ).clone()
 

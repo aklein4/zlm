@@ -8,24 +8,17 @@ import matplotlib.pyplot as plt
 import utils.constants as constants
 
 
+BASE_PATH = os.path.join(constants.LOCAL_DATA_PATH)
 SAVE_PATH = os.path.join(constants.LOCAL_DATA_PATH, "benchmark_chart.png")
 
-BASE_PATH = os.path.join(constants.LOCAL_DATA_PATH, "evaluation_results")
-
 CHECKPOINTS = {
-    "aklein4--ZEBRA_muon-1p7b-once/000000024000": "Low-MI-09K",
-    "aklein4--ZEBRA_muon-1p7b-mi/000000018000": "Diffusion-18K",
-    "aklein4--ZEBRA_muon-1p7b-cont/000000009000": "Diffusion-09K",
-    # "../guidance_evaluation_results": "Guided",
-    # "../guidance_evaluation_results_2": "Guided-2",
-    "aklein4--ZEBRA_ar-1p7b-kernel-strong/000000009000": "AR-09K",
-    "aklein4--ZEBRA_ar-1p7b-sigreg/000000007000": "SIGReg-07K",
-    "../no_noise_scaled_eval_results/aklein4--ZEBRA_ar-1p7b-kernel-strong/000000009000": "AR-NN-09K",
-    "aklein4--ZEBRA_baseline-1p7b/000000050000": "Baseline-50K",
-    # "aklein4--ZEBRA_baseline-1p7b/000000020000": "Baseline-20K",
-    # "aklein4--ZEBRA_baseline-1p7b/000000015000": "Baseline-15K",
-    "aklein4--ZEBRA_baseline-1p7b/000000010000": "Baseline-10K",
-    # "aklein4--ZEBRA_baseline-1p7b/000000005000": "Baseline-5K",
+    "evaluation_results_v2/aklein4--ZEBRA-v2_360m-alpha-lowReg/000000027000": "Gaussian",
+    "evaluation_results_v2/aklein4--ZEBRA-v2_360m-cauchy/000000027000": "Cauchy",
+    "evaluation_results_v2/aklein4--ZEBRA-v2_360m-cauchy-noReg/000000024000": "Cauchy-noReg",
+    "evaluation_results_v2-noise=0-fixed/aklein4--ZEBRA-v2_360m-alpha-lowReg/000000027000": "Gaussian-0",
+    "evaluation_results_v2-noise=0/aklein4--ZEBRA-v2_360m-cauchy/000000027000": "Cauchy-0",
+    "evaluation_results_v2-noise=0/aklein4--ZEBRA-v2_360m-cauchy-noReg/000000024000": "Cauchy-noReg-0",
+    "evaluation_results_v2/aklein4--ZEBRA-v2_360m-baseline/000000020000": "Baseline",
 }
 
 REASONING_BENCHMARKS = [

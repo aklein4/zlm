@@ -111,6 +111,11 @@ def main() -> None:
     ax.grid(True, alpha=0.25)
     ax.spines[["top", "right"]].set_visible(False)
 
+    x = np.linspace(0.0, 1.0, 1001)
+    y = 8 * (x/0.73)**2.3
+    ax.plot(x, y, color="#aa4444", linewidth=1.5, linestyle="--")
+    ax.set_ylim(top=10.0)
+
     fig.savefig(OUTPUT_PATH, dpi=200)
     print(f"Saved {OUTPUT_PATH}")
     for value in (0.0, 0.25, 0.5, 0.75, 0.9, 0.99, 0.999999):
