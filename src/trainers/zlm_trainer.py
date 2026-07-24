@@ -51,10 +51,13 @@ class ZLMTrainer(BaseTrainer):
         for m in self.model.modules():
             if isinstance(m, ARLinear):
                 m.weight.no_muon = True
-        self.model.decoder_head.cross_proj.weight.no_muon = True
-        self.model.decoder_head.down_proj.weight.no_muon = True
 
-        self.model.encoder_mu_proj_out.weight.no_muon = True
+        for param in [
+            self.model.decoder_head._orig_mod.cross_proj.weight,
+            self.model.decoder_head._orig_mod.down_proj.weight,
+            self.model.encoder_mu_proj_out.weight
+        ]:
+            param.no_muon = True
 
 
     def get_effective_parties(self, x):
