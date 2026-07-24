@@ -51,6 +51,10 @@ class ZLMTrainer(BaseTrainer):
         for m in self.model.modules():
             if isinstance(m, ARLinear):
                 m.weight.no_muon = True
+        self.model.decoder_head.cross_proj.weight.no_muon = True
+        self.model.decoder_head.down_proj.weight.no_muon = True
+
+        self.model.encoder_mu_proj_out.weight.no_muon = True
 
 
     def get_effective_parties(self, x):
@@ -95,10 +99,10 @@ class ZLMTrainer(BaseTrainer):
 
         mu_kl_scale = {}
         scaled_mu = scale_gradient(mu, mu_kl_scale)
-    
+
         kl = sp_cauchy_kl(
             self.model._sphere_shape(scaled_mu),
-            self.model.concentration,
+            self.model.get_concentration(),
             self.model._sphere_shape(pred_mu),
         ) # [B, S, N_ar]
         kl = kl.sum((0, -1)) # [S,]
@@ -244,6 +248,7 @@ class ZLMTrainer(BaseTrainer):
             "kl_per_token": kl_per_token,
             "kl_per_latent": kl_per_latent,
             "kl_full_parties": kl_parties,
+            "concentration": self.model.get_concentration(),
             
             "regularize_scale": regularize_scale,
             "regularize_loss": spectral_reg,

@@ -134,8 +134,11 @@ class ZLMModel(nn.Module):
         self.latent_size = config.latent_size
         self.z_ar_steps = config.z_ar_steps
         self.sphere_size = self.latent_size // self.z_ar_steps
-        
-        self.concentration = config.concentration
+
+        initial_concentration = torch.tensor([config.init_concentration])
+        self.log_concentration = nn.Parameter(
+            torch.logit(initial_concentration) / math.sqrt(self.hidden_size)
+        )
 
         # create the transformer backbones
         self.encoder_model = EncoderModel(config)
@@ -279,6 +282,12 @@ class ZLMModel(nn.Module):
         return x.reshape(*x.shape[:-2], self.latent_size)
 
 
+    def get_concentration(self):
+        return torch.sigmoid(
+            self.log_concentration * math.sqrt(self.hidden_size)
+        )
+
+
     def _group_l2_norm(self, x: torch.FloatTensor) -> torch.FloatTensor:
         x = self._sphere_shape(x)
         x = F.normalize(x.float(), dim=-1).to(x.dtype)
@@ -322,7 +331,7 @@ class ZLMModel(nn.Module):
             noise = self._sphere_shape(noise)
 
         z = sample_sp_cauchy(
-            mu, self.concentration, noise
+            mu, self.get_concentration(), noise
         )
   
         if noise_scale is not None:

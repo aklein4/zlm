@@ -67,12 +67,13 @@ z_length: 384
 # latent configuration
 latent_size: 64
 z_ar_steps: 8
-concentration: 0.735
 
 # head configuration
 head_intermediate_size: 2560
 
 # training configuration
+init_concentration: 0.735
+
 lm_loss_ema_beta: 0.75
 
 
