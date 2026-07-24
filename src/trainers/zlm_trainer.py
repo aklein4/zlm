@@ -55,7 +55,7 @@ class ZLMTrainer(BaseTrainer):
         for param in [
             self.model.decoder_head._orig_mod.cross_proj.weight,
             self.model.decoder_head._orig_mod.down_proj.weight,
-            self.model.encoder_mu_proj_out.weight
+            self.model.encoder_mu_proj_out._orig_mod.weight
         ]:
             param.no_muon = True
 
